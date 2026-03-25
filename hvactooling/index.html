@@ -1,0 +1,781 @@
+  -<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Field Entry</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+:root {
+  --bg:        #0f0f0f;
+  --surface:   #181818;
+  --surface2:  #222222;
+  --border:    #2e2e2e;
+  --orange:    #c85a00;
+  --orange-hi: #e86d10;
+  --orange-lo: #7a3800;
+  --orange-dim:#2a1200;
+  --text:      #e0d8d0;
+  --text-dim:  #887870;
+  --text-mute: #504540;
+  --green:     #1e4a1e;
+  --green-hi:  #4a9a4a;
+  --red:       #5a1a1a;
+  --red-hi:    #bb3333;
+  --mono:      'Share Tech Mono', monospace;
+  --ui:        'Rajdhani', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { background: var(--bg); color: var(--text); font-family: var(--ui); font-size: 16px; min-height: 100vh; }
+
+/* ── GATE ── */
+#gate {
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 28px 20px;
+}
+.g-wordmark { font-family: var(--ui); font-size: 1.1rem; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: var(--orange); margin-bottom: 4px; }
+.g-sub { font-family: var(--mono); font-size: .7rem; color: var(--text-mute); letter-spacing: .08em; margin-bottom: 44px; }
+.g-box { width: 100%; max-width: 380px; }
+.g-lbl { display: block; font-size: .72rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 7px; }
+.g-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 3px; color: var(--text); font-family: var(--mono); font-size: .95rem;
+  padding: 14px 14px; outline: none; transition: border-color .15s; margin-bottom: 7px;
+  letter-spacing: .04em;
+}
+.g-input:focus { border-color: var(--orange); }
+.g-hint { font-family: var(--mono); font-size: .68rem; color: var(--text-mute); margin-bottom: 20px; line-height: 1.6; }
+.g-btn {
+  width: 100%; background: var(--orange); border: none; border-radius: 3px;
+  color: #fff; font-family: var(--ui); font-weight: 700; font-size: 1rem;
+  letter-spacing: .14em; text-transform: uppercase; padding: 14px; cursor: pointer;
+  margin-bottom: 28px; transition: background .12s;
+}
+.g-btn:active { background: var(--orange-hi); }
+.g-divider { border: none; border-top: 1px solid var(--border); margin-bottom: 18px; }
+.g-saved-lbl { font-size: .66rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--text-mute); margin-bottom: 10px; }
+.g-list { display: flex; flex-direction: column; gap: 6px; }
+.g-item {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--orange-lo); border-radius: 3px;
+  padding: 11px 12px; cursor: pointer; transition: border-left-color .12s;
+}
+.g-item:active { border-left-color: var(--orange); }
+.g-item-name { font-family: var(--mono); font-size: .8rem; color: var(--orange-hi); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-item-count { font-family: var(--mono); font-size: .68rem; color: var(--text-mute); white-space: nowrap; }
+.g-item-del { background: none; border: none; color: var(--text-mute); font-size: .95rem; cursor: pointer; padding: 2px 6px; flex-shrink: 0; }
+.g-empty { font-family: var(--mono); font-size: .72rem; color: var(--text-mute); text-align: center; padding: 14px 0; }
+
+/* ── APP ── */
+#app { display: none; }
+
+header {
+  background: var(--surface); border-bottom: 2px solid var(--orange);
+  padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+  position: sticky; top: 0; z-index: 100;
+}
+.hdr-back { background: none; border: none; color: var(--orange); font-size: 1.25rem; cursor: pointer; padding: 2px 8px 2px 0; flex-shrink: 0; line-height: 1; }
+.hdr-name { font-family: var(--mono); font-size: .76rem; color: var(--orange-hi); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hdr-badge {
+  background: var(--orange-dim); border: 1px solid var(--orange-lo); color: var(--orange-hi);
+  font-family: var(--mono); font-size: .7rem; padding: 3px 9px; border-radius: 3px; letter-spacing: .06em; flex-shrink: 0;
+}
+
+/* ── TABS ── */
+.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); }
+.tab {
+  flex: 1; padding: 10px 0; text-align: center; font-family: var(--ui); font-weight: 600;
+  font-size: .8rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-mute); cursor: pointer; border-bottom: 2px solid transparent; transition: all .12s;
+}
+.tab.active { color: var(--orange-hi); border-bottom-color: var(--orange); }
+
+/* ── PANELS ── */
+.panel { display: none; padding: 16px; padding-bottom: 48px; }
+.panel.active { display: block; }
+
+/* ── FORM ── */
+.fg { margin-bottom: 13px; }
+label.fl {
+  display: block; font-size: .7rem; font-weight: 700; letter-spacing: .15em;
+  text-transform: uppercase; color: var(--text-dim); margin-bottom: 5px;
+}
+input[type=text], input[type=number], textarea {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 3px; color: var(--text); font-family: var(--mono); font-size: .92rem;
+  padding: 11px 12px; outline: none; transition: border-color .15s;
+  -webkit-appearance: none; appearance: none;
+}
+input:focus, textarea:focus { border-color: var(--orange); }
+textarea { resize: vertical; min-height: 72px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row3 { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+
+.sec { border: none; border-top: 1px solid var(--border); margin: 18px 0 14px; }
+.sec-lbl { font-size: .67rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--orange-lo); margin-bottom: 12px; }
+
+/* ── Y/N ── */
+.yn { display: flex; gap: 7px; }
+.yn-b {
+  flex: 1; padding: 10px 0; border-radius: 3px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text-mute); font-family: var(--ui);
+  font-weight: 700; font-size: .92rem; letter-spacing: .06em; cursor: pointer; text-align: center; transition: all .1s;
+}
+.yn-b.y.on { background: var(--green); border-color: var(--green-hi); color: #bfefbf; }
+.yn-b.n.on { background: var(--red);   border-color: var(--red-hi);   color: #f5bbbb; }
+.yn-b.na.on { background: var(--orange-dim); border-color: var(--orange-lo); color: var(--orange-hi); }
+
+/* ── BUTTONS ── */
+.btn {
+  display: block; width: 100%; padding: 13px; border-radius: 3px; border: none;
+  font-family: var(--ui); font-weight: 700; font-size: .95rem; letter-spacing: .12em;
+  text-transform: uppercase; cursor: pointer; transition: all .12s; margin-bottom: 10px;
+}
+.btn-primary { background: var(--orange); color: #fff; }
+.btn-primary:active { background: var(--orange-hi); }
+.btn-ghost { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+.btn-ghost:active { border-color: var(--orange); color: var(--orange-hi); }
+.btn-export { background: var(--surface2); color: var(--orange-hi); border: 1px solid var(--orange-lo); }
+.btn-export:active { background: var(--orange-dim); }
+.btn-danger { background: var(--red); color: #f5bbbb; }
+
+/* ── QUEUE ── */
+.qi {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-left: 3px solid var(--orange); border-radius: 3px;
+  padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+}
+.qi-info { flex: 1; min-width: 0; }
+.qi-unit { font-family: var(--mono); font-size: .82rem; color: var(--orange-hi); font-weight: 700; }
+.qi-model { font-family: var(--mono); font-size: .7rem; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qi-flags { display: flex; gap: 4px; flex-shrink: 0; }
+.flag { font-size: .6rem; font-weight: 700; padding: 2px 5px; border-radius: 2px; letter-spacing: .04em; }
+.f-ok   { background: var(--green); color: #bfefbf; }
+.f-bad  { background: var(--red);   color: #f5bbbb; }
+.f-pend { background: var(--surface); color: var(--text-mute); border: 1px solid var(--border); }
+.qi-del { background: none; border: none; color: var(--text-mute); font-size: 1rem; cursor: pointer; padding: 4px 6px; flex-shrink: 0; }
+.qi-del:active { color: var(--red-hi); }
+
+/* ── PARTS ── */
+.ps { margin-bottom: 22px; }
+.ps-hdr { font-size: .7rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--orange); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--orange-lo); }
+.ps-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.ps-name { font-family: var(--mono); font-size: .82rem; color: var(--text); }
+.ps-qty { font-family: var(--mono); font-size: 1.05rem; font-weight: 700; color: var(--orange-hi); background: var(--orange-dim); padding: 2px 10px; border-radius: 2px; min-width: 36px; text-align: center; }
+
+/* ── Discrete filter / belt inputs ── */
+.dim-row, .belt-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.dim-cell {
+  flex: 2; min-width: 0;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 3px; color: var(--text); font-family: var(--mono);
+  font-size: .92rem; padding: 11px 10px; outline: none;
+  transition: border-color .15s; text-align: center;
+  -webkit-appearance: none; appearance: none;
+}
+.dim-cell.dim-narrow { flex: 1.2; }
+.dim-cell:focus { border-color: var(--orange); }
+.dim-sep {
+  color: var(--text-mute); font-family: var(--mono);
+  font-size: 1rem; flex-shrink: 0; user-select: none;
+}
+.dim-qty {
+  flex: 1.4; min-width: 0;
+  background: var(--surface2); border: 1px solid var(--orange-lo);
+  border-radius: 3px; color: var(--orange-hi); font-family: var(--mono);
+  font-size: .92rem; padding: 11px 8px; outline: none;
+  transition: border-color .15s; text-align: center;
+  -webkit-appearance: none; appearance: none;
+}
+.dim-qty:focus { border-color: var(--orange); }
+.belt-pre { flex: 1; min-width: 0; text-align: center; }
+.belt-let { flex: 1.4; min-width: 0; text-align: center; }
+.belt-num { flex: 2; min-width: 0; text-align: center; }
+.belt-pre, .belt-let, .belt-num {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 3px; color: var(--text); font-family: var(--mono);
+  font-size: .92rem; padding: 11px 8px; outline: none;
+  transition: border-color .15s;
+  -webkit-appearance: none; appearance: none;
+}
+.belt-pre:focus, .belt-let:focus, .belt-num:focus { border-color: var(--orange); }
+.preview {
+  font-family: var(--mono); font-size: .78rem;
+  color: var(--orange-hi); letter-spacing: .04em;
+  font-weight: 400; text-transform: none;
+}
+
+.empty { color: var(--text-mute); font-family: var(--mono); font-size: .76rem; text-align: center; padding: 28px 0; }
+
+/* ── TOAST ── */
+#toast {
+  position: fixed; bottom: 20px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--orange); color: #fff;
+  font-family: var(--ui); font-weight: 700; font-size: .8rem;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 10px 20px; border-radius: 4px;
+  transition: transform .2s ease; z-index: 999;
+  pointer-events: none; white-space: nowrap;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ══ GATE ══ -->
+<div id="gate">
+  <div class="g-wordmark">Field Entry</div>
+  <div class="g-sub">Service Logic — Field Data</div>
+
+  <div class="g-box">
+    <label class="g-lbl">Job / Session Name</label>
+    <input class="g-input" id="gInput" type="text"
+      placeholder="260216-0037 Merrill Gardens"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+      maxlength="80">
+    <div class="g-hint">Spaces → underscores in filenames. Max 80 characters.</div>
+    <button class="g-btn" onclick="startSession()">Start / Resume Session</button>
+
+    <hr class="g-divider">
+    <div class="g-saved-lbl">Saved Sessions</div>
+    <div class="g-list" id="gList"></div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+  <header>
+    <button class="hdr-back" onclick="exitToGate()">&#8592;</button>
+    <div class="hdr-name" id="hdrName"></div>
+    <div class="hdr-badge" id="hdrBadge">0</div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="entry" onclick="switchTab(this)">Entry</div>
+    <div class="tab" data-tab="queue" onclick="switchTab(this)">Queue</div>
+    <div class="tab" data-tab="parts" onclick="switchTab(this)">Parts</div>
+    <div class="tab" data-tab="export" onclick="switchTab(this)">Export</div>
+  </div>
+
+  <!-- ENTRY TAB -->
+  <div class="panel active" id="tab-entry">
+
+    <div class="fg">
+      <label class="fl">Unit #</label>
+      <input type="text" id="f-unit"
+        placeholder="1  or  22-2"
+        autocomplete="off" autocorrect="off" spellcheck="false"
+        oninput="forceUpper(this)">
+    </div>
+
+    <div class="row2">
+      <div class="fg">
+        <label class="fl">Equipment Name</label>
+        <input type="text" id="f-name" placeholder="Pkg RTU"
+          autocomplete="off" autocorrect="off">
+      </div>
+      <div class="fg">
+        <label class="fl">Location</label>
+        <input type="text" id="f-loc" placeholder="Roof"
+          autocomplete="off" autocorrect="off">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="fg">
+        <label class="fl">Make</label>
+        <input type="text" id="f-make"
+          placeholder="CARRIER"
+          autocomplete="off" autocorrect="off" spellcheck="false"
+          oninput="forceUpper(this)">
+      </div>
+      <div class="fg">
+        <label class="fl">Type</label>
+        <input type="text" id="f-type" placeholder="RTU"
+          autocomplete="off" autocorrect="off">
+      </div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">Model #</label>
+      <input type="text" id="f-model"
+        placeholder="48TCED12F2A6A6F0G0"
+        autocomplete="off" autocorrect="off" spellcheck="false"
+        oninput="forceUpper(this)">
+    </div>
+
+    <div class="fg">
+      <label class="fl">Serial #</label>
+      <input type="text" id="f-serial"
+        placeholder="0619P90369"
+        autocomplete="off" autocorrect="off" spellcheck="false"
+        oninput="forceUpper(this)">
+    </div>
+
+    <hr class="sec">
+    <div class="sec-lbl">Filters</div>
+
+    <!-- Filter 1 -->
+    <div class="fg">
+      <label class="fl">Filter Size &nbsp;<span class="preview" id="prev-f1"></span></label>
+      <div class="dim-row">
+        <input type="number" id="f-fw" placeholder="20" min="0" oninput="buildFilter()" class="dim-cell">
+        <span class="dim-sep">×</span>
+        <input type="number" id="f-fh" placeholder="20" min="0" oninput="buildFilter()" class="dim-cell">
+        <span class="dim-sep">×</span>
+        <input type="number" id="f-fd" placeholder="2" min="0" step="0.25" oninput="buildFilter()" class="dim-cell dim-narrow">
+        <input type="number" id="f-fqty" placeholder="qty" min="0" class="dim-qty">
+      </div>
+      <input type="hidden" id="f-fsize">
+    </div>
+
+    <!-- Filter 2 -->
+    <div class="fg">
+      <label class="fl">2nd Filter &nbsp;<span class="preview" id="prev-f2"></span></label>
+      <div class="dim-row">
+        <input type="number" id="f-f2w" placeholder="20" min="0" oninput="buildFilter2()" class="dim-cell">
+        <span class="dim-sep">×</span>
+        <input type="number" id="f-f2h" placeholder="20" min="0" oninput="buildFilter2()" class="dim-cell">
+        <span class="dim-sep">×</span>
+        <input type="number" id="f-f2d" placeholder="2" min="0" step="0.25" oninput="buildFilter2()" class="dim-cell dim-narrow">
+        <input type="number" id="f-f2qty" placeholder="qty" min="0" class="dim-qty">
+      </div>
+      <input type="hidden" id="f-f2size">
+    </div>
+
+    <div class="fg">
+      <label class="fl">Changed?</label>
+      <div class="yn">
+        <button class="yn-b y" onclick="ynSet(this,'f-fchg','Y')">Y</button>
+        <button class="yn-b n" onclick="ynSet(this,'f-fchg','N')">N</button>
+        <button class="yn-b na" onclick="ynSet(this,'f-fchg','N/A')">N/A</button>
+      </div>
+      <input type="hidden" id="f-fchg">
+    </div>
+
+    <hr class="sec">
+    <div class="sec-lbl">Belt</div>
+
+    <!-- Belt: [optional #] [letters] [number]  e.g. 2B57, A57, 4L240, AX32 -->
+    <div class="fg">
+      <label class="fl">Belt # &nbsp;<span class="preview" id="prev-b1"></span></label>
+      <div class="belt-row">
+        <input type="text" id="f-bp" placeholder="#" maxlength="2"
+          autocomplete="off" autocorrect="off" spellcheck="false" inputmode="numeric"
+          oninput="buildBelt()" class="belt-pre">
+        <input type="text" id="f-bl" placeholder="A"  maxlength="3"
+          autocomplete="off" autocorrect="off" spellcheck="false"
+          oninput="forceUpper(this);buildBelt()" class="belt-let">
+        <input type="text" id="f-bn" placeholder="57" maxlength="5"
+          autocomplete="off" autocorrect="off" spellcheck="false" inputmode="numeric"
+          oninput="buildBelt()" class="belt-num">
+        <input type="number" id="f-bqty" placeholder="qty" min="0" class="dim-qty">
+      </div>
+      <input type="hidden" id="f-belt">
+    </div>
+
+    <div class="fg">
+      <label class="fl">Changed?</label>
+      <div class="yn">
+        <button class="yn-b y" onclick="ynSet(this,'f-bchg','Y')">Y</button>
+        <button class="yn-b n" onclick="ynSet(this,'f-bchg','N')">N</button>
+        <button class="yn-b na" onclick="ynSet(this,'f-bchg','N/A')">N/A</button>
+      </div>
+      <input type="hidden" id="f-bchg">
+    </div>
+
+    <hr class="sec">
+    <div class="sec-lbl">Status</div>
+
+    <div class="row2">
+      <div class="fg">
+        <label class="fl">Unit Working?</label>
+        <div class="yn">
+          <button class="yn-b y" onclick="ynSet(this,'f-working','Y')">Y</button>
+          <button class="yn-b n" onclick="ynSet(this,'f-working','N')">N</button>
+        </div>
+        <input type="hidden" id="f-working">
+      </div>
+      <div class="fg">
+        <label class="fl">Maint Done?</label>
+        <div class="yn">
+          <button class="yn-b y" onclick="ynSet(this,'f-done','Y')">Y</button>
+          <button class="yn-b n" onclick="ynSet(this,'f-done','N')">N</button>
+        </div>
+        <input type="hidden" id="f-done">
+      </div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">Notes</label>
+      <textarea id="f-notes" placeholder="Faults, observations, parts needed..."></textarea>
+    </div>
+
+    <button class="btn btn-primary" onclick="addRecord()">+ Add to Queue</button>
+    <button class="btn btn-ghost"   onclick="clearForm()">Clear Form</button>
+
+  </div>
+
+  <!-- QUEUE TAB -->
+  <div class="panel" id="tab-queue">
+    <div id="queueBody"></div>
+  </div>
+
+  <!-- PARTS TAB -->
+  <div class="panel" id="tab-parts">
+    <div id="partsBody"></div>
+  </div>
+
+  <!-- EXPORT TAB -->
+  <div class="panel" id="tab-export">
+    <p style="color:var(--text-dim);font-family:var(--mono);font-size:.75rem;line-height:1.7;margin-bottom:22px;">
+      CSV — columns match master spreadsheet, drop-in merge.<br>
+      Parts — totals by filter size and belt number.
+    </p>
+    <button class="btn btn-export" onclick="doExportCSV()">Export CSV</button>
+    <button class="btn btn-export" onclick="doExportParts()">Export Parts List</button>
+    <hr class="sec" style="margin-top:24px;">
+    <button class="btn btn-danger" onclick="doNuke()">Clear All Records</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ── Storage helpers ────────────────────────────────────────────────────────
+const SK = n => 'sl_session__' + n;
+
+function allSessions() {
+  const out = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('sl_session__')) out.push(k.slice(12));
+  }
+  return out.sort();
+}
+
+function getRecords(name) {
+  try { return JSON.parse(localStorage.getItem(SK(name)) || '[]'); }
+  catch(e) { return []; }
+}
+
+function saveRecords(name, arr) {
+  localStorage.setItem(SK(name), JSON.stringify(arr));
+}
+
+// ── Active session ─────────────────────────────────────────────────────────
+let session = null;
+
+// ── Gate ───────────────────────────────────────────────────────────────────
+function renderGate() {
+  const list = document.getElementById('gList');
+  const sessions = allSessions();
+  if (!sessions.length) {
+    list.innerHTML = '<div class="g-empty">No saved sessions.</div>';
+    return;
+  }
+  list.innerHTML = sessions.map(s => {
+    const n = getRecords(s).length;
+    const esc = s.replace(/'/g, "\\'");
+    return `<div class="g-item" onclick="openSession('${esc}')">
+      <div class="g-item-name">${s}</div>
+      <div class="g-item-count">${n} unit${n!==1?'s':''}</div>
+      <button class="g-item-del" onclick="event.stopPropagation();delSession('${esc}')">&#10005;</button>
+    </div>`;
+  }).join('');
+}
+
+function startSession() {
+  const raw = document.getElementById('gInput').value.trim();
+  if (!raw) { toast('Enter a job name'); return; }
+  const name = raw.replace(/\s+/g, '_');
+  document.getElementById('gInput').value = '';
+  openSession(name);
+}
+
+function openSession(name) {
+  session = name;
+  document.getElementById('hdrName').textContent = name;
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  updateBadge();
+  // Reset to entry tab
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab="entry"]').classList.add('active');
+  document.getElementById('tab-entry').classList.add('active');
+}
+
+function exitToGate() {
+  session = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('gate').style.display = 'flex';
+  renderGate();
+}
+
+function delSession(name) {
+  if (!confirm('Delete session "' + name + '" and all its records?')) return;
+  localStorage.removeItem(SK(name));
+  renderGate();
+}
+
+// ── Filter / belt builders ─────────────────────────────────────────────────
+function buildFilter() {
+  const w = document.getElementById('f-fw').value.trim();
+  const h = document.getElementById('f-fh').value.trim();
+  const d = document.getElementById('f-fd').value.trim();
+  const str = (w && h && d) ? `${w}x${h}x${d}"` : [w,h,d].filter(Boolean).join('x');
+  document.getElementById('f-fsize').value = str;
+  document.getElementById('prev-f1').textContent = str;
+}
+
+function buildFilter2() {
+  const w = document.getElementById('f-f2w').value.trim();
+  const h = document.getElementById('f-f2h').value.trim();
+  const d = document.getElementById('f-f2d').value.trim();
+  const str = (w && h && d) ? `${w}x${h}x${d}"` : [w,h,d].filter(Boolean).join('x');
+  document.getElementById('f-f2size').value = str;
+  document.getElementById('prev-f2').textContent = str;
+}
+
+function buildBelt() {
+  const pre  = document.getElementById('f-bp').value.trim();
+  const let_ = document.getElementById('f-bl').value.trim().toUpperCase();
+  const num  = document.getElementById('f-bn').value.trim();
+  const str  = pre + let_ + num;
+  document.getElementById('f-belt').value = str;
+  document.getElementById('prev-b1').textContent = str;
+}
+
+// ── Auto-uppercase (Unit, Make, Model, Serial, Belt) ───────────────────────
+function forceUpper(el) {
+  const s = el.selectionStart, e = el.selectionEnd;
+  el.value = el.value.toUpperCase();
+  el.setSelectionRange(s, e);
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+function switchTab(el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  const id = 'tab-' + el.dataset.tab;
+  document.getElementById(id).classList.add('active');
+  if (el.dataset.tab === 'queue')  renderQueue();
+  if (el.dataset.tab === 'parts')  renderParts();
+}
+
+// ── Y/N toggles ────────────────────────────────────────────────────────────
+function ynSet(btn, hidId, val) {
+  btn.closest('.yn').querySelectorAll('.yn-b').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById(hidId).value = val;
+}
+
+// ── Add record ─────────────────────────────────────────────────────────────
+function addRecord() {
+  const unit = document.getElementById('f-unit').value.trim();
+  if (!unit) { toast('Unit # required'); return; }
+
+  const rec = {
+    unit,
+    name:     document.getElementById('f-name').value.trim(),
+    loc:      document.getElementById('f-loc').value.trim(),
+    make:     document.getElementById('f-make').value.trim(),
+    type:     document.getElementById('f-type').value.trim(),
+    model:    document.getElementById('f-model').value.trim(),
+    serial:   document.getElementById('f-serial').value.trim(),
+    fsize:    document.getElementById('f-fsize').value,
+    fqty:     document.getElementById('f-fqty').value.trim(),
+    f2size:   document.getElementById('f-f2size').value,
+    f2qty:    document.getElementById('f-f2qty').value.trim(),
+    fchg:     document.getElementById('f-fchg').value,
+    belt:     document.getElementById('f-belt').value,
+    bqty:     document.getElementById('f-bqty').value.trim(),
+    bchg:     document.getElementById('f-bchg').value,
+    working:  document.getElementById('f-working').value,
+    done:     document.getElementById('f-done').value,
+    date:     new Date().toLocaleDateString('en-US'),
+    notes:    document.getElementById('f-notes').value.trim(),
+  };
+
+  const recs = getRecords(session);
+  recs.push(rec);
+  saveRecords(session, recs);
+  updateBadge();
+  clearForm();
+  toast('Unit ' + unit + ' queued');
+}
+
+function clearForm() {
+  ['f-unit','f-name','f-loc','f-make','f-type','f-model','f-serial',
+   'f-fw','f-fh','f-fd','f-fqty','f-fsize',
+   'f-f2w','f-f2h','f-f2d','f-f2qty','f-f2size',
+   'f-bp','f-bl','f-bn','f-bqty','f-belt','f-notes'
+  ].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  ['f-fchg','f-bchg','f-working','f-done'
+  ].forEach(id => document.getElementById(id).value = '');
+  document.querySelectorAll('.yn-b').forEach(b => b.classList.remove('on'));
+  document.getElementById('prev-f1').textContent = '';
+  document.getElementById('prev-f2').textContent = '';
+  document.getElementById('prev-b1').textContent = '';
+}
+
+// ── Badge ──────────────────────────────────────────────────────────────────
+function updateBadge() {
+  document.getElementById('hdrBadge').textContent = getRecords(session).length;
+}
+
+// ── Queue render ───────────────────────────────────────────────────────────
+function renderQueue() {
+  const recs = getRecords(session);
+  const el = document.getElementById('queueBody');
+  if (!recs.length) { el.innerHTML = '<div class="empty">No units queued.</div>'; return; }
+  el.innerHTML = recs.map((r, i) => {
+    let flags = '';
+    if (r.working) flags += `<span class="flag ${r.working==='Y'?'f-ok':'f-bad'}">${r.working==='Y'?'OK':'DOWN'}</span>`;
+    if (r.done)    flags += `<span class="flag ${r.done==='Y'?'f-ok':'f-pend'}">${r.done==='Y'?'DONE':'PEND'}</span>`;
+    return `<div class="qi">
+      <div class="qi-info">
+        <div class="qi-unit">UNIT ${r.unit}</div>
+        <div class="qi-model">${r.model || r.name || '—'}</div>
+      </div>
+      <div class="qi-flags">${flags}</div>
+      <button class="qi-del" onclick="delRecord(${i})">&#10005;</button>
+    </div>`;
+  }).join('');
+}
+
+function delRecord(i) {
+  const recs = getRecords(session);
+  recs.splice(i, 1);
+  saveRecords(session, recs);
+  updateBadge();
+  renderQueue();
+}
+
+// ── Parts render ───────────────────────────────────────────────────────────
+function calcParts(recs) {
+  const filters = {}, belts = {};
+  recs.forEach(r => {
+    if (r.fsize && r.fqty && +r.fqty > 0) {
+      const k = r.fsize.toUpperCase();
+      filters[k] = (filters[k]||0) + +r.fqty;
+    }
+    if (r.f2size && r.f2qty && +r.f2qty > 0) {
+      const k = r.f2size.toUpperCase();
+      filters[k] = (filters[k]||0) + +r.f2qty;
+    }
+    if (r.belt && !/no.?belt/i.test(r.belt) && r.bqty && +r.bqty > 0) {
+      const k = r.belt.toUpperCase();
+      belts[k] = (belts[k]||0) + +r.bqty;
+    }
+  });
+  return { filters, belts };
+}
+
+function renderParts() {
+  const recs = getRecords(session);
+  const el = document.getElementById('partsBody');
+  if (!recs.length) { el.innerHTML = '<div class="empty">Add units to see totals.</div>'; return; }
+  const { filters, belts } = calcParts(recs);
+  let html = '';
+
+  html += '<div class="ps"><div class="ps-hdr">Filters</div>';
+  const fk = Object.keys(filters);
+  if (fk.length) fk.forEach(k => html += `<div class="ps-row"><span class="ps-name">${k}</span><span class="ps-qty">${filters[k]}</span></div>`);
+  else html += '<div style="color:var(--text-mute);font-family:var(--mono);font-size:.72rem;padding:8px 0">No filter data.</div>';
+  html += '</div>';
+
+  html += '<div class="ps"><div class="ps-hdr">Belts</div>';
+  const bk = Object.keys(belts);
+  if (bk.length) bk.forEach(k => html += `<div class="ps-row"><span class="ps-name">${k}</span><span class="ps-qty">${belts[k]}</span></div>`);
+  else html += '<div style="color:var(--text-mute);font-family:var(--mono);font-size:.72rem;padding:8px 0">No belt data.</div>';
+  html += '</div>';
+
+  el.innerHTML = html;
+}
+
+// ── CSV export ─────────────────────────────────────────────────────────────
+const HEADERS = [
+  'Equipment #','EQUIPMENT NAME','Location','Make','Type',
+  'Model #','Serial #','Belt','Belt QTY','Filter(s)','Filter QTY',
+  '2nd Filter(s)','2nd Filter QTY','Change Filter (Y/N)','Change Belt (Y/N)',
+  'Unit Working Properly (Y/N)','Maintenance Complete (Y/N)',
+  'Date & Tech Initials','Notes'
+];
+
+function recToRow(r) {
+  return [
+    r.unit, r.name, r.loc, r.make, r.type, r.model, r.serial,
+    r.belt, r.bqty, r.fsize, r.fqty, r.f2size, r.f2qty,
+    r.fchg, r.bchg, r.working, r.done, r.date, r.notes
+  ].map(v => `"${(v||'').replace(/"/g,'""')}"`).join(',');
+}
+
+function doExportCSV() {
+  const recs = getRecords(session);
+  if (!recs.length) { toast('Nothing to export'); return; }
+  const csv = [HEADERS.map(h=>`"${h}"`).join(','), ...recs.map(recToRow)].join('\n');
+  download(session + '_data_' + today() + '.csv', csv, 'text/csv');
+}
+
+function doExportParts() {
+  const recs = getRecords(session);
+  if (!recs.length) { toast('Nothing to export'); return; }
+  const { filters, belts } = calcParts(recs);
+  let t = session + '\nParts List  ' + new Date().toLocaleDateString('en-US') + '\n\n';
+  t += 'FILTERS\n' + '-'.repeat(30) + '\n';
+  Object.entries(filters).forEach(([k,v]) => t += k.padEnd(22) + v + '\n');
+  t += '\nBELTS\n' + '-'.repeat(30) + '\n';
+  if (Object.keys(belts).length) Object.entries(belts).forEach(([k,v]) => t += k.padEnd(22) + v + '\n');
+  else t += 'none\n';
+  download(session + '_parts_' + today() + '.txt', t, 'text/plain');
+}
+
+function doNuke() {
+  const n = getRecords(session).length;
+  if (!n) { toast('No records'); return; }
+  if (!confirm('Delete all ' + n + ' records in this session?')) return;
+  saveRecords(session, []);
+  updateBadge();
+  toast('Records cleared');
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function download(fname, content, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], {type}));
+  a.download = fname;
+  a.click();
+  toast('Saved: ' + fname);
+}
+
+function today() { return new Date().toISOString().slice(0,10); }
+
+let _toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+renderGate();
+document.getElementById('gInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startSession();
+});
+</script>
+</body>
+</html>
