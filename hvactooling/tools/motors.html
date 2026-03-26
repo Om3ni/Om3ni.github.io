@@ -1342,20 +1342,20 @@ function getReportBlock(context) {
     if (cR && cM) lines.push(pad('Deviation:') + dv(+((cM - cR) / cR * 100).toFixed(1), '%'));
     lines.push('');
     lines.push('WINDINGS');
-    lines.push(pad('C — R:') + dv(fv('psc-w-cr'), 'Ω'));
-    lines.push(pad('C — S:') + dv(fv('psc-w-cs'), 'Ω'));
-    lines.push(pad('R — S:') + dv(fv('psc-w-rs'), 'Ω'));
+    lines.push(pad('C-R:') + dv(fv('psc-w-cr'), 'Ohm'));
+    lines.push(pad('C-S:') + dv(fv('psc-w-cs'), 'Ohm'));
+    lines.push(pad('R-S:') + dv(fv('psc-w-rs'), 'Ohm'));
     const wCR = fv('psc-w-cr'), wCS = fv('psc-w-cs'), wRS = fv('psc-w-rs');
     if (wCR && wCS && wRS) {
       const sum = wCR + wCS;
-      lines.push(pad('C-R + C-S:') + dv(sum, 'Ω', 2));
+      lines.push(pad('C-R + C-S:') + dv(sum, 'Ohm', 2));
       lines.push(pad('Deviation:') + dv(+(Math.abs(sum - wRS) / wRS * 100).toFixed(1), '%'));
     }
     lines.push('');
     lines.push('INSULATION');
     lines.push(pad('Test Voltage:') + dv(fv('psc-meg-v'),    'V', 0));
-    lines.push(pad('Reading:')      + dv(fv('psc-meg-now'),  'MΩ'));
-    if (fv('psc-meg-prev') !== null) lines.push(pad('Previous:') + dv(fv('psc-meg-prev'), 'MΩ'));
+    lines.push(pad('Reading:')      + dv(fv('psc-meg-now'),  'MOhm'));
+    if (fv('psc-meg-prev') !== null) lines.push(pad('Previous:') + dv(fv('psc-meg-prev'), 'MOhm'));
     const notes = sv('psc-notes');
     if (notes) { lines.push(''); lines.push('NOTES'); lines.push(notes); }
 
@@ -1390,16 +1390,16 @@ function getReportBlock(context) {
     if (vI !== null) lines.push(pad('Voltage Unbalance:') + dv(vI, '%', 2));
     lines.push('');
     lines.push('WINDINGS');
-    lines.push(pad('T1 — T2:') + dv(fv('tph-w-t1t2'), 'Ω'));
-    lines.push(pad('T2 — T3:') + dv(fv('tph-w-t2t3'), 'Ω'));
-    lines.push(pad('T1 — T3:') + dv(fv('tph-w-t1t3'), 'Ω'));
+    lines.push(pad('T1-T2:') + dv(fv('tph-w-t1t2'), 'Ohm'));
+    lines.push(pad('T2-T3:') + dv(fv('tph-w-t2t3'), 'Ohm'));
+    lines.push(pad('T1-T3:') + dv(fv('tph-w-t1t3'), 'Ohm'));
     const wd = maxDevPct([fv('tph-w-t1t2'), fv('tph-w-t2t3'), fv('tph-w-t1t3')]);
     if (wd !== null) lines.push(pad('Max Deviation:') + dv(wd, '%'));
     lines.push('');
     lines.push('INSULATION');
     lines.push(pad('Test Voltage:') + dv(fv('tph-meg-v'),    'V', 0));
-    lines.push(pad('Reading:')      + dv(fv('tph-meg-now'),  'MΩ'));
-    if (fv('tph-meg-prev') !== null) lines.push(pad('Previous:') + dv(fv('tph-meg-prev'), 'MΩ'));
+    lines.push(pad('Reading:')      + dv(fv('tph-meg-now'),  'MOhm'));
+    if (fv('tph-meg-prev') !== null) lines.push(pad('Previous:') + dv(fv('tph-meg-prev'), 'MOhm'));
     const notes = sv('tph-notes');
     if (notes) { lines.push(''); lines.push('NOTES'); lines.push(notes); }
 
@@ -1421,16 +1421,16 @@ function getReportBlock(context) {
     lines.push(pad('Insulation OK:')   + (document.querySelector('[data-chk="meg"]')?.checked  ? 'YES' : 'NO'));
     lines.push('');
     lines.push('WINDINGS');
-    lines.push(pad('T1 — T2:') + dv(fv('ecm-w-t1t2'), 'Ω'));
-    lines.push(pad('T2 — T3:') + dv(fv('ecm-w-t2t3'), 'Ω'));
-    lines.push(pad('T1 — T3:') + dv(fv('ecm-w-t1t3'), 'Ω'));
+    lines.push(pad('T1-T2:') + dv(fv('ecm-w-t1t2'), 'Ohm'));
+    lines.push(pad('T2-T3:') + dv(fv('ecm-w-t2t3'), 'Ohm'));
+    lines.push(pad('T1-T3:') + dv(fv('ecm-w-t1t3'), 'Ohm'));
     const wd = maxDevPct([fv('ecm-w-t1t2'), fv('ecm-w-t2t3'), fv('ecm-w-t1t3')]);
     if (wd !== null) lines.push(pad('Max Deviation:') + dv(wd, '%'));
     lines.push('');
     lines.push('INSULATION');
     lines.push(pad('Test Voltage:') + dv(fv('ecm-meg-v'),    'V', 0));
-    lines.push(pad('Reading:')      + dv(fv('ecm-meg-now'),  'MΩ'));
-    if (fv('ecm-meg-prev') !== null) lines.push(pad('Previous:') + dv(fv('ecm-meg-prev'), 'MΩ'));
+    lines.push(pad('Reading:')      + dv(fv('ecm-meg-now'),  'MOhm'));
+    if (fv('ecm-meg-prev') !== null) lines.push(pad('Previous:') + dv(fv('ecm-meg-prev'), 'MOhm'));
     const runV = fv('ecm-run-volts'), runA = fv('ecm-run-amps');
     if (runV || runA) {
       lines.push('');

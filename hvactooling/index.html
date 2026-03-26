@@ -1341,6 +1341,9 @@ function initModuleFrame(mid) {
       const doc = frame.contentDocument;
       const win = frame.contentWindow;
       win.HVAC_EMBEDDED = true;
+      // Propagate theme to iframe
+      const theme = localStorage.getItem(THEME_KEY) || 'dark';
+      doc.documentElement.setAttribute('data-theme', theme);
       // Hide module header and standalone bar
       const hdr = doc.querySelector('header');
       if (hdr) hdr.style.display = 'none';
@@ -1696,7 +1699,7 @@ function buildUnifiedReport(rec) {
   const motor = states.motors;
   if (motor) {
     lines.push('');
-    lines.push('MOTOR — ' + motor.type.toUpperCase());
+    lines.push('MOTOR - ' + motor.type.toUpperCase());
     const np = motor.nameplate;
     if (np) {
       lines.push('');
@@ -1839,7 +1842,7 @@ function buildUnifiedReport(rec) {
       }
     }
     if (watts !== null && watts > 0) {
-      const eer = +(capacity / (watts / 1000)).toFixed(1);
+      const eer = +(capacity / watts).toFixed(1);
       xm.push(pad('Actual EER:') + dv(eer, 'BTU/Wh'));
     }
   }
@@ -1886,6 +1889,8 @@ function openTool(name, title) {
   frame.onload = function() {
     try {
       const doc = frame.contentDocument;
+      // Propagate theme
+      doc.documentElement.setAttribute('data-theme', localStorage.getItem(THEME_KEY) || 'dark');
       // Hide module header (we have our own bar)
       const hdr = doc.querySelector('header');
       if (hdr) hdr.style.display = 'none';
@@ -1904,6 +1909,7 @@ function openCalc(name, title) {
   frame.onload = function() {
     try {
       const doc = frame.contentDocument;
+      doc.documentElement.setAttribute('data-theme', localStorage.getItem(THEME_KEY) || 'dark');
       const hdr = doc.querySelector('header');
       if (hdr) hdr.style.display = 'none';
     } catch(e) {}
@@ -1946,6 +1952,14 @@ function toggleTheme() {
   const next = current === 'dark' ? 'light' : 'dark';
   localStorage.setItem(THEME_KEY, next);
   applyTheme();
+  // Propagate to all loaded iframes
+  document.querySelectorAll('iframe').forEach(frame => {
+    try {
+      if (frame.contentDocument) {
+        frame.contentDocument.documentElement.setAttribute('data-theme', next);
+      }
+    } catch(e) {}
+  });
 }
 
 // ── License gate ──────────────────────────────────────────────────────────
