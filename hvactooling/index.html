@@ -7,6 +7,43 @@
 <link rel="stylesheet" href="base.css">
 <style>
 
+/* ── License gate ── */
+#license-gate {
+  position: fixed; inset: 0; z-index: 999;
+  background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px 20px;
+}
+.license-wrap {
+  width: 100%; max-width: 440px; display: flex; flex-direction: column;
+  max-height: 100%; overflow: hidden;
+}
+.license-brand {
+  font-family: var(--ui); font-size: 1.1rem; font-weight: 700;
+  letter-spacing: .3em; text-transform: uppercase; color: var(--orange);
+  margin-bottom: 4px; text-align: center;
+}
+.license-sub {
+  font-family: var(--mono); font-size: .68rem; color: var(--text-mute);
+  letter-spacing: .06em; margin-bottom: 20px; text-align: center;
+}
+.license-scroll {
+  flex: 1; overflow-y: auto; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 3px;
+  padding: 16px 18px; margin-bottom: 16px; min-height: 0;
+}
+.license-text {
+  font-family: var(--mono); font-size: .68rem; color: var(--text-dim);
+  line-height: 1.8; letter-spacing: .02em; white-space: pre-wrap;
+}
+.license-actions { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.license-actions .btn { margin: 0; }
+.license-contact {
+  font-family: var(--mono); font-size: .6rem; color: var(--text-mute);
+  text-align: center; margin-top: 12px; letter-spacing: .03em;
+}
+.license-contact a { color: var(--orange-lo); text-decoration: none; border-bottom: 1px solid var(--orange-lo); }
+
 /* ── Index-specific header ── */
 .owner-btn {
   background: none; border: 1px solid var(--border); border-radius: 3px;
@@ -271,10 +308,62 @@ textarea { resize: vertical; min-height: 72px; }
 </head>
 <body>
 
+<!-- ══ LICENSE GATE ══ -->
+<div id="license-gate">
+  <div class="license-wrap">
+    <div class="license-brand">HVAC Field Tools</div>
+    <div class="license-sub">License Agreement</div>
+    <div class="license-scroll">
+      <div class="license-text">HVAC Field Tools — Proprietary License
+
+Copyright (c) 2026 Om3ni. All rights reserved.
+
+GRANT OF USE
+
+This software is made available for use free of charge to individual HVAC/R technicians for personal field use. No registration or attribution is required.
+
+COMMERCIAL USE
+
+Use of this software for commercial gain — including but not limited to deployment within a company, integration into a commercial product or service, or use by employees of a commercial organization — requires a commercial license.
+
+Commercial licenses must be requested from and approved by the copyright holder prior to use.
+
+RESTRICTIONS
+
+This software, including all source code, design, user experience, and architecture, is the intellectual property of the copyright holder.
+
+You may NOT, without a commercial license:
+
+  - Use this software for commercial gain
+  - Copy, modify, or distribute the source code
+  - Deploy the source code internally within a commercial organization
+  - Create derivative works based on this software
+  - Reverse-engineer, decompile, or extract design patterns for use in competing products
+  - Remove or alter this license notice
+
+Public availability of source code on GitHub does not constitute a grant of rights beyond those explicitly stated above.
+
+DISCLAIMER
+
+This software is provided "as is" without warranty of any kind, express or implied. The copyright holder shall not be liable for any damages arising from the use of this software.</div>
+    </div>
+    <div class="license-actions" id="license-first">
+      <button class="btn btn-primary" onclick="acceptLicense()">I Accept</button>
+      <button class="btn btn-ghost" onclick="declineLicense()">Decline</button>
+    </div>
+    <div class="license-actions" id="license-return" style="display:none">
+      <button class="btn btn-ghost" onclick="document.getElementById('license-gate').style.display='none'">Close</button>
+    </div>
+    <div class="license-contact">
+      Commercial licensing: <a href="mailto:michaaar1981@gmail.com?subject=IP%20discussion%2FHVACtooling">michaaar1981@gmail.com</a>
+    </div>
+  </div>
+</div>
+
 <header>
   <div class="hdr-titles">
     <div class="hdr-title">Field Entry</div>
-    <div class="hdr-sub">Field Data · <a href="mailto:michaaar1981@gmail.com?subject=IP%20discussion%2FHVACtooling" style="color:var(--text-mute);text-decoration:none;border-bottom:1px solid var(--text-mute)">License</a></div>
+    <div class="hdr-sub">Field Data · <a href="#" onclick="showLicense();return false" style="color:var(--text-mute);text-decoration:none;border-bottom:1px solid var(--text-mute)">License</a></div>
   </div>
   <button class="owner-btn" id="ownerBtn" onclick="openOwnerModal()">owner</button>
   <div class="hdr-badge" id="hdrBadge">0</div>
@@ -551,6 +640,7 @@ textarea { resize: vertical; min-height: 72px; }
       CSV — columns match master spreadsheet, drop-in merge.<br>
       Parts — totals by filter size and belt number.
     </p>
+    <button class="btn btn-primary" onclick="doExportReport()">Generate Report</button>
     <button class="btn btn-export" onclick="doExportCSV()">Export CSV</button>
     <button class="btn btn-export" onclick="doExportParts()">Export Parts List</button>
     <hr class="sec" style="margin-top:24px;">
@@ -887,6 +977,7 @@ function addRecord() {
     date:     new Date().toLocaleDateString('en-US'),
     notes:    document.getElementById('f-notes').value.trim(),
     modules:  getModuleReports({ embedded: true }),
+    moduleStates: getModuleStates(),
   };
 
   const recs = getRecords();
@@ -1008,6 +1099,15 @@ function recToRow(r) {
   ].map(v => `"${(v||'').replace(/"/g,'""')}"`).join(',');
 }
 
+function doExportReport() {
+  const recs = getRecords();
+  if (!recs.length) { toast('No units to report'); return; }
+  const reports = recs.map(r => buildUnifiedReport(r));
+  const full = reports.join('\n\n' + '='.repeat(40) + '\n\n');
+  const jobName = document.getElementById('f-job').value.trim().replace(/\s+/g, '_') || 'report';
+  download(jobName + '_report_' + today() + '.txt', full, 'text/plain');
+}
+
 function doExportCSV() {
   const recs = getRecords();
   if (!recs.length) { toast('Nothing to export'); return; }
@@ -1078,6 +1178,8 @@ function addModule(name, title) {
 function removeModule(mid) {
   moduleSlots = moduleSlots.filter(m => m.id !== mid);
   renderModuleSlots();
+  // Fields may need to reappear in remaining modules
+  setTimeout(syncSharedFields, 300);
 }
 
 function renderModuleSlots() {
@@ -1108,12 +1210,118 @@ function renderModuleSlots() {
         if (bar) bar.style.display = 'none';
         // Auto-resize iframe to content
         resizeModuleFrame(frame);
-        // Re-resize on input (content may grow/shrink)
-        doc.addEventListener('input', () => resizeModuleFrame(frame));
-        doc.addEventListener('click', () => setTimeout(() => resizeModuleFrame(frame), 100));
+        // Sync shared fields across all modules
+        syncSharedFields();
+        // Re-resize and re-sync on input (content may grow/shrink, shared fields may change)
+        doc.addEventListener('input', () => { resizeModuleFrame(frame); syncSharedFields(); });
+        doc.addEventListener('click', () => setTimeout(() => { resizeModuleFrame(frame); syncSharedFields(); }, 100));
       } catch(e) { /* cross-origin safety */ }
     };
   });
+}
+
+// ── Shared field mapping: module → { field: [inputIds] }
+// These are the input IDs inside each module's iframe for shared fields
+const SHARED_FIELDS = {
+  heat: {
+    returnAir: ['g-return', 'e-return'],
+    supplyAir: ['g-supply', 'e-supply'],
+    // heat doesn't have ambient or cfm inputs — cfm is derived
+  },
+  airflow: {
+    returnAir: ['returnAir'],
+    supplyAir: ['supplyAir'],
+    cfm:       ['cfmInput'],
+    ambient:   ['ambient'],
+  },
+  refrigeration: {
+    returnAir: ['returnAir'],
+    supplyAir: ['supplyAir'],
+    ambient:   ['ambient'],
+    cfm:       ['cfm'],
+  }
+};
+
+// Which section labels/headers to also hide when all inputs in a group are hidden
+const SHARED_SECTIONS = {
+  refrigeration: {
+    // The "Airside — Optional" section header + container
+    returnAir: ['.sec:has(#returnAir)'],
+  }
+};
+
+function syncSharedFields() {
+  // Determine which fields are already filled by earlier modules
+  const owned = {}; // field → module name that owns it
+
+  for (const m of moduleSlots) {
+    if (!SHARED_FIELDS[m.name]) continue;
+    try {
+      const frame = document.getElementById('mod-frame-' + m.id);
+      if (!frame || !frame.contentWindow || !frame.contentWindow.getCalcState) continue;
+      const state = frame.contentWindow.getCalcState();
+      if (!state) continue;
+
+      for (const field of ['returnAir', 'supplyAir', 'dt', 'cfm', 'ambient']) {
+        if (state[field] !== null && state[field] !== undefined && !owned[field]) {
+          owned[field] = m.name;
+        }
+      }
+    } catch(e) {}
+  }
+
+  // Now hide inputs in downstream modules for fields already owned
+  for (const m of moduleSlots) {
+    if (!SHARED_FIELDS[m.name]) continue;
+    try {
+      const frame = document.getElementById('mod-frame-' + m.id);
+      if (!frame || !frame.contentDocument) continue;
+      const doc = frame.contentDocument;
+
+      for (const [field, inputIds] of Object.entries(SHARED_FIELDS[m.name])) {
+        const isOwned = owned[field] && owned[field] !== m.name;
+        for (const inputId of inputIds) {
+          const input = doc.getElementById(inputId);
+          if (!input) continue;
+          // Walk up to the nearest .fg, .input-pair parent div, or direct parent
+          const container = input.closest('.fg') || input.closest('.input-pair > div') || input.parentElement?.parentElement;
+          if (container) {
+            container.style.display = isOwned ? 'none' : '';
+          }
+        }
+      }
+
+      // Hide section headers/labels that become empty
+      // Check if the airside optional section in refrigeration should be hidden
+      if (m.name === 'refrigeration') {
+        const allAirsideOwned = owned.returnAir && owned.returnAir !== 'refrigeration' &&
+                                owned.supplyAir && owned.supplyAir !== 'refrigeration' &&
+                                owned.ambient && owned.ambient !== 'refrigeration' &&
+                                owned.cfm && owned.cfm !== 'refrigeration';
+        // Find the airside section by its label text
+        doc.querySelectorAll('.sec-lbl').forEach(lbl => {
+          if (lbl.textContent.includes('Optional') || lbl.textContent.includes('Airside')) {
+            const sec = lbl.closest('.sec');
+            if (sec) sec.style.display = allAirsideOwned ? 'none' : '';
+          }
+        });
+      }
+
+      // Hide temperature rise section in heat if return/supply owned upstream
+      if (m.name === 'heat') {
+        const tempOwned = owned.returnAir && owned.returnAir !== 'heat' &&
+                          owned.supplyAir && owned.supplyAir !== 'heat';
+        doc.querySelectorAll('.sec-lbl').forEach(lbl => {
+          if (lbl.textContent.includes('Temperature Rise')) {
+            const sec = lbl.closest('.sec');
+            if (sec) sec.style.display = tempOwned ? 'none' : '';
+          }
+        });
+      }
+
+      resizeModuleFrame(frame);
+    } catch(e) {}
+  }
 }
 
 function resizeModuleFrame(frame) {
@@ -1150,6 +1358,375 @@ function getModuleStates() {
     } catch(e) {}
   });
   return states;
+}
+
+// ── Unified report assembler ──────────────────────────────────────────────
+function buildUnifiedReport(rec) {
+  const states = rec.moduleStates || {};
+  const pad = (s, w = 24) => String(s).padEnd(w);
+  const dv  = (n, unit = '', dec = 1) => {
+    if (n === null || n === undefined) return '--';
+    return (dec === 0 ? Math.round(n) : n.toFixed(dec)) + (unit ? ' ' + unit : '');
+  };
+
+  const lines = [];
+
+  // ── Header
+  lines.push('FIELD SERVICE REPORT');
+  lines.push(rec.date + '  ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+  lines.push('');
+  if (rec.job)    lines.push(pad('Job #:')    + rec.job);
+  if (rec.unit)   lines.push(pad('Unit #:')   + rec.unit);
+  if (rec.name)   lines.push(pad('Equipment:') + rec.name);
+  if (rec.make)   lines.push(pad('Make:')     + rec.make);
+  if (rec.model)  lines.push(pad('Model:')    + rec.model);
+  if (rec.serial) lines.push(pad('Serial:')   + rec.serial);
+  if (rec.loc)    lines.push(pad('Location:') + rec.loc);
+  if (rec.type)   lines.push(pad('Type:')     + rec.type);
+
+  // ── Resolve shared fields — first module with data owns it
+  // Priority: heat → airflow → refrigeration
+  const shared = { returnAir: null, supplyAir: null, dt: null, cfm: null, ambient: null };
+  const sharedSource = {};
+
+  const resolveOrder = [
+    { key: 'heat',          state: states.heat },
+    { key: 'airflow',       state: states.airflow },
+    { key: 'refrigeration', state: states.refrigeration }
+  ];
+
+  for (const field of ['returnAir', 'supplyAir', 'dt', 'cfm', 'ambient']) {
+    for (const { key, state } of resolveOrder) {
+      if (state && state[field] !== null && state[field] !== undefined) {
+        shared[field] = state[field];
+        sharedSource[field] = key;
+        break;
+      }
+    }
+  }
+
+  // Helper: should this field be printed for this module?
+  function owns(moduleName, field) {
+    return sharedSource[field] === moduleName;
+  }
+
+  // ── PM fields
+  const hasPM = rec.fsize || rec.belt || rec.fchg || rec.bchg || rec.working || rec.done;
+  if (hasPM) {
+    lines.push('');
+    lines.push('PM STATUS');
+    if (rec.fsize)   lines.push(pad('Filter 1:')        + rec.fsize + (rec.fqty ? ' x' + rec.fqty : ''));
+    if (rec.f2size)  lines.push(pad('Filter 2:')        + rec.f2size + (rec.f2qty ? ' x' + rec.f2qty : ''));
+    if (rec.fchg)    lines.push(pad('Filters Changed:')  + rec.fchg);
+    if (rec.belt)    lines.push(pad('Belt:')             + rec.belt + (rec.bqty ? ' x' + rec.bqty : ''));
+    if (rec.bchg)    lines.push(pad('Belt Changed:')     + rec.bchg);
+    if (rec.working) lines.push(pad('Unit Operating:')   + rec.working);
+    if (rec.done)    lines.push(pad('PM Complete:')      + rec.done);
+  }
+
+  // Shared fields are printed in SYSTEM ANALYSIS section at the end
+
+  // ── Electrical section
+  const elec = states.electrical;
+  if (elec) {
+    lines.push('');
+    lines.push('ELECTRICAL');
+    lines.push(pad('Configuration:') + (elec.phase === 1 ? 'Single Phase' : 'Three Phase'));
+    if (elec.npV !== null)     lines.push(pad('Rated Voltage:')  + dv(elec.npV, 'V', 0));
+    if (elec.avgLL !== null)   lines.push(pad('Average L-L:')    + dv(elec.avgLL, 'V'));
+    if (elec.vDev !== null)    lines.push(pad('Deviation:')      + dv(elec.vDev, 'V'));
+    if (elec.vDevPct !== null) lines.push(pad('% Deviation:')    + dv(elec.vDevPct, '%'));
+    if (elec.vImbal !== null)  lines.push(pad('NEMA Unbalance:') + dv(elec.vImbal, '%', 2));
+
+    // Individual L-L readings
+    if (elec.ll_vals) {
+      const labels = elec.phase === 1 ? ['L1-L2'] : ['L1-L2', 'L2-L3', 'L1-L3'];
+      labels.forEach((lbl, i) => {
+        if (elec.ll_vals[i] !== null) lines.push(pad('  ' + lbl + ':') + dv(elec.ll_vals[i], 'V'));
+      });
+    }
+    if (elec.lg_vals) {
+      const labels = elec.phase === 1 ? ['L1-G', 'L2-G'] : ['L1-G', 'L2-G', 'L3-G'];
+      labels.forEach((lbl, i) => {
+        if (elec.lg_vals[i] !== null) lines.push(pad('  ' + lbl + ':') + dv(elec.lg_vals[i], 'V'));
+      });
+    }
+
+    // Transformers
+    if (elec.transformers && elec.transformers.length) {
+      elec.transformers.forEach(t => {
+        lines.push('');
+        lines.push(`TRANSFORMER ${t.num}`);
+        lines.push(`Primary (${t.priPhase}Ph)`);
+        const pll = t.priPhase === 1 ? ['L1-L2'] : ['L1-L2', 'L2-L3', 'L1-L3'];
+        pll.forEach((lbl, j) => { if (t.pri.ll[j] !== null) lines.push(pad('  ' + lbl + ':') + dv(t.pri.ll[j], 'V')); });
+        const plg = t.priPhase === 1 ? ['L1-G', 'L2-G'] : ['L1-G', 'L2-G', 'L3-G'];
+        plg.forEach((lbl, j) => { if (t.pri.lg[j] !== null) lines.push(pad('  ' + lbl + ':') + dv(t.pri.lg[j], 'V')); });
+        if (t.priAvgLL !== null) lines.push(pad('  Average L-L:') + dv(t.priAvgLL, 'V'));
+        if (t.priImbal !== null) lines.push(pad('  NEMA Unbalance:') + dv(t.priImbal, '%', 2));
+        lines.push(`Secondary (${t.secPhase}Ph)`);
+        const sll = t.secPhase === 1 ? ['L1-L2'] : ['L1-L2', 'L2-L3', 'L1-L3'];
+        sll.forEach((lbl, j) => { if (t.sec.ll[j] !== null) lines.push(pad('  ' + lbl + ':') + dv(t.sec.ll[j], 'V')); });
+        const slg = t.secPhase === 1 ? ['L1-G', 'L2-G'] : ['L1-G', 'L2-G', 'L3-G'];
+        slg.forEach((lbl, j) => { if (t.sec.lg[j] !== null) lines.push(pad('  ' + lbl + ':') + dv(t.sec.lg[j], 'V')); });
+        if (t.secAvgLL !== null) lines.push(pad('  Average L-L:') + dv(t.secAvgLL, 'V'));
+        if (t.secImbal !== null) lines.push(pad('  NEMA Unbalance:') + dv(t.secImbal, '%', 2));
+      });
+    }
+  }
+
+  // ── Heat section
+  const heat = states.heat;
+  if (heat) {
+    lines.push('');
+    lines.push(heat.type === 'gas' ? 'GAS HEAT' : 'ELECTRIC HEAT');
+    if (heat.type === 'gas') {
+      if (heat.btuIn !== null) lines.push(pad('BTU Input:')  + dv(heat.btuIn, 'BTU/h', 0));
+      if (heat.eff !== null)   lines.push(pad('Efficiency:') + dv(heat.eff, '%'));
+      if (heat.btuOut !== null) lines.push(pad('BTU Output:') + dv(heat.btuOut, 'BTU/h', 0));
+    } else {
+      lines.push(pad('Input Method:') + (heat.inputMethod === 'nameplate' ? 'Nameplate kW' : 'Measured'));
+      if (heat.volts !== null) lines.push(pad('Volts:') + dv(heat.volts, 'V'));
+      if (heat.amps !== null)  lines.push(pad('Amps:')  + dv(heat.amps, 'A'));
+      if (heat.watts !== null) lines.push(pad('Watts:') + dv(heat.watts, 'W', 0));
+      if (heat.kw !== null)    lines.push(pad('kW:')    + dv(heat.kw, 'kW', 2));
+      if (heat.btuOut !== null) lines.push(pad('BTU/h Output:') + dv(heat.btuOut, 'BTU/h', 0));
+    }
+    // Shared fields (return/supply/cfm) printed in SYSTEM ANALYSIS
+  }
+
+  // ── Refrigeration section
+  const refrig = states.refrigeration;
+  if (refrig) {
+    lines.push('');
+    lines.push('REFRIGERATION');
+    if (refrig.refrigerant)  lines.push(pad('Refrigerant:')  + refrig.refrigerant + (refrig.zeotropic ? ' (zeotropic)' : ''));
+    if (refrig.meteringDevice) lines.push(pad('Metering:') + (refrig.meteringDevice === 'txv' ? 'TXV / EEV' : 'Fixed Orifice'));
+    lines.push('');
+    lines.push('SUCTION');
+    if (refrig.suctionPressure !== null)  lines.push(pad('Pressure:')  + dv(refrig.suctionPressure, 'PSIG'));
+    if (refrig.suctionSatTemp !== null)   lines.push(pad('Sat Temp:')  + dv(refrig.suctionSatTemp, 'F') + (refrig.zeotropic ? ' (dew)' : ''));
+    if (refrig.suctionLineTemp !== null)  lines.push(pad('Line Temp:') + dv(refrig.suctionLineTemp, 'F'));
+    if (refrig.superheat !== null)        lines.push(pad('Superheat:') + dv(refrig.superheat, 'F'));
+    lines.push('');
+    lines.push('LIQUID');
+    if (refrig.liquidPressure !== null)   lines.push(pad('Pressure:')   + dv(refrig.liquidPressure, 'PSIG'));
+    if (refrig.liquidSatTemp !== null)    lines.push(pad('Sat Temp:')   + dv(refrig.liquidSatTemp, 'F') + (refrig.zeotropic ? ' (bubble)' : ''));
+    if (refrig.liquidLineTemp !== null)   lines.push(pad('Line Temp:')  + dv(refrig.liquidLineTemp, 'F'));
+    if (refrig.subcooling !== null)       lines.push(pad('Subcooling:') + dv(refrig.subcooling, 'F'));
+    lines.push('');
+    if (refrig.compressionRatio !== null) lines.push(pad('Compression Ratio:') + dv(refrig.compressionRatio, '', 2));
+    // Approach temps (may also appear in cross-module, but these are refrig-native)
+    if (refrig.evaporatorApproach !== null) lines.push(pad('Evap Approach:') + dv(refrig.evaporatorApproach, 'F'));
+    if (refrig.condenserApproach !== null)  lines.push(pad('Cond Approach:') + dv(refrig.condenserApproach, 'F'));
+  }
+
+  // ── Airflow section (only non-shared fields)
+  const air = states.airflow;
+  if (air) {
+    const hasUnique = air.sensible !== null || air.fpm !== null ||
+                      air.oaPct !== null || air.mixedAir !== null;
+    if (hasUnique) {
+      lines.push('');
+      lines.push('AIRFLOW');
+      if (air.sensible !== null) lines.push(pad('Sensible Heat:') + dv(air.sensible, 'BTU/h', 0));
+      if (air.cfmSource === 'fpm' && air.fpm !== null) {
+        lines.push(pad('FPM:')       + dv(air.fpm, '', 0));
+        if (air.ductW && air.ductH)  lines.push(pad('Duct Size:') + air.ductW + ' x ' + air.ductH + ' in');
+        if (air.ductArea)            lines.push(pad('Duct Area:') + dv(air.ductArea, 'ft2', 2));
+      }
+      if (air.mixedAir !== null || air.oaPct !== null) {
+        lines.push('');
+        lines.push('MIXED AIR');
+        if (air.mixedAir !== null) lines.push(pad('Mixed Air Temp:') + dv(air.mixedAir, 'F'));
+        if (air.oaPct !== null)    lines.push(pad('OA Percentage:')  + dv(air.oaPct, '%'));
+        if (air.oaCFM !== null)    lines.push(pad('OA CFM:')         + dv(air.oaCFM, '', 0));
+        if (air.raCFM !== null)    lines.push(pad('Return Air CFM:') + dv(air.raCFM, '', 0));
+      }
+    }
+  }
+
+  // ── Motors section
+  const motor = states.motors;
+  if (motor) {
+    lines.push('');
+    lines.push('MOTOR — ' + motor.type.toUpperCase());
+    const np = motor.nameplate;
+    if (np) {
+      lines.push('');
+      lines.push('NAMEPLATE');
+      if (np.voltage) lines.push(pad('Rated Voltage:')  + dv(np.voltage, 'V', 0));
+      if (np.hp)      lines.push(pad('Horsepower:')     + dv(np.hp, 'HP'));
+      if (np.fla)     lines.push(pad('Full Load Amps:') + dv(np.fla, 'A'));
+      if (np.sf)      lines.push(pad('Service Factor:') + dv(np.sf, '', 2));
+      if (np.moduleModel) lines.push(pad('Module Model:') + np.moduleModel);
+    }
+    const run = motor.running;
+    if (run) {
+      if (motor.type === 'three-phase') {
+        if (run.amps && run.amps.some(a => a !== null)) {
+          lines.push('');
+          lines.push('RUNNING AMPS');
+          ['L1', 'L2', 'L3'].forEach((lbl, i) => {
+            if (run.amps[i] !== null) lines.push(pad(lbl + ':') + dv(run.amps[i], 'A'));
+          });
+          if (run.avgAmps !== null) lines.push(pad('Average:') + dv(run.avgAmps, 'A'));
+          if (run.ampImbalPct !== null) lines.push(pad('Current Imbalance:') + dv(run.ampImbalPct, '%', 2));
+        }
+        if (run.volts && run.volts.some(v => v !== null)) {
+          lines.push('');
+          lines.push('MOTOR VOLTAGE');
+          ['L1-L2', 'L2-L3', 'L1-L3'].forEach((lbl, i) => {
+            if (run.volts[i] !== null) lines.push(pad(lbl + ':') + dv(run.volts[i], 'V'));
+          });
+          if (run.avgVolts !== null) lines.push(pad('Average L-L:') + dv(run.avgVolts, 'V'));
+          if (run.voltageImbalPct !== null) lines.push(pad('Voltage Unbalance:') + dv(run.voltageImbalPct, '%', 2));
+        }
+      } else {
+        const hasRun = run.voltage !== null || run.amps !== null;
+        if (hasRun) {
+          lines.push('');
+          lines.push('RUNNING');
+          if (run.voltage !== null) lines.push(pad('Supply Voltage:') + dv(run.voltage, 'V'));
+          if (run.amps !== null)    lines.push(pad('Running Amps:')   + dv(run.amps, 'A'));
+        }
+      }
+      if (run.pctFLA !== null) lines.push(pad('% of FLA:') + dv(run.pctFLA, '%'));
+      if (run.sfCeiling !== null) lines.push(pad('SF Ceiling:') + dv(run.sfCeiling, 'A'));
+    }
+    const cap = motor.capacitor;
+    if (cap && (cap.rated !== null || cap.measured !== null)) {
+      lines.push('');
+      lines.push('CAPACITOR');
+      if (cap.rated !== null)        lines.push(pad('Rated:')     + dv(cap.rated, 'MFD'));
+      if (cap.measured !== null)     lines.push(pad('Measured:')  + dv(cap.measured, 'MFD'));
+      if (cap.deviationPct !== null) lines.push(pad('Deviation:') + dv(cap.deviationPct, '%'));
+    }
+    const wind = motor.windings;
+    if (wind) {
+      const hasWind = wind.cr !== undefined
+        ? (wind.cr !== null || wind.cs !== null || wind.rs !== null)
+        : (wind.values && wind.values.some(w => w !== null));
+      if (hasWind) {
+        lines.push('');
+        lines.push('WINDINGS');
+        if (wind.cr !== undefined) {
+          // PSC windings
+          if (wind.cr !== null) lines.push(pad('C - R:') + dv(wind.cr, 'Ohm'));
+          if (wind.cs !== null) lines.push(pad('C - S:') + dv(wind.cs, 'Ohm'));
+          if (wind.rs !== null) lines.push(pad('R - S:') + dv(wind.rs, 'Ohm'));
+          if (wind.sum !== null) lines.push(pad('C-R + C-S:') + dv(wind.sum, 'Ohm', 2));
+          if (wind.deviationPct !== null) lines.push(pad('Deviation:') + dv(wind.deviationPct, '%'));
+        } else if (wind.values) {
+          // 3-phase / ECM windings
+          ['T1-T2', 'T2-T3', 'T1-T3'].forEach((lbl, i) => {
+            if (wind.values[i] !== null) lines.push(pad(lbl + ':') + dv(wind.values[i], 'Ohm'));
+          });
+          if (wind.maxDeviationPct !== null) lines.push(pad('Max Deviation:') + dv(wind.maxDeviationPct, '%'));
+        }
+      }
+    }
+    const ins = motor.insulation;
+    if (ins && ins.reading !== null) {
+      lines.push('');
+      lines.push('INSULATION');
+      if (ins.testVoltage !== null) lines.push(pad('Test Voltage:') + dv(ins.testVoltage, 'V', 0));
+      lines.push(pad('Reading:') + dv(ins.reading, 'MOhm'));
+      if (ins.previous !== null)   lines.push(pad('Previous:') + dv(ins.previous, 'MOhm'));
+    }
+    if (motor.checklist) {
+      const cl = motor.checklist;
+      const anyChecked = cl.highVoltage || cl.controlSignal || cl.windingsOk || cl.connectionsOk || cl.insulationOk;
+      if (anyChecked) {
+        lines.push('');
+        lines.push('ECM CHECKLIST');
+        lines.push(pad('High Voltage:')   + (cl.highVoltage   ? 'YES' : 'NO'));
+        lines.push(pad('Control Signal:') + (cl.controlSignal ? 'YES' : 'NO'));
+        lines.push(pad('Windings OK:')    + (cl.windingsOk    ? 'YES' : 'NO'));
+        lines.push(pad('Connections OK:') + (cl.connectionsOk ? 'YES' : 'NO'));
+        lines.push(pad('Insulation OK:')  + (cl.insulationOk  ? 'YES' : 'NO'));
+      }
+    }
+    if (motor.notes) {
+      lines.push('');
+      lines.push('MOTOR NOTES');
+      lines.push(motor.notes);
+    }
+  }
+
+  // ── System analysis — shared fields + cross-module metrics
+  const xm = [];
+
+  // Shared environmental readings
+  if (shared.returnAir !== null) xm.push(pad('Return Air:')      + dv(shared.returnAir, 'F'));
+  if (shared.supplyAir !== null) xm.push(pad('Supply Air:')      + dv(shared.supplyAir, 'F'));
+  if (shared.dt !== null)        xm.push(pad('Delta T:')         + dv(shared.dt, 'F'));
+  if (shared.ambient !== null)   xm.push(pad('Outdoor Ambient:') + dv(shared.ambient, 'F'));
+  if (shared.cfm !== null)       xm.push(pad('CFM:')             + dv(shared.cfm, '', 0));
+
+  // Evaporator approach (cross-validated: return air from any source + suction sat from refrig)
+  if (shared.returnAir !== null && refrig && refrig.suctionSatTemp !== null) {
+    const evapApp = +(shared.returnAir - refrig.suctionSatTemp).toFixed(1);
+    xm.push(pad('Evap Approach:') + dv(evapApp, 'F') + '  (return - suction sat)');
+  }
+
+  // Condenser approach (liquid sat from refrig + ambient from any source)
+  if (shared.ambient !== null && refrig && refrig.liquidSatTemp !== null) {
+    const condApp = +(refrig.liquidSatTemp - shared.ambient).toFixed(1);
+    xm.push(pad('Cond Approach:') + dv(condApp, 'F') + '  (liquid sat - ambient)');
+  }
+
+  // Actual cooling capacity
+  if (shared.cfm !== null && shared.dt !== null && shared.dt > 0) {
+    const capacity = Math.round(1.08 * shared.cfm * shared.dt);
+    const tons = +(capacity / 12000).toFixed(2);
+    xm.push(pad('Cooling Capacity:') + dv(capacity, 'BTU/h', 0));
+    xm.push(pad('Cooling Tons:') + dv(tons, 'tons', 2));
+
+    // EER — need watts from motor or electrical
+    let watts = null;
+    if (motor && motor.running) {
+      if (motor.type === 'three-phase' && motor.running.avgAmps !== null && motor.running.avgVolts !== null) {
+        watts = motor.running.avgVolts * motor.running.avgAmps * 1.732;
+      } else if (motor.running.voltage !== null && motor.running.amps !== null) {
+        watts = motor.running.voltage * motor.running.amps;
+      }
+    }
+    if (watts !== null && watts > 0) {
+      const eer = +(capacity / (watts / 1000)).toFixed(1);
+      xm.push(pad('Actual EER:') + dv(eer, 'BTU/Wh'));
+    }
+  }
+
+  // Voltage drop: supply vs motor
+  if (elec && elec.avgLL !== null && motor && motor.running) {
+    let motorVolts = null;
+    if (motor.type === 'three-phase' && motor.running.avgVolts !== null) {
+      motorVolts = motor.running.avgVolts;
+    } else if (motor.running.voltage !== null) {
+      motorVolts = motor.running.voltage;
+    }
+    if (motorVolts !== null) {
+      const vDrop = +(elec.avgLL - motorVolts).toFixed(1);
+      const vDropPct = +(vDrop / elec.avgLL * 100).toFixed(1);
+      xm.push(pad('Voltage Drop:') + dv(vDrop, 'V') + '  (' + dv(vDropPct, '%') + ')');
+    }
+  }
+
+  if (xm.length > 0) {
+    lines.push('');
+    lines.push('SYSTEM ANALYSIS');
+    xm.forEach(l => lines.push(l));
+  }
+
+  // ── Notes
+  if (rec.notes) {
+    lines.push('');
+    lines.push('NOTES');
+    lines.push(rec.notes);
+  }
+
+  return lines.join('\n');
 }
 
 // ── Tool launcher ────────────────────────────────────────────────────────
@@ -1196,7 +1773,33 @@ function getToolReportBlock(context) {
   return null;
 }
 
+// ── License gate ──────────────────────────────────────────────────────────
+const LICENSE_KEY = 'sl_license_accepted';
+
+function checkLicense() {
+  if (localStorage.getItem(LICENSE_KEY)) {
+    document.getElementById('license-gate').style.display = 'none';
+  }
+}
+
+function acceptLicense() {
+  localStorage.setItem(LICENSE_KEY, Date.now());
+  document.getElementById('license-gate').style.display = 'none';
+}
+
+function declineLicense() {
+  document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:var(--mono);color:var(--text-mute);font-size:.8rem;text-align:center;padding:20px;">License declined. Close this tab to exit.</div>';
+}
+
+function showLicense() {
+  const accepted = !!localStorage.getItem(LICENSE_KEY);
+  document.getElementById('license-first').style.display  = accepted ? 'none' : 'flex';
+  document.getElementById('license-return').style.display = accepted ? 'flex' : 'none';
+  document.getElementById('license-gate').style.display = 'flex';
+}
+
 // ── Boot ───────────────────────────────────────────────────────────────────
+checkLicense();
 updateBadge();
 updateOwnerUI();
 if (isOwner()) syncModelIndex();
