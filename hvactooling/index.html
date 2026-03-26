@@ -1306,52 +1306,58 @@ function addModule(name, title) {
   const mid = moduleId;
   moduleSlots.push({ id: mid, name, title });
   document.getElementById('module-picker').classList.remove('open');
-  renderModuleSlots();
+  appendModuleSlot(mid, name, title);
 }
 
 function removeModule(mid) {
   moduleSlots = moduleSlots.filter(m => m.id !== mid);
-  renderModuleSlots();
+  const slot = document.getElementById('mod-slot-' + mid);
+  if (slot) slot.remove();
   // Fields may need to reappear in remaining modules
   setTimeout(syncSharedFields, 300);
 }
 
-function renderModuleSlots() {
+function appendModuleSlot(mid, name, title) {
   const list = document.getElementById('module-list');
-  list.innerHTML = moduleSlots.map(m => `
-    <div class="module-slot" id="mod-slot-${m.id}">
-      <div class="module-slot-hdr">
-        <span class="module-slot-title">${m.title}</span>
-        <button class="module-slot-del" onclick="removeModule(${m.id})">&#10005;</button>
-      </div>
-      <iframe id="mod-frame-${m.id}" src="tools/${m.name}.html"></iframe>
+  const div = document.createElement('div');
+  div.className = 'module-slot';
+  div.id = 'mod-slot-' + mid;
+  div.innerHTML = `
+    <div class="module-slot-hdr">
+      <span class="module-slot-title">${title}</span>
+      <button class="module-slot-del" onclick="removeModule(${mid})">&#10005;</button>
     </div>
-  `).join('');
+    <iframe id="mod-frame-${mid}" src="tools/${name}.html"></iframe>
+  `;
+  list.appendChild(div);
+  initModuleFrame(mid);
+}
 
-  // Wait for each iframe to load, then set embedded mode and auto-resize
-  moduleSlots.forEach(m => {
-    const frame = document.getElementById('mod-frame-' + m.id);
-    if (!frame) return;
-    frame.onload = function() {
-      try {
-        const doc = frame.contentDocument;
-        const win = frame.contentWindow;
-        win.HVAC_EMBEDDED = true;
-        // Hide module header and standalone bar
-        const hdr = doc.querySelector('header');
-        if (hdr) hdr.style.display = 'none';
-        const bar = doc.getElementById('standaloneBar');
-        if (bar) bar.style.display = 'none';
-        // Auto-resize iframe to content
-        resizeModuleFrame(frame);
-        // Sync shared fields across all modules
-        syncSharedFields();
-        // Re-resize and re-sync on input (content may grow/shrink, shared fields may change)
-        doc.addEventListener('input', () => { resizeModuleFrame(frame); syncSharedFields(); });
-        doc.addEventListener('click', () => setTimeout(() => { resizeModuleFrame(frame); syncSharedFields(); }, 100));
-      } catch(e) { /* cross-origin safety */ }
-    };
-  });
+function initModuleFrame(mid) {
+  const frame = document.getElementById('mod-frame-' + mid);
+  if (!frame) return;
+  frame.onload = function() {
+    try {
+      const doc = frame.contentDocument;
+      const win = frame.contentWindow;
+      win.HVAC_EMBEDDED = true;
+      // Hide module header and standalone bar
+      const hdr = doc.querySelector('header');
+      if (hdr) hdr.style.display = 'none';
+      const bar = doc.getElementById('standaloneBar');
+      if (bar) bar.style.display = 'none';
+      // Fix sticky positioning — header is hidden so tabs/content shouldn't offset
+      const tabs = doc.querySelector('.tabs');
+      if (tabs) { tabs.style.top = '0'; tabs.style.position = 'relative'; }
+      // Auto-resize iframe to content
+      resizeModuleFrame(frame);
+      // Sync shared fields across all modules
+      syncSharedFields();
+      // Re-resize and re-sync on input
+      doc.addEventListener('input', () => { resizeModuleFrame(frame); syncSharedFields(); });
+      doc.addEventListener('click', () => setTimeout(() => { resizeModuleFrame(frame); syncSharedFields(); }, 100));
+    } catch(e) { /* cross-origin safety */ }
+  };
 }
 
 // ── Shared field mapping: module → { field: [inputIds] }
