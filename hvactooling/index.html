@@ -1400,8 +1400,9 @@ const SHARED_SECTIONS = {
 };
 
 function syncSharedFields() {
-  // Determine which fields are already filled by earlier modules
-  const owned = {}; // field → module name that owns it
+  // Pass 1: collect values and ownership from all modules in order
+  const owned = {};      // field → { module name, module id }
+  const values = {};     // field → value
 
   for (const m of moduleSlots) {
     if (!SHARED_FIELDS[m.name]) continue;
@@ -1413,41 +1414,61 @@ function syncSharedFields() {
 
       for (const field of ['returnAir', 'supplyAir', 'dt', 'cfm', 'ambient']) {
         if (state[field] !== null && state[field] !== undefined && !owned[field]) {
-          owned[field] = m.name;
+          owned[field] = { name: m.name, id: m.id };
+          values[field] = state[field];
         }
       }
     } catch(e) {}
   }
 
-  // Now hide inputs in downstream modules for fields already owned
+  // Pass 2: hide downstream inputs, inject values, trigger recalc
   for (const m of moduleSlots) {
     if (!SHARED_FIELDS[m.name]) continue;
     try {
       const frame = document.getElementById('mod-frame-' + m.id);
       if (!frame || !frame.contentDocument) continue;
       const doc = frame.contentDocument;
+      let needsRecalc = false;
 
       for (const [field, inputIds] of Object.entries(SHARED_FIELDS[m.name])) {
-        const isOwned = owned[field] && owned[field] !== m.name;
+        const isOwned = owned[field] && owned[field].name !== m.name;
         for (const inputId of inputIds) {
           const input = doc.getElementById(inputId);
           if (!input) continue;
-          // Walk up to the nearest .fg, .input-pair parent div, or direct parent
+
+          // Hide/show container
           const container = input.closest('.fg') || input.closest('.input-pair > div') || input.parentElement?.parentElement;
           if (container) {
             container.style.display = isOwned ? 'none' : '';
           }
+
+          // Inject value into hidden input so module's native calcs work
+          if (isOwned && values[field] !== undefined) {
+            const newVal = String(values[field]);
+            if (input.value !== newVal) {
+              input.value = newVal;
+              needsRecalc = true;
+            }
+          }
         }
       }
 
-      // Hide section headers/labels that become empty
-      // Check if the airside optional section in refrigeration should be hidden
+      // Trigger the module's recalc if we injected values
+      if (needsRecalc) {
+        try {
+          const win = frame.contentWindow;
+          if (win.recalc) win.recalc();
+          else if (win.calcGas) win.calcGas();
+          else if (win.calcElec) win.calcElec();
+        } catch(e) {}
+      }
+
+      // Hide section headers that become empty
       if (m.name === 'refrigeration') {
-        const allAirsideOwned = owned.returnAir && owned.returnAir !== 'refrigeration' &&
-                                owned.supplyAir && owned.supplyAir !== 'refrigeration' &&
-                                owned.ambient && owned.ambient !== 'refrigeration' &&
-                                owned.cfm && owned.cfm !== 'refrigeration';
-        // Find the airside section by its label text
+        const allAirsideOwned = owned.returnAir && owned.returnAir.name !== 'refrigeration' &&
+                                owned.supplyAir && owned.supplyAir.name !== 'refrigeration' &&
+                                owned.ambient && owned.ambient.name !== 'refrigeration' &&
+                                owned.cfm && owned.cfm.name !== 'refrigeration';
         doc.querySelectorAll('.sec-lbl').forEach(lbl => {
           if (lbl.textContent.includes('Optional') || lbl.textContent.includes('Airside')) {
             const sec = lbl.closest('.sec');
@@ -1456,10 +1477,9 @@ function syncSharedFields() {
         });
       }
 
-      // Hide temperature rise section in heat if return/supply owned upstream
       if (m.name === 'heat') {
-        const tempOwned = owned.returnAir && owned.returnAir !== 'heat' &&
-                          owned.supplyAir && owned.supplyAir !== 'heat';
+        const tempOwned = owned.returnAir && owned.returnAir.name !== 'heat' &&
+                          owned.supplyAir && owned.supplyAir.name !== 'heat';
         doc.querySelectorAll('.sec-lbl').forEach(lbl => {
           if (lbl.textContent.includes('Temperature Rise')) {
             const sec = lbl.closest('.sec');
