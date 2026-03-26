@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Electrical Analysis · HVAC Tools</title>
+<link rel="stylesheet" href="../base.css">
+<style>
+/* ── Electrical-specific styles ── */
+
+/* Transformer blocks */
+.xfmr-block {
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--orange-lo);
+  border-radius: 3px; padding: 12px; margin-bottom: 10px;
+}
+.xfmr-hdr {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+}
+.xfmr-title { font-size: .72rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--orange-hi); }
+.xfmr-del { background: none; border: none; color: var(--text-mute); font-size: 1rem; cursor: pointer; padding: 2px 6px; }
+.xfmr-del:active { color: var(--red-hi); }
+
+/* Xfmr phase mini-selector */
+.xfmr-phase-row { display: flex; gap: 5px; margin-bottom: 10px; }
+.xfmr-phase-btn {
+  flex: 1; padding: 7px; border-radius: 3px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text-mute);
+  font-family: var(--mono); font-size: .68rem; letter-spacing: .04em;
+  cursor: pointer; text-align: center; transition: all .1s;
+}
+.xfmr-phase-btn.active { background: var(--orange-dim); border-color: var(--orange-lo); color: var(--orange-hi); }
+
+.xfmr-side-lbl {
+  font-size: .62rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--text-mute); margin-bottom: 6px; margin-top: 8px;
+}
+.xfmr-opt-lbl {
+  font-size: .6rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--text-mute); margin-bottom: 5px; margin-top: 8px; opacity: .7;
+}
+
+/* Transformer panel layout */
+.xfmr-panel {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 3px; padding: 10px;
+}
+.xfmr-panel + .xfmr-panel { margin-top: 10px; }
+.xfmr-panel-hdr {
+  font-size: .62rem; font-weight: 700; letter-spacing: .22em;
+  text-transform: uppercase; color: var(--orange-lo);
+  border-bottom: 1px solid var(--border); margin-bottom: 8px; padding-bottom: 6px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.xfmr-panel-hdr-hint {
+  font-family: var(--mono); font-size: .6rem; color: var(--text-mute);
+  letter-spacing: .02em; text-transform: none; font-weight: 400;
+}
+.xfmr-results-inline {
+  margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.result-sec-hdr-pri { padding-top: 4px; }
+.result-sec-hdr-sec { padding-top: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="hdr-back" href="../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Electrical Analysis</div>
+    <div class="hdr-sub">Supply Voltage · Phase Imbalance · Transformers</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- SUPPLY PHASE -->
+  <label class="fl">Supply Configuration</label>
+  <div class="phase-grid">
+    <button class="phase-btn active" data-phase="1">Single Phase</button>
+    <button class="phase-btn" data-phase="3">Three Phase</button>
+  </div>
+
+  <!-- NAMEPLATE -->
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Nameplate</div>
+    <div class="fg">
+      <label class="fl" for="np-voltage">Rated Voltage</label>
+      <div class="iw">
+        <input type="number" id="np-voltage" inputmode="decimal" placeholder="208" step="1">
+        <span class="iw-unit">V</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPPLY VOLTAGE -->
+  <div class="sec">
+    <div class="sec-lbl">Supply Voltage — Line to Line</div>
+
+    <!-- Single phase L-L -->
+    <div id="v1-ll">
+      <div class="fg">
+        <label class="fl" for="s-l1l2">L1 — L2</label>
+        <div class="iw">
+          <input type="number" id="s-l1l2" inputmode="decimal" placeholder="--" step="0.1">
+          <span class="iw-unit">V</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Three phase L-L -->
+    <div id="v3-ll" style="display:none">
+      <div class="input-trio">
+        <div>
+          <label class="fl" for="t-l1l2">L1 — L2</label>
+          <div class="iw">
+            <input type="number" id="t-l1l2" inputmode="decimal" placeholder="--" step="0.1">
+            <span class="iw-unit">V</span>
+          </div>
+        </div>
+        <div>
+          <label class="fl" for="t-l2l3">L2 — L3</label>
+          <div class="iw">
+            <input type="number" id="t-l2l3" inputmode="decimal" placeholder="--" step="0.1">
+            <span class="iw-unit">V</span>
+          </div>
+        </div>
+        <div>
+          <label class="fl" for="t-l1l3">L1 — L3</label>
+          <div class="iw">
+            <input type="number" id="t-l1l3" inputmode="decimal" placeholder="--" step="0.1">
+            <span class="iw-unit">V</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="readout">
+      <span class="readout-lbl">Average L-L</span>
+      <span class="readout-val" id="avg-ll-disp">--</span>
+    </div>
+
+    <!-- L-G optional -->
+    <div class="optional-lbl">Line to Ground — Optional</div>
+
+    <!-- Single phase L-G -->
+    <div id="v1-lg">
+      <div class="input-pair">
+        <div>
+          <label class="fl" for="s-l1g">L1 — G</label>
+          <div class="iw">
+            <input type="number" id="s-l1g" inputmode="decimal" placeholder="--" step="0.1">
+            <span class="iw-unit">V</span>
+          </div>
+        </div>
+        <div>
+          <label class="fl" for="s-l2g">L2 — G</label>
+          <div class="iw">
+            <input type="number" id="s-l2g" inputmode="decimal" placeholder="--" step="0.1">
+            <span class="iw-unit">V</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Three phase L-G -->
+    <div id="v3-lg" style="display:none">
+      <div class="input-trio">
+        <div>
+          <label class="fl" for="t-l1g">L1 — G</label>
+          <div class="iw">
+            <input type="number" id="t-l1g" inputmode="decimal" placeholder="--" step="0.1">
+            <span class="iw-unit">V</span>
+          </div>
+        </div>
+        <div>
+          <label class="fl" for="t-l2g">L2 — G</label>
+          <div class="iw">
+            <input type="number" id="t-l2g" inputmode="decimal" placeholder="--" step="0.1">
+            <span class="iw-unit">V</span>
+          </div>
+        </div>
+        <div>
+          <label class="fl" for="t-l3g">L3 — G</label>
+          <div class="iw">
+            <input type="number" id="t-l3g" inputmode="decimal" placeholder="--" step="0.1">
+            <span class="iw-unit">V</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TRANSFORMERS -->
+  <div class="sec">
+    <div class="sec-lbl">Transformers</div>
+    <div id="xfmr-list"></div>
+    <button class="btn-add" id="add-xfmr-btn">+ Add Transformer</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results">
+
+    <div class="result-sec-hdr">Nameplate</div>
+    <div class="result-row dim" id="r-npv">
+      <div class="rr-left"><span class="rr-label">Rated Voltage</span></div>
+      <span class="rr-val" id="rv-npv">--</span>
+    </div>
+
+    <div class="result-sec-hdr">Supply Voltage</div>
+
+    <!-- Single phase results -->
+    <div id="res-1ph">
+      <div class="result-row dim" id="r-s-l1l2">
+        <div class="rr-left"><span class="rr-label">L1 — L2</span></div>
+        <span class="rr-val" id="rv-s-l1l2">--</span>
+      </div>
+      <div class="result-row dim" id="r-s-l1g" style="display:none">
+        <div class="rr-left"><span class="rr-label">L1 — G</span></div>
+        <span class="rr-val" id="rv-s-l1g">--</span>
+      </div>
+      <div class="result-row dim" id="r-s-l2g" style="display:none">
+        <div class="rr-left"><span class="rr-label">L2 — G</span></div>
+        <span class="rr-val" id="rv-s-l2g">--</span>
+      </div>
+    </div>
+
+    <!-- Three phase results -->
+    <div id="res-3ph" style="display:none">
+      <div class="result-row dim" id="r-t-l1l2">
+        <div class="rr-left"><span class="rr-label">L1 — L2</span></div>
+        <span class="rr-val" id="rv-t-l1l2">--</span>
+      </div>
+      <div class="result-row dim" id="r-t-l2l3">
+        <div class="rr-left"><span class="rr-label">L2 — L3</span></div>
+        <span class="rr-val" id="rv-t-l2l3">--</span>
+      </div>
+      <div class="result-row dim" id="r-t-l1l3">
+        <div class="rr-left"><span class="rr-label">L1 — L3</span></div>
+        <span class="rr-val" id="rv-t-l1l3">--</span>
+      </div>
+      <div class="result-row dim" id="r-t-l1g" style="display:none">
+        <div class="rr-left"><span class="rr-label">L1 — G</span></div>
+        <span class="rr-val" id="rv-t-l1g">--</span>
+      </div>
+      <div class="result-row dim" id="r-t-l2g" style="display:none">
+        <div class="rr-left"><span class="rr-label">L2 — G</span></div>
+        <span class="rr-val" id="rv-t-l2g">--</span>
+      </div>
+      <div class="result-row dim" id="r-t-l3g" style="display:none">
+        <div class="rr-left"><span class="rr-label">L3 — G</span></div>
+        <span class="rr-val" id="rv-t-l3g">--</span>
+      </div>
+      <div class="result-row dim" id="r-t-imbal" style="display:none">
+        <div class="rr-left">
+          <span class="rr-label">NEMA Voltage Unbalance</span>
+          <span class="rr-sub">Max deviation from avg / avg (L-L)</span>
+        </div>
+        <span class="rr-val" id="rv-t-imbal">--</span>
+      </div>
+    </div>
+
+    <div class="result-row dim" id="r-avgll">
+      <div class="rr-left"><span class="rr-label">Average L-L</span></div>
+      <span class="rr-val" id="rv-avgll">--</span>
+    </div>
+    <div class="result-row dim" id="r-vdev">
+      <div class="rr-left">
+        <span class="rr-label">Deviation from Rated</span>
+        <span class="rr-sub">Average L-L vs Nameplate</span>
+      </div>
+      <span class="rr-val" id="rv-vdev">--</span>
+    </div>
+    <div class="result-row dim" id="r-vdev-pct">
+      <div class="rr-left">
+        <span class="rr-label">% Deviation from Rated</span>
+        <span class="rr-sub">Average L-L vs Nameplate</span>
+      </div>
+      <span class="rr-val" id="rv-vdev-pct">--</span>
+    </div>
+
+  </div>
+
+</main>
+
+<div id="standaloneBar">
+  <button class="btn btn-ghost" id="open-report-btn">Export Report</button>
+</div>
+
+<div class="modal-overlay" id="reportOverlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">Electrical Report</span>
+      <button class="modal-close" id="close-report-btn">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <pre class="report-pre" id="reportText"></pre>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="copy-report-btn">Copy</button>
+      <button class="btn btn-primary" id="download-report-btn">Save .txt</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+
+// ── State
+let phase        = 1;
+let transformers = [];
+let xfmrCount    = 0;
+
+// ── Helpers
+function fv(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const n = parseFloat(el.value);
+  return isNaN(n) ? null : n;
+}
+
+function d(n, unit = '', dec = 1) {
+  return n === null ? '--' : n.toFixed(dec) + (unit ? ' ' + unit : '');
+}
+
+function avg(arr) {
+  const f = arr.filter(x => x !== null);
+  return f.length ? f.reduce((a, b) => a + b, 0) / f.length : null;
+}
+
+function imbal(arr) {
+  const f = arr.filter(x => x !== null);
+  if (f.length < 2) return null;
+  const a = avg(f);
+  if (!a) return null;
+  const maxDev = Math.max(...f.map(x => Math.abs(x - a)));
+  return +(maxDev / a * 100).toFixed(2);
+}
+
+function setRow(rowId, valId, value, unit, dec = 1, show = true) {
+  const row = document.getElementById(rowId);
+  const val = document.getElementById(valId);
+  if (!row || !val) return;
+  if (!show) { row.style.display = 'none'; return; }
+  row.style.display = '';
+  if (value === null) {
+    row.className = 'result-row dim';
+    val.className = 'rr-val';
+    val.textContent = '--';
+  } else {
+    row.className = 'result-row live';
+    val.className = 'rr-val live';
+    val.textContent = d(value, unit, dec);
+  }
+}
+
+function setReadout(id, value, unit = '', dec = 1) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (value === null) {
+    el.textContent = '--';
+    el.classList.remove('live');
+  } else {
+    el.textContent = d(value, unit, dec);
+    el.classList.add('live');
+  }
+}
+
+function show(id, vis) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = vis ? '' : 'none';
+}
+
+let _tt;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_tt);
+  _tt = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── Phase switching
+function selPhase(btn) {
+  document.querySelectorAll('.phase-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  phase = parseInt(btn.dataset.phase);
+  const is3 = phase === 3;
+  show('v1-ll', !is3); show('v1-lg', !is3);
+  show('v3-ll',  is3); show('v3-lg',  is3);
+  show('res-1ph', !is3); show('res-3ph', is3);
+  recalc();
+}
+
+// ── Transformer management
+function addTransformer() {
+  xfmrCount++;
+  transformers.push({ id: xfmrCount, priPhase: 3, secPhase: 1 });
+  renderTransformers();
+  recalc();
+}
+
+function removeTransformer(id) {
+  transformers = transformers.filter(t => t.id !== id);
+  renderTransformers();
+  recalc();
+}
+
+function selXfmrPhase(btn) {
+  const xid  = +btn.dataset.id;
+  const side = btn.dataset.side;
+  const block = document.getElementById(`xfmr-block-${xid}`);
+  block.querySelectorAll(`.xfmr-phase-btn[data-side="${side}"]`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const t = transformers.find(t => t.id === xid);
+  if (!t) return;
+  if (side === 'pri') t.priPhase = parseInt(btn.dataset.ph);
+  else               t.secPhase = parseInt(btn.dataset.ph);
+  renderXfmrInputs(xid);
+  recalc();
+}
+
+function renderXfmrInputs(xid) {
+  const t = transformers.find(t => t.id === xid);
+  if (!t) return;
+  const block = document.getElementById(`xfmr-block-${xid}`);
+  if (!block) return;
+
+  const priDiv = block.querySelector('.xfmr-pri-inputs');
+  if (priDiv) priDiv.innerHTML = voltageInputsHTML(xid, 'pri', t.priPhase);
+
+  const secDiv = block.querySelector('.xfmr-sec-inputs');
+  if (secDiv) secDiv.innerHTML = voltageInputsHTML(xid, 'sec', t.secPhase);
+}
+
+function voltageInputsHTML(xid, side, ph) {
+  const p = `x-${side}-${xid}`;
+  if (ph === 1) return `
+    <div class="xfmr-side-lbl">Line to Line</div>
+    <div class="fg"><div class="iw">
+      <input type="number" id="${p}-l1l2" inputmode="decimal" placeholder="--" step="0.1">
+      <span class="iw-unit">V L1-L2</span>
+    </div></div>
+    <div class="xfmr-opt-lbl">Line to Ground — Optional</div>
+    <div class="input-pair">
+      <div><div class="iw"><input type="number" id="${p}-l1g" inputmode="decimal" placeholder="--" step="0.1"><span class="iw-unit">V L1-G</span></div></div>
+      <div><div class="iw"><input type="number" id="${p}-l2g" inputmode="decimal" placeholder="--" step="0.1"><span class="iw-unit">V L2-G</span></div></div>
+    </div>`;
+  else return `
+    <div class="xfmr-side-lbl">Line to Line</div>
+    <div class="input-trio">
+      <div><div class="iw"><input type="number" id="${p}-l1l2" inputmode="decimal" placeholder="--" step="0.1"><span class="iw-unit">L1-L2</span></div></div>
+      <div><div class="iw"><input type="number" id="${p}-l2l3" inputmode="decimal" placeholder="--" step="0.1"><span class="iw-unit">L2-L3</span></div></div>
+      <div><div class="iw"><input type="number" id="${p}-l1l3" inputmode="decimal" placeholder="--" step="0.1"><span class="iw-unit">L1-L3</span></div></div>
+    </div>
+    <div class="xfmr-opt-lbl">Line to Ground — Optional</div>
+    <div class="input-trio">
+      <div><div class="iw"><input type="number" id="${p}-l1g" inputmode="decimal" placeholder="--" step="0.1"><span class="iw-unit">L1-G</span></div></div>
+      <div><div class="iw"><input type="number" id="${p}-l2g" inputmode="decimal" placeholder="--" step="0.1"><span class="iw-unit">L2-G</span></div></div>
+      <div><div class="iw"><input type="number" id="${p}-l3g" inputmode="decimal" placeholder="--" step="0.1"><span class="iw-unit">L3-G</span></div></div>
+    </div>`;
+}
+
+function renderTransformers() {
+  const list = document.getElementById('xfmr-list');
+
+  list.innerHTML = transformers.map((t, i) => `
+    <div class="xfmr-block" id="xfmr-block-${t.id}">
+      <div class="xfmr-hdr">
+        <span class="xfmr-title">Transformer ${i + 1}</span>
+        <button class="xfmr-del" data-id="${t.id}">&#10005;</button>
+      </div>
+
+      <div class="xfmr-panel">
+        <div class="xfmr-panel-hdr">
+          <span>Primary</span>
+          <span class="xfmr-panel-hdr-hint" id="xfmr-${t.id}-supply-hint"></span>
+        </div>
+        <div class="xfmr-phase-row">
+          <button class="xfmr-phase-btn${t.priPhase === 1 ? ' active' : ''}" data-id="${t.id}" data-side="pri" data-ph="1">1Ph</button>
+          <button class="xfmr-phase-btn${t.priPhase === 3 ? ' active' : ''}" data-id="${t.id}" data-side="pri" data-ph="3">3Ph</button>
+        </div>
+        <div class="xfmr-pri-inputs">${voltageInputsHTML(t.id, 'pri', t.priPhase)}</div>
+      </div>
+
+      <div class="xfmr-panel">
+        <div class="xfmr-panel-hdr">Secondary</div>
+        <div class="xfmr-phase-row">
+          <button class="xfmr-phase-btn${t.secPhase === 1 ? ' active' : ''}" data-id="${t.id}" data-side="sec" data-ph="1">1Ph</button>
+          <button class="xfmr-phase-btn${t.secPhase === 3 ? ' active' : ''}" data-id="${t.id}" data-side="sec" data-ph="3">3Ph</button>
+        </div>
+        <div class="xfmr-sec-inputs">${voltageInputsHTML(t.id, 'sec', t.secPhase)}</div>
+      </div>
+
+      <div class="xfmr-results-inline" id="xfmr-${t.id}-results"></div>
+    </div>
+  `).join('');
+}
+
+// ── Gather voltage readings for a transformer side
+function gatherSideVoltages(xid, side, ph) {
+  const p = `x-${side}-${xid}`;
+  if (ph === 1) {
+    return {
+      ll: [fv(`${p}-l1l2`)],
+      lg: [fv(`${p}-l1g`), fv(`${p}-l2g`)]
+    };
+  } else {
+    return {
+      ll: [fv(`${p}-l1l2`), fv(`${p}-l2l3`), fv(`${p}-l1l3`)],
+      lg: [fv(`${p}-l1g`), fv(`${p}-l2g`), fv(`${p}-l3g`)]
+    };
+  }
+}
+
+// ── Deduplicated calc state
+function getCalcState() {
+  const npV = fv('np-voltage');
+
+  let ll_vals, lg_vals;
+  if (phase === 1) {
+    ll_vals = [fv('s-l1l2')];
+    lg_vals = [fv('s-l1g'), fv('s-l2g')];
+  } else {
+    ll_vals = [fv('t-l1l2'), fv('t-l2l3'), fv('t-l1l3')];
+    lg_vals = [fv('t-l1g'), fv('t-l2g'), fv('t-l3g')];
+  }
+
+  const avgLL   = avg(ll_vals.filter(x => x !== null));
+  const vImbal  = (phase === 3 && ll_vals.every(x => x !== null)) ? imbal(ll_vals) : null;
+  const vDev    = (avgLL !== null && npV !== null) ? +(avgLL - npV).toFixed(1) : null;
+  const vDevPct = (vDev !== null && npV !== null && npV !== 0) ? +(vDev / npV * 100).toFixed(1) : null;
+
+  const xfmrStates = transformers.map((t, i) => {
+    const pri = gatherSideVoltages(t.id, 'pri', t.priPhase);
+    const sec = gatherSideVoltages(t.id, 'sec', t.secPhase);
+    const priAvgLL = avg(pri.ll.filter(x => x !== null));
+    const secAvgLL = avg(sec.ll.filter(x => x !== null));
+    const priImbal = (t.priPhase === 3 && pri.ll.every(x => x !== null)) ? imbal(pri.ll) : null;
+    const secImbal = (t.secPhase === 3 && sec.ll.every(x => x !== null)) ? imbal(sec.ll) : null;
+    return { id: t.id, num: i + 1, priPhase: t.priPhase, secPhase: t.secPhase, pri, sec, priAvgLL, secAvgLL, priImbal, secImbal };
+  });
+
+  return { phase, npV, ll_vals, lg_vals, avgLL, vImbal, vDev, vDevPct, transformers: xfmrStates };
+}
+
+// ── Main calculation
+function recalc() {
+  const state = getCalcState();
+  const { npV, ll_vals, lg_vals, avgLL, vImbal, vDev, vDevPct } = state;
+
+  setReadout('avg-ll-disp', avgLL, 'V');
+
+  // Nameplate
+  setRow('r-npv', 'rv-npv', npV, 'V', 0);
+
+  // Supply L-L results
+  if (phase === 1) {
+    setRow('r-s-l1l2', 'rv-s-l1l2', ll_vals[0], 'V');
+    show('r-s-l1g', lg_vals[0] !== null); if (lg_vals[0] !== null) setRow('r-s-l1g', 'rv-s-l1g', lg_vals[0], 'V');
+    show('r-s-l2g', lg_vals[1] !== null); if (lg_vals[1] !== null) setRow('r-s-l2g', 'rv-s-l2g', lg_vals[1], 'V');
+  } else {
+    setRow('r-t-l1l2', 'rv-t-l1l2', ll_vals[0], 'V');
+    setRow('r-t-l2l3', 'rv-t-l2l3', ll_vals[1], 'V');
+    setRow('r-t-l1l3', 'rv-t-l1l3', ll_vals[2], 'V');
+    show('r-t-l1g', lg_vals[0] !== null); if (lg_vals[0] !== null) setRow('r-t-l1g', 'rv-t-l1g', lg_vals[0], 'V');
+    show('r-t-l2g', lg_vals[1] !== null); if (lg_vals[1] !== null) setRow('r-t-l2g', 'rv-t-l2g', lg_vals[1], 'V');
+    show('r-t-l3g', lg_vals[2] !== null); if (lg_vals[2] !== null) setRow('r-t-l3g', 'rv-t-l3g', lg_vals[2], 'V');
+    show('r-t-imbal', vImbal !== null); if (vImbal !== null) setRow('r-t-imbal', 'rv-t-imbal', vImbal, '%', 2);
+  }
+
+  setRow('r-avgll',    'rv-avgll',    avgLL,   'V');
+  setRow('r-vdev',     'rv-vdev',     vDev,    'V');
+  setRow('r-vdev-pct', 'rv-vdev-pct', vDevPct, '%');
+
+  // Transformers — inline results and supply hint
+  state.transformers.forEach(ts => {
+    // Update supply hint in primary panel header
+    const hintEl = document.getElementById(`xfmr-${ts.id}-supply-hint`);
+    if (hintEl) {
+      hintEl.textContent = avgLL !== null ? `Supply Avg L-L: ${d(avgLL, 'V')}` : '';
+    }
+
+    // Inline results
+    const resDiv = document.getElementById(`xfmr-${ts.id}-results`);
+    if (!resDiv) return;
+
+    const dv = (n, unit = '', dec = 1) => n === null ? '--' : n.toFixed(dec) + (unit ? ' ' + unit : '');
+
+    const addRow = (label, val, unit, dec = 1, sub = '') => {
+      if (val === null) return '';
+      return `<div class="result-row live">
+        <div class="rr-left"><span class="rr-label">${label}</span>${sub ? `<span class="rr-sub">${sub}</span>` : ''}
+        </div><span class="rr-val live">${dv(val, unit, dec)}</span></div>`;
+    };
+
+    let html = '';
+
+    // Primary side
+    html += `<div class="result-sec-hdr result-sec-hdr-pri">Primary (${ts.priPhase}Ph)</div>`;
+    if (ts.priPhase === 1) {
+      html += addRow('L1 — L2', ts.pri.ll[0], 'V');
+      html += addRow('L1 — G',  ts.pri.lg[0], 'V');
+      html += addRow('L2 — G',  ts.pri.lg[1], 'V');
+    } else {
+      html += addRow('L1 — L2', ts.pri.ll[0], 'V');
+      html += addRow('L2 — L3', ts.pri.ll[1], 'V');
+      html += addRow('L1 — L3', ts.pri.ll[2], 'V');
+      html += addRow('L1 — G',  ts.pri.lg[0], 'V');
+      html += addRow('L2 — G',  ts.pri.lg[1], 'V');
+      html += addRow('L3 — G',  ts.pri.lg[2], 'V');
+      if (ts.priImbal !== null) html += addRow('NEMA Voltage Unbalance', ts.priImbal, '%', 2, 'Max dev / avg (L-L)');
+    }
+    if (ts.priAvgLL !== null) html += addRow('Average L-L', ts.priAvgLL, 'V');
+
+    // Secondary side
+    html += `<div class="result-sec-hdr result-sec-hdr-sec">Secondary (${ts.secPhase}Ph)</div>`;
+    if (ts.secPhase === 1) {
+      html += addRow('L1 — L2', ts.sec.ll[0], 'V');
+      html += addRow('L1 — G',  ts.sec.lg[0], 'V');
+      html += addRow('L2 — G',  ts.sec.lg[1], 'V');
+    } else {
+      html += addRow('L1 — L2', ts.sec.ll[0], 'V');
+      html += addRow('L2 — L3', ts.sec.ll[1], 'V');
+      html += addRow('L1 — L3', ts.sec.ll[2], 'V');
+      html += addRow('L1 — G',  ts.sec.lg[0], 'V');
+      html += addRow('L2 — G',  ts.sec.lg[1], 'V');
+      html += addRow('L3 — G',  ts.sec.lg[2], 'V');
+      if (ts.secImbal !== null) html += addRow('NEMA Voltage Unbalance', ts.secImbal, '%', 2, 'Max dev / avg (L-L)');
+    }
+    if (ts.secAvgLL !== null) html += addRow('Average L-L', ts.secAvgLL, 'V');
+
+    resDiv.innerHTML = html;
+  });
+}
+
+// ── Report
+function getReportBlock(context) {
+  const pad = (s, w = 24) => String(s).padEnd(w);
+  const dv  = (n, unit = '', dec = 1) => n === null ? '--' : n.toFixed(dec) + (unit ? ' ' + unit : '');
+
+  const state = getCalcState();
+  const { npV, ll_vals, lg_vals, avgLL, vImbal, vDev, vDevPct } = state;
+
+  let lines = [];
+  if (!context) {
+    lines.push('ELECTRICAL ANALYSIS');
+    lines.push(
+      new Date().toLocaleDateString('en-US') + '  ' +
+      new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    );
+    lines.push('');
+  }
+
+  lines.push('ELECTRICAL ANALYSIS');
+  lines.push(pad('Configuration:') + (phase === 1 ? 'Single Phase' : 'Three Phase'));
+  lines.push('');
+  lines.push('NAMEPLATE');
+  if (npV !== null) lines.push(pad('Rated Voltage:') + dv(npV, 'V', 0));
+  lines.push('');
+  lines.push('SUPPLY VOLTAGE');
+
+  const llLabels1 = ['L1-L2'], llLabels3 = ['L1-L2', 'L2-L3', 'L1-L3'];
+  const lgLabels1 = ['L1-G', 'L2-G'], lgLabels3 = ['L1-G', 'L2-G', 'L3-G'];
+  (phase === 1 ? llLabels1 : llLabels3).forEach((lbl, i) => { if (ll_vals[i] !== null) lines.push(pad(lbl + ':') + dv(ll_vals[i], 'V')); });
+  (phase === 1 ? lgLabels1 : lgLabels3).forEach((lbl, i) => { if (lg_vals[i] !== null) lines.push(pad(lbl + ':') + dv(lg_vals[i], 'V')); });
+  if (avgLL   !== null) lines.push(pad('Average L-L:')           + dv(avgLL,   'V'));
+  if (vDev    !== null) lines.push(pad('Deviation from Rated:')  + dv(vDev,    'V'));
+  if (vDevPct !== null) lines.push(pad('% Deviation:')           + dv(vDevPct, '%'));
+  if (vImbal  !== null) lines.push(pad('NEMA Voltage Unbalance:')+ dv(vImbal,  '%', 2));
+
+  state.transformers.forEach(ts => {
+    lines.push('');
+    lines.push(`TRANSFORMER ${ts.num}`);
+    lines.push(`Primary (${ts.priPhase}Ph)`);
+    const pll = ts.priPhase === 1 ? ['L1-L2'] : ['L1-L2', 'L2-L3', 'L1-L3'];
+    const plg = ts.priPhase === 1 ? ['L1-G', 'L2-G'] : ['L1-G', 'L2-G', 'L3-G'];
+    pll.forEach((lbl, j) => { if (ts.pri.ll[j] !== null) lines.push(pad('  ' + lbl + ':') + dv(ts.pri.ll[j], 'V')); });
+    plg.forEach((lbl, j) => { if (ts.pri.lg[j] !== null) lines.push(pad('  ' + lbl + ':') + dv(ts.pri.lg[j], 'V')); });
+    if (ts.priAvgLL !== null) lines.push(pad('  Average L-L:')            + dv(ts.priAvgLL, 'V'));
+    if (ts.priImbal !== null) lines.push(pad('  NEMA Voltage Unbalance:') + dv(ts.priImbal, '%', 2));
+
+    lines.push(`Secondary (${ts.secPhase}Ph)`);
+    const sll = ts.secPhase === 1 ? ['L1-L2'] : ['L1-L2', 'L2-L3', 'L1-L3'];
+    const slg = ts.secPhase === 1 ? ['L1-G', 'L2-G'] : ['L1-G', 'L2-G', 'L3-G'];
+    sll.forEach((lbl, j) => { if (ts.sec.ll[j] !== null) lines.push(pad('  ' + lbl + ':') + dv(ts.sec.ll[j], 'V')); });
+    slg.forEach((lbl, j) => { if (ts.sec.lg[j] !== null) lines.push(pad('  ' + lbl + ':') + dv(ts.sec.lg[j], 'V')); });
+    if (ts.secAvgLL !== null) lines.push(pad('  Average L-L:')            + dv(ts.secAvgLL, 'V'));
+    if (ts.secImbal !== null) lines.push(pad('  NEMA Voltage Unbalance:') + dv(ts.secImbal, '%', 2));
+  });
+
+  return lines.join('\n');
+}
+
+function openReport() {
+  document.getElementById('reportText').textContent = getReportBlock();
+  document.getElementById('reportOverlay').classList.add('open');
+}
+
+function closeReport() {
+  document.getElementById('reportOverlay').classList.remove('open');
+}
+
+function copyReport() {
+  navigator.clipboard?.writeText(document.getElementById('reportText').textContent)
+    .then(() => toast('Copied'))
+    .catch(() => toast('Copy failed'));
+}
+
+function downloadReport() {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([document.getElementById('reportText').textContent], { type: 'text/plain' }));
+  a.download = `electrical_${new Date().toISOString().slice(0, 10)}.txt`;
+  a.click();
+  toast('Saved');
+}
+
+// ── Init — bind all events
+function init() {
+  document.querySelectorAll('.phase-btn').forEach(btn => {
+    btn.addEventListener('click', () => selPhase(btn));
+  });
+
+  document.querySelectorAll('#np-voltage, #s-l1l2, #s-l1g, #s-l2g, #t-l1l2, #t-l2l3, #t-l1l3, #t-l1g, #t-l2g, #t-l3g').forEach(inp => {
+    inp.addEventListener('input', recalc);
+  });
+
+  document.getElementById('add-xfmr-btn').addEventListener('click', addTransformer);
+
+  const xfmrList = document.getElementById('xfmr-list');
+  xfmrList.addEventListener('click', e => {
+    const delBtn = e.target.closest('.xfmr-del');
+    if (delBtn) {
+      removeTransformer(+delBtn.dataset.id);
+      return;
+    }
+    const phaseBtn = e.target.closest('.xfmr-phase-btn');
+    if (phaseBtn) {
+      selXfmrPhase(phaseBtn);
+    }
+  });
+  xfmrList.addEventListener('input', e => {
+    if (e.target.matches('input[type="number"]')) recalc();
+  });
+
+  document.getElementById('open-report-btn').addEventListener('click', openReport);
+  document.getElementById('close-report-btn').addEventListener('click', closeReport);
+  document.getElementById('copy-report-btn').addEventListener('click', copyReport);
+  document.getElementById('download-report-btn').addEventListener('click', downloadReport);
+
+  if (window.HVAC_EMBEDDED) document.getElementById('standaloneBar').style.display = 'none';
+
+  window.getReportBlock = getReportBlock;
+  window.getCalcState = getCalcState;
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+</script>
+</body>
+</html>

@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Heat Analysis · HVAC Tools</title>
+<link rel="stylesheet" href="../base.css">
+<style>
+/* ── Heat-specific styles ── */
+
+/* Path selector (nameplate kW vs measured) */
+.path-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 14px; }
+.path-btn {
+  padding: 9px; border-radius: 3px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text-mute);
+  font-family: var(--ui); font-weight: 600; font-size: .82rem;
+  letter-spacing: .06em; cursor: pointer; text-align: center;
+  transition: all .1s; text-transform: uppercase;
+}
+.path-btn.active { background: var(--orange-dim); border-color: var(--orange); color: var(--orange-hi); }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="hdr-back" href="../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Heat Analysis</div>
+    <div class="hdr-sub">BTU Output · Temperature Rise · CFM</div>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" data-tab="gas" onclick="selTab(this)">Gas</div>
+  <div class="tab" data-tab="electric" onclick="selTab(this)">Electric</div>
+</div>
+
+<!-- GAS PANEL -->
+<div class="panel active" id="panel-gas">
+
+  <div class="sec" style="border-top:none; margin-top:0">
+    <div class="sec-lbl" style="padding-top:4px">Nameplate</div>
+
+    <div class="input-pair">
+      <div>
+        <label class="fl" for="g-btu-input">BTU Input</label>
+        <div class="iw">
+          <input type="number" id="g-btu-input" inputmode="decimal" placeholder="--" step="1000" oninput="calcGas()">
+          <span class="iw-unit">BTU/h</span>
+        </div>
+      </div>
+      <div>
+        <label class="fl" for="g-eff">Efficiency</label>
+        <div class="iw">
+          <input type="number" id="g-eff" inputmode="decimal" placeholder="80" step="1" min="1" max="100" oninput="calcGas()">
+          <span class="iw-unit">%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="readout">
+      <span class="readout-lbl">BTU Output</span>
+      <span class="readout-val" id="g-btu-out-disp">--</span>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Temperature Rise</div>
+
+    <div class="input-pair">
+      <div>
+        <label class="fl" for="g-return">Return Air</label>
+        <div class="iw">
+          <input type="number" id="g-return" inputmode="decimal" placeholder="--" step="0.1" oninput="calcGas()">
+          <span class="iw-unit">F</span>
+        </div>
+      </div>
+      <div>
+        <label class="fl" for="g-supply">Supply Air</label>
+        <div class="iw">
+          <input type="number" id="g-supply" inputmode="decimal" placeholder="--" step="0.1" oninput="calcGas()">
+          <span class="iw-unit">F</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="readout">
+      <span class="readout-lbl">Delta T</span>
+      <span class="readout-val" id="g-dt-disp">--</span>
+    </div>
+  </div>
+
+  <!-- GAS RESULTS -->
+  <div class="results" id="g-results">
+    <div class="result-sec-hdr">Gas Heat</div>
+
+    <div class="result-row dim" id="g-r-btu-in">
+      <div class="rr-left">
+        <span class="rr-label">BTU Input</span>
+        <span class="rr-sub">Nameplate</span>
+      </div>
+      <span class="rr-val" id="g-rv-btu-in">--</span>
+    </div>
+
+    <div class="result-row dim" id="g-r-eff">
+      <div class="rr-left">
+        <span class="rr-label">Efficiency</span>
+      </div>
+      <span class="rr-val" id="g-rv-eff">--</span>
+    </div>
+
+    <div class="result-row dim" id="g-r-btu-out">
+      <div class="rr-left">
+        <span class="rr-label">BTU Output</span>
+        <span class="rr-sub">Input x Efficiency</span>
+      </div>
+      <span class="rr-val" id="g-rv-btu-out">--</span>
+    </div>
+
+    <div class="result-sec-hdr">Airside</div>
+
+    <div class="result-row dim" id="g-r-return">
+      <div class="rr-left"><span class="rr-label">Return Air</span></div>
+      <span class="rr-val" id="g-rv-return">--</span>
+    </div>
+
+    <div class="result-row dim" id="g-r-supply">
+      <div class="rr-left"><span class="rr-label">Supply Air</span></div>
+      <span class="rr-val" id="g-rv-supply">--</span>
+    </div>
+
+    <div class="result-row dim" id="g-r-dt">
+      <div class="rr-left"><span class="rr-label">Delta T</span></div>
+      <span class="rr-val" id="g-rv-dt">--</span>
+    </div>
+
+    <div class="result-row dim" id="g-r-cfm">
+      <div class="rr-left">
+        <span class="rr-label">CFM</span>
+        <span class="rr-sub">BTU Output / (1.08 x Delta T)</span>
+      </div>
+      <span class="rr-val" id="g-rv-cfm">--</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ELECTRIC PANEL -->
+<div class="panel" id="panel-electric">
+
+  <!-- INPUT PATH SELECTOR -->
+  <label class="fl" style="margin-top:4px">Input Method</label>
+  <div class="path-grid">
+    <button class="path-btn active" data-path="nameplate" onclick="selPath(this)">Nameplate kW</button>
+    <button class="path-btn" data-path="measured" onclick="selPath(this)">Measured</button>
+  </div>
+
+  <!-- NAMEPLATE PATH -->
+  <div id="e-nameplate-fields">
+    <div class="fg">
+      <label class="fl" for="e-kw">Nameplate kW</label>
+      <div class="iw">
+        <input type="number" id="e-kw" inputmode="decimal" placeholder="--" step="0.1" oninput="calcElec()">
+        <span class="iw-unit">kW</span>
+      </div>
+      <div class="hint">1 kW = 3412 BTU/h</div>
+    </div>
+  </div>
+
+  <!-- MEASURED PATH -->
+  <div id="e-measured-fields" style="display:none">
+    <label class="fl">Phase</label>
+    <div class="phase-grid">
+      <button class="phase-btn active" data-phase="1" onclick="selPhase(this)">Single Phase</button>
+      <button class="phase-btn" data-phase="3" onclick="selPhase(this)">Three Phase</button>
+    </div>
+
+    <div class="input-pair">
+      <div>
+        <label class="fl" for="e-volts">Volts</label>
+        <div class="iw">
+          <input type="number" id="e-volts" inputmode="decimal" placeholder="--" step="1" oninput="calcElec()">
+          <span class="iw-unit">V</span>
+        </div>
+      </div>
+      <div>
+        <label class="fl" for="e-amps">Amps</label>
+        <div class="iw">
+          <input type="number" id="e-amps" inputmode="decimal" placeholder="--" step="0.1" oninput="calcElec()">
+          <span class="iw-unit">A</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hint" id="e-phase-formula" style="margin-bottom:8px">
+      Watts = Volts x Amps
+    </div>
+  </div>
+
+  <!-- BTU READOUT -->
+  <div class="readout" id="e-btu-readout">
+    <span class="readout-lbl">BTU/h Output</span>
+    <span class="readout-val" id="e-btu-disp">--</span>
+  </div>
+
+  <!-- TEMPERATURE RISE -->
+  <div class="sec">
+    <div class="sec-lbl">Temperature Rise</div>
+
+    <div class="hint" style="margin-bottom:10px">
+      Note: Temperature rise across a duct heater or unit heater may not accurately represent system CFM due to element bypass air. Use the Airflow module FPM method for duct heaters and unit heaters.
+    </div>
+
+    <div class="input-pair">
+      <div>
+        <label class="fl" for="e-return">Return Air</label>
+        <div class="iw">
+          <input type="number" id="e-return" inputmode="decimal" placeholder="--" step="0.1" oninput="calcElec()">
+          <span class="iw-unit">F</span>
+        </div>
+      </div>
+      <div>
+        <label class="fl" for="e-supply">Supply Air</label>
+        <div class="iw">
+          <input type="number" id="e-supply" inputmode="decimal" placeholder="--" step="0.1" oninput="calcElec()">
+          <span class="iw-unit">F</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="readout">
+      <span class="readout-lbl">Delta T</span>
+      <span class="readout-val" id="e-dt-disp">--</span>
+    </div>
+  </div>
+
+  <!-- ELECTRIC RESULTS -->
+  <div class="results" id="e-results">
+    <div class="result-sec-hdr">Electric Heat</div>
+
+    <div class="result-row dim" id="e-r-input">
+      <div class="rr-left">
+        <span class="rr-label">Input</span>
+        <span class="rr-sub" id="e-input-sub">Nameplate kW</span>
+      </div>
+      <span class="rr-val" id="e-rv-input">--</span>
+    </div>
+
+    <div class="result-row dim" id="e-r-watts" style="display:none">
+      <div class="rr-left">
+        <span class="rr-label">Watts</span>
+        <span class="rr-sub" id="e-watts-sub">V x A</span>
+      </div>
+      <span class="rr-val" id="e-rv-watts">--</span>
+    </div>
+
+    <div class="result-row dim" id="e-r-kw" style="display:none">
+      <div class="rr-left">
+        <span class="rr-label">kW</span>
+        <span class="rr-sub">Watts / 1000</span>
+      </div>
+      <span class="rr-val" id="e-rv-kw">--</span>
+    </div>
+
+    <div class="result-row dim" id="e-r-btu">
+      <div class="rr-left">
+        <span class="rr-label">BTU/h Output</span>
+        <span class="rr-sub">kW x 3412</span>
+      </div>
+      <span class="rr-val" id="e-rv-btu">--</span>
+    </div>
+
+    <div class="result-sec-hdr">Airside</div>
+
+    <div class="result-row dim" id="e-r-return">
+      <div class="rr-left"><span class="rr-label">Return Air</span></div>
+      <span class="rr-val" id="e-rv-return">--</span>
+    </div>
+
+    <div class="result-row dim" id="e-r-supply">
+      <div class="rr-left"><span class="rr-label">Supply Air</span></div>
+      <span class="rr-val" id="e-rv-supply">--</span>
+    </div>
+
+    <div class="result-row dim" id="e-r-dt">
+      <div class="rr-left"><span class="rr-label">Delta T</span></div>
+      <span class="rr-val" id="e-rv-dt">--</span>
+    </div>
+
+    <div class="result-row dim" id="e-r-cfm">
+      <div class="rr-left">
+        <span class="rr-label">CFM</span>
+        <span class="rr-sub">BTU/h / (1.08 x Delta T)</span>
+      </div>
+      <span class="rr-val" id="e-rv-cfm">--</span>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="standaloneBar">
+  <button class="btn btn-ghost" onclick="openReport()">Export Report</button>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="modal-overlay" id="reportOverlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">Heat Report</span>
+      <button class="modal-close" onclick="closeReport()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <pre class="report-pre" id="reportText"></pre>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="copyReport()">Copy</button>
+      <button class="btn btn-primary" onclick="downloadReport()">Save .txt</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+
+// ── State
+let activeTab   = 'gas';
+let elecPath    = 'nameplate';
+let elecPhase   = 1;
+
+// ── Helpers
+function fv(id)   { const n = parseFloat(document.getElementById(id)?.value); return isNaN(n) ? null : n; }
+function d(n, unit='', dec=1) { return n === null ? '--' : n.toFixed(dec) + (unit ? ' ' + unit : ''); }
+function di(n, unit='') { return n === null ? '--' : Math.round(n) + (unit ? ' ' + unit : ''); }
+
+function setRow(rowId, valId, value, unit, dec=1, show=true) {
+  const row = document.getElementById(rowId);
+  const val = document.getElementById(valId);
+  if (!row || !val) return;
+  if (!show) { row.style.display = 'none'; return; }
+  row.style.display = '';
+  if (value === null) {
+    row.className = 'result-row dim';
+    val.className = 'rr-val';
+    val.textContent = '--';
+  } else {
+    row.className = 'result-row live';
+    val.className = 'rr-val live';
+    val.textContent = dec === 0 ? di(value, unit) : d(value, unit, dec);
+  }
+}
+
+function setReadout(dispId, value, unit='', dec=1) {
+  const el = document.getElementById(dispId);
+  if (!el) return;
+  if (value === null) { el.textContent = '--'; el.classList.remove('live'); }
+  else {
+    el.textContent = dec === 0 ? di(value, unit) : d(value, unit, dec);
+    el.classList.add('live');
+  }
+}
+
+// ── Tab switching
+window.selTab = function(btn) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  activeTab = btn.dataset.tab;
+  document.getElementById('panel-' + activeTab).classList.add('active');
+};
+
+// ── Electric path switching
+window.selPath = function(btn) {
+  document.querySelectorAll('.path-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  elecPath = btn.dataset.path;
+  document.getElementById('e-nameplate-fields').style.display = elecPath === 'nameplate' ? '' : 'none';
+  document.getElementById('e-measured-fields').style.display  = elecPath === 'measured'  ? '' : 'none';
+  document.getElementById('e-r-watts').style.display = elecPath === 'measured' ? '' : 'none';
+  document.getElementById('e-r-kw').style.display    = elecPath === 'measured' ? '' : 'none';
+  const sub = document.getElementById('e-input-sub');
+  if (sub) sub.textContent = elecPath === 'nameplate' ? 'Nameplate kW' : 'Measured';
+  calcElec();
+};
+
+// ── Phase switching
+window.selPhase = function(btn) {
+  document.querySelectorAll('.phase-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  elecPhase = parseInt(btn.dataset.phase);
+  const formula = document.getElementById('e-phase-formula');
+  if (formula) formula.textContent = elecPhase === 3
+    ? 'Watts = Volts x Amps x 1.732  (PF = 1.0, resistive load)'
+    : 'Watts = Volts x Amps';
+  const wattsSub = document.getElementById('e-watts-sub');
+  if (wattsSub) wattsSub.textContent = elecPhase === 3 ? 'V x A x 1.732' : 'V x A';
+  calcElec();
+};
+
+// ── Gas calculation
+window.calcGas = function() {
+  const btuIn  = fv('g-btu-input');
+  const eff    = fv('g-eff');
+  const ret    = fv('g-return');
+  const sup    = fv('g-supply');
+
+  const btuOut = (btuIn !== null && eff !== null) ? btuIn * (eff / 100) : null;
+  const dt     = (ret !== null && sup !== null)   ? +(sup - ret).toFixed(1) : null;
+  const cfm    = (btuOut !== null && dt !== null && dt !== 0) ? btuOut / (1.08 * dt) : null;
+
+  setReadout('g-btu-out-disp', btuOut, 'BTU/h', 0);
+  setReadout('g-dt-disp',      dt,     'F');
+
+  setRow('g-r-btu-in',  'g-rv-btu-in',  btuIn,  'BTU/h', 0);
+  setRow('g-r-eff',     'g-rv-eff',     eff,    '%');
+  setRow('g-r-btu-out', 'g-rv-btu-out', btuOut, 'BTU/h', 0);
+  setRow('g-r-return',  'g-rv-return',  ret,    'F');
+  setRow('g-r-supply',  'g-rv-supply',  sup,    'F');
+  setRow('g-r-dt',      'g-rv-dt',      dt,     'F');
+  setRow('g-r-cfm',     'g-rv-cfm',     cfm,    'CFM', 0);
+
+  // Write CFM to session record if available
+  if (window.HVAC_SESSION && cfm !== null) window.HVAC_SESSION.cfm = Math.round(cfm);
+};
+
+// ── Electric calculation
+window.calcElec = function() {
+  const ret = fv('e-return');
+  const sup = fv('e-supply');
+  const dt  = (ret !== null && sup !== null) ? +(sup - ret).toFixed(1) : null;
+
+  let kw    = null;
+  let watts = null;
+  let btu   = null;
+
+  if (elecPath === 'nameplate') {
+    kw  = fv('e-kw');
+    btu = kw !== null ? kw * 3412 : null;
+  } else {
+    const v = fv('e-volts');
+    const a = fv('e-amps');
+    if (v !== null && a !== null) {
+      watts = elecPhase === 3 ? v * a * 1.732 : v * a;
+      kw    = watts / 1000;
+      btu   = kw * 3412;
+    }
+  }
+
+  const cfm = (btu !== null && dt !== null && dt !== 0) ? btu / (1.08 * dt) : null;
+
+  setReadout('e-btu-disp', btu, 'BTU/h', 0);
+  setReadout('e-dt-disp',  dt,  'F');
+
+  // Input row
+  if (elecPath === 'nameplate') {
+    setRow('e-r-input', 'e-rv-input', kw, 'kW', 1);
+  } else {
+    const v = fv('e-volts'); const a = fv('e-amps');
+    const inputVal = (v !== null && a !== null) ? (elecPhase === 3 ? v * a * 1.732 : v * a) : null;
+    setRow('e-r-input', 'e-rv-input', inputVal, 'W', 0);
+  }
+
+  setRow('e-r-watts', 'e-rv-watts', watts, 'W',    0, elecPath === 'measured');
+  setRow('e-r-kw',    'e-rv-kw',    kw,    'kW',   2, elecPath === 'measured');
+  setRow('e-r-btu',   'e-rv-btu',   btu,   'BTU/h', 0);
+  setRow('e-r-return','e-rv-return', ret,   'F');
+  setRow('e-r-supply','e-rv-supply', sup,   'F');
+  setRow('e-r-dt',    'e-rv-dt',    dt,    'F');
+  setRow('e-r-cfm',   'e-rv-cfm',   cfm,   'CFM', 0);
+
+  // Write CFM to session record if available
+  if (window.HVAC_SESSION && cfm !== null) window.HVAC_SESSION.cfm = Math.round(cfm);
+};
+
+// ── Structured calc state — for cross-module analysis
+window.getCalcState = function() {
+  if (activeTab === 'gas') {
+    const btuIn  = fv('g-btu-input');
+    const eff    = fv('g-eff');
+    const ret    = fv('g-return');
+    const sup    = fv('g-supply');
+    const btuOut = (btuIn !== null && eff !== null) ? btuIn * (eff / 100) : null;
+    const dt     = (ret !== null && sup !== null)   ? +(sup - ret).toFixed(1) : null;
+    const cfm    = (btuOut !== null && dt !== null && dt !== 0) ? btuOut / (1.08 * dt) : null;
+
+    return {
+      type: 'gas',
+      btuIn, eff, btuOut,
+      returnAir: ret, supplyAir: sup, dt, cfm,
+      // Gas-specific
+      volts: null, amps: null, watts: null, kw: null, phase: null
+    };
+  } else {
+    const ret = fv('e-return');
+    const sup = fv('e-supply');
+    const dt  = (ret !== null && sup !== null) ? +(sup - ret).toFixed(1) : null;
+    let kw = null, watts = null, btu = null;
+    const volts = elecPath === 'measured' ? fv('e-volts') : null;
+    const amps  = elecPath === 'measured' ? fv('e-amps')  : null;
+
+    if (elecPath === 'nameplate') {
+      kw  = fv('e-kw');
+      btu = kw !== null ? kw * 3412 : null;
+    } else {
+      if (volts !== null && amps !== null) {
+        watts = elecPhase === 3 ? volts * amps * 1.732 : volts * amps;
+        kw    = watts / 1000;
+        btu   = kw * 3412;
+      }
+    }
+    const cfm = (btu !== null && dt !== null && dt !== 0) ? btu / (1.08 * dt) : null;
+
+    return {
+      type: 'electric',
+      btuIn: null, eff: null, btuOut: btu,
+      returnAir: ret, supplyAir: sup, dt, cfm,
+      // Electric-specific
+      inputMethod: elecPath, phase: elecPhase,
+      volts, amps, watts, kw
+    };
+  }
+};
+
+// ── Report block — callable by main tool as getReportBlock(context)
+window.getReportBlock = function(context) {
+  const pad = (s, w=22) => String(s).padEnd(w);
+  const dv  = (n, unit='', dec=1) => n === null ? '--' : (dec === 0 ? Math.round(n) : n.toFixed(dec)) + (unit ? ' ' + unit : '');
+
+  let lines = [];
+
+  if (!context) {
+    lines.push('HEAT ANALYSIS');
+    lines.push(new Date().toLocaleDateString('en-US') + '  ' +
+      new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}));
+    lines.push('');
+  }
+
+  if (activeTab === 'gas') {
+    const btuIn  = fv('g-btu-input');
+    const eff    = fv('g-eff');
+    const ret    = fv('g-return');
+    const sup    = fv('g-supply');
+    const btuOut = (btuIn !== null && eff !== null) ? btuIn * (eff / 100) : null;
+    const dt     = (ret !== null && sup !== null)   ? +(sup - ret).toFixed(1) : null;
+    const cfm    = (btuOut !== null && dt !== null && dt !== 0) ? btuOut / (1.08 * dt) : null;
+
+    lines.push('GAS HEAT');
+    lines.push(pad('BTU Input:')    + dv(btuIn,  'BTU/h', 0));
+    lines.push(pad('Efficiency:')   + dv(eff,    '%'));
+    lines.push(pad('BTU Output:')   + dv(btuOut, 'BTU/h', 0));
+    lines.push('');
+    lines.push(pad('Return Air:')   + dv(ret, 'F'));
+    lines.push(pad('Supply Air:')   + dv(sup, 'F'));
+    lines.push(pad('Delta T:')      + dv(dt,  'F'));
+    lines.push(pad('CFM:')          + dv(cfm, 'CFM', 0));
+
+  } else {
+    const ret = fv('e-return');
+    const sup = fv('e-supply');
+    const dt  = (ret !== null && sup !== null) ? +(sup - ret).toFixed(1) : null;
+    let kw = null, watts = null, btu = null;
+
+    if (elecPath === 'nameplate') {
+      kw  = fv('e-kw');
+      btu = kw !== null ? kw * 3412 : null;
+    } else {
+      const v = fv('e-volts'), a = fv('e-amps');
+      if (v !== null && a !== null) {
+        watts = elecPhase === 3 ? v * a * 1.732 : v * a;
+        kw    = watts / 1000;
+        btu   = kw * 3412;
+      }
+    }
+    const cfm = (btu !== null && dt !== null && dt !== 0) ? btu / (1.08 * dt) : null;
+
+    lines.push('ELECTRIC HEAT');
+    lines.push(pad('Input Method:') + (elecPath === 'nameplate' ? 'Nameplate kW' : (elecPhase === 3 ? 'Measured - Three Phase' : 'Measured - Single Phase')));
+    if (elecPath === 'nameplate') {
+      lines.push(pad('Nameplate kW:') + dv(kw, 'kW', 1));
+    } else {
+      lines.push(pad('Volts:')  + dv(fv('e-volts'), 'V', 1));
+      lines.push(pad('Amps:')   + dv(fv('e-amps'),  'A', 1));
+      if (elecPhase === 3) lines.push(pad('Factor:') + '1.732 (resistive)');
+      lines.push(pad('Watts:')  + dv(watts, 'W', 0));
+      lines.push(pad('kW:')     + dv(kw,    'kW', 2));
+    }
+    lines.push(pad('BTU/h Output:') + dv(btu, 'BTU/h', 0));
+    lines.push('');
+    lines.push(pad('Return Air:')   + dv(ret, 'F'));
+    lines.push(pad('Supply Air:')   + dv(sup, 'F'));
+    lines.push(pad('Delta T:')      + dv(dt,  'F'));
+    lines.push(pad('CFM:')          + dv(cfm, 'CFM', 0));
+  }
+
+  return lines.join('\n');
+};
+
+// ── Standalone report modal
+window.openReport    = function() { document.getElementById('reportText').textContent = window.getReportBlock(); document.getElementById('reportOverlay').classList.add('open'); };
+window.closeReport   = function() { document.getElementById('reportOverlay').classList.remove('open'); };
+window.copyReport    = function() { navigator.clipboard?.writeText(document.getElementById('reportText').textContent).then(()=>toast('Copied')).catch(()=>toast('Copy failed')); };
+window.downloadReport = function() {
+  const txt = document.getElementById('reportText').textContent;
+  const a   = document.createElement('a');
+  a.href    = URL.createObjectURL(new Blob([txt], {type:'text/plain'}));
+  a.download = `heat_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click(); toast('Saved');
+};
+
+// ── Toast
+let _tt;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── Boot
+if (window.HVAC_EMBEDDED) document.getElementById('standaloneBar').style.display = 'none';
+
+</script>
+</body>
+</html>

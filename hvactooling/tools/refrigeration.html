@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Refrigeration Analysis · HVAC Tools</title>
+<link rel="stylesheet" href="../base.css">
+<style>
+/* ── Refrigeration-specific styles ── */
+
+/* Refrigerant selector */
+.ref-grid { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+.ref-btn {
+  padding: 7px 10px; border-radius: 3px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text-mute);
+  font-family: var(--mono); font-size: .72rem; letter-spacing: .04em;
+  cursor: pointer; text-align: center; transition: all .1s;
+}
+.ref-btn.active { background: var(--orange-dim); border-color: var(--orange); color: var(--orange-hi); }
+.ref-btn.a2l { border-color: var(--yellow-hi); }
+.ref-btn.a2l.active { border-color: var(--yellow-hi); color: var(--yellow-hi); background: var(--yellow-dim); }
+
+/* Metering device selector */
+.meter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 14px; }
+.meter-btn {
+  padding: 9px; border-radius: 3px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text-mute);
+  font-family: var(--ui); font-weight: 600; font-size: .82rem;
+  letter-spacing: .06em; cursor: pointer; text-align: center;
+  transition: all .1s; text-transform: uppercase;
+}
+.meter-btn.active { background: var(--orange-dim); border-color: var(--orange); color: var(--orange-hi); }
+
+/* Saturation readout */
+.sat-line {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 10px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 3px; margin-bottom: 4px;
+}
+.sat-line-lbl { font-family: var(--mono); font-size: .63rem; color: var(--text-mute); letter-spacing: .06em; text-transform: uppercase; }
+.sat-line-val { font-family: var(--mono); font-size: .92rem; color: var(--text-mute); transition: color .2s; }
+.sat-line-val.live { color: var(--orange-hi); }
+.sat-line-glide {
+  font-family: var(--mono); font-size: .6rem; color: var(--text-mute);
+  letter-spacing: .04em; padding: 0 10px 6px; display: none;
+}
+.sat-line-glide.show { display: block; }
+
+/* Error message */
+.err {
+  font-family: var(--mono); font-size: .68rem; color: var(--red-hi);
+  margin-top: 6px; display: none; letter-spacing: .03em;
+}
+.err.show { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="hdr-back" href="../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Refrigeration Analysis</div>
+    <div class="hdr-sub">Superheat · Subcooling · Compression Ratio · Approach</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- REFRIGERANT -->
+  <label class="fl">Refrigerant</label>
+  <div class="ref-grid" id="refGrid"></div>
+
+  <!-- METERING DEVICE -->
+  <label class="fl">Metering Device</label>
+  <div class="meter-grid">
+    <button class="meter-btn active" data-sys="txv" onclick="selMeter(this)">TXV / EEV</button>
+    <button class="meter-btn" data-sys="fo" onclick="selMeter(this)">Fixed Orifice</button>
+  </div>
+
+  <!-- SUCTION CIRCUIT -->
+  <div class="sec">
+    <div class="sec-lbl">Suction Circuit</div>
+
+    <div class="input-pair">
+      <div>
+        <label class="fl" for="suctPSIG">Suction Pressure</label>
+        <div class="iw">
+          <input type="number" id="suctPSIG" inputmode="decimal" placeholder="0.0" step="0.1" oninput="onSuctPress()">
+          <span class="iw-unit">PSIG</span>
+        </div>
+        <div class="err" id="err-suct">Out of range</div>
+      </div>
+      <div>
+        <label class="fl" for="suctLine">Suction Line Temp</label>
+        <div class="iw">
+          <input type="number" id="suctLine" inputmode="decimal" placeholder="0.0" step="0.1" oninput="recalc()">
+          <span class="iw-unit">F</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sat-line">
+      <div>
+        <span class="sat-line-lbl">Suction Sat Temp</span>
+        <div class="sat-line-glide" id="suctGlide"></div>
+      </div>
+      <span class="sat-line-val" id="suctSatDisp">--</span>
+    </div>
+  </div>
+
+  <!-- LIQUID CIRCUIT -->
+  <div class="sec">
+    <div class="sec-lbl">Liquid Circuit</div>
+
+    <div class="input-pair">
+      <div>
+        <label class="fl" for="liqPSIG">Liquid Pressure</label>
+        <div class="iw">
+          <input type="number" id="liqPSIG" inputmode="decimal" placeholder="0.0" step="0.1" oninput="onLiqPress()">
+          <span class="iw-unit">PSIG</span>
+        </div>
+        <div class="err" id="err-liq">Out of range</div>
+      </div>
+      <div>
+        <label class="fl" for="liqLine">Liquid Line Temp</label>
+        <div class="iw">
+          <input type="number" id="liqLine" inputmode="decimal" placeholder="0.0" step="0.1" oninput="recalc()">
+          <span class="iw-unit">F</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sat-line">
+      <div>
+        <span class="sat-line-lbl">Liquid Sat Temp</span>
+        <div class="sat-line-glide" id="liqGlide"></div>
+      </div>
+      <span class="sat-line-val" id="liqSatDisp">--</span>
+    </div>
+  </div>
+
+  <!-- AIRSIDE — OPTIONAL -->
+  <div class="sec">
+    <div class="sec-lbl">Airside — Optional</div>
+
+    <div class="input-pair">
+      <div>
+        <label class="fl" for="returnAir">Return Air Temp</label>
+        <div class="iw">
+          <input type="number" id="returnAir" inputmode="decimal" placeholder="--" step="0.1" oninput="recalc()">
+          <span class="iw-unit">F</span>
+        </div>
+      </div>
+      <div>
+        <label class="fl" for="supplyAir">Supply Air Temp</label>
+        <div class="iw">
+          <input type="number" id="supplyAir" inputmode="decimal" placeholder="--" step="0.1" oninput="recalc()">
+          <span class="iw-unit">F</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label class="fl" for="ambient">Outdoor Ambient Temp</label>
+      <div class="iw">
+        <input type="number" id="ambient" inputmode="decimal" placeholder="--" step="0.1" oninput="recalc()">
+        <span class="iw-unit">F</span>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label class="fl" for="cfm">CFM</label>
+      <div class="iw">
+        <input type="number" id="cfm" inputmode="decimal" placeholder="--" step="1" oninput="recalc()">
+        <span class="iw-unit">CFM</span>
+      </div>
+      <div class="hint">Add Heat Module to calculate CFM from BTU and temperature rise</div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results">
+
+    <div class="result-sec-hdr">Suction</div>
+    <div class="result-row dim" id="r-suct-pres">
+      <span class="rr-label">Suction</span>
+      <span class="rr-val" id="rv-suct-pres">--</span>
+    </div>
+    <div class="result-row dim" id="r-suct-sat">
+      <span class="rr-label">Sat Temp</span>
+      <span class="rr-val" id="rv-suct-sat">--</span>
+    </div>
+    <div class="result-row dim" id="r-suct-line">
+      <span class="rr-label">Line Temp</span>
+      <span class="rr-val" id="rv-suct-line">--</span>
+    </div>
+    <div class="result-row dim" id="r-sh">
+      <span class="rr-label">Superheat</span>
+      <span class="rr-val" id="rv-sh">--</span>
+    </div>
+
+    <div class="result-sec-hdr">Liquid</div>
+    <div class="result-row dim" id="r-liq-pres">
+      <span class="rr-label">Liquid</span>
+      <span class="rr-val" id="rv-liq-pres">--</span>
+    </div>
+    <div class="result-row dim" id="r-liq-sat">
+      <span class="rr-label">Sat Temp</span>
+      <span class="rr-val" id="rv-liq-sat">--</span>
+    </div>
+    <div class="result-row dim" id="r-liq-line">
+      <span class="rr-label">Line Temp</span>
+      <span class="rr-val" id="rv-liq-line">--</span>
+    </div>
+    <div class="result-row dim" id="r-sc">
+      <span class="rr-label">Subcooling</span>
+      <span class="rr-val" id="rv-sc">--</span>
+    </div>
+
+    <div class="result-sec-hdr">System</div>
+    <div class="result-row dim" id="r-cr">
+      <span class="rr-label">Compression Ratio</span>
+      <span class="rr-val" id="rv-cr">--</span>
+    </div>
+
+    <div class="result-sec-hdr" id="hdr-airside" style="display:none">Airside</div>
+    <div class="result-row dim" id="r-return"   style="display:none"><span class="rr-label">Return Air</span><span class="rr-val" id="rv-return">--</span></div>
+    <div class="result-row dim" id="r-supply"   style="display:none"><span class="rr-label">Supply Air</span><span class="rr-val" id="rv-supply">--</span></div>
+    <div class="result-row dim" id="r-dt"       style="display:none"><span class="rr-label">Delta T</span><span class="rr-val" id="rv-dt">--</span></div>
+    <div class="result-row dim" id="r-evap-app" style="display:none"><span class="rr-label">Evap Approach</span><span class="rr-val" id="rv-evap-app">--</span></div>
+    <div class="result-row dim" id="r-cond-app" style="display:none"><span class="rr-label">Cond Approach</span><span class="rr-val" id="rv-cond-app">--</span></div>
+    <div class="result-row dim" id="r-ambient"  style="display:none"><span class="rr-label">Outdoor Ambient</span><span class="rr-val" id="rv-ambient">--</span></div>
+    <div class="result-row dim" id="r-cfm"      style="display:none"><span class="rr-label">CFM</span><span class="rr-val" id="rv-cfm">--</span></div>
+
+  </div>
+
+</main>
+
+<!-- STANDALONE REPORT BAR — hidden when embedded in main tool -->
+<div id="standaloneBar">
+  <button class="btn btn-ghost" onclick="openReport()">Export Report</button>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="modal-overlay" id="reportOverlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">Refrigeration Report</span>
+      <button class="modal-close" onclick="closeReport()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <pre class="report-pre" id="reportText"></pre>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="copyReport()">Copy</button>
+      <button class="btn btn-primary" onclick="downloadReport()">Save .txt</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { getSatTemp, getSatPressure, getRange, listRefrigerants } from '../refrigerants/index.js';
+
+// ── Constants
+const ATM_PSIA = 14.696;
+
+// ── Superheat target ranges by metering type
+const TARGETS = {
+  txv: { low: 8,  high: 16 },
+  fo:  { low: 10, high: 18 }
+};
+
+// ── State
+const REFS = {};           // id → { name, zeotropic, safetyClass }
+let selRef = null;
+let selSys = 'txv';
+
+// ── Build refrigerant registry from library
+listRefrigerants().forEach(r => {
+  REFS[r.id] = {
+    name:       r.name,
+    zeotropic:  r.tableType === 'zeotropic',
+    safetyClass: r.safetyClass
+  };
+});
+
+// Default selection — prefer R-410A, else first available
+selRef = REFS['R-410A'] ? 'R-410A' : Object.keys(REFS)[0];
+
+// ── P-T lookup wrappers
+// Suction side always uses dew point for zeotropic (vapor line)
+// Liquid side always uses bubble point for zeotropic (liquid line)
+function getSuctSat(id, psig) {
+  return getSatTemp(id, psig, 'dew');
+}
+function getLiqSat(id, psig) {
+  return getSatTemp(id, psig, 'bubble');
+}
+
+// For zeotropic: also get the other point to show glide
+function getSuctSatBubble(id, psig) {
+  return REFS[id]?.zeotropic ? getSatTemp(id, psig, 'bubble') : null;
+}
+function getLiqSatDew(id, psig) {
+  return REFS[id]?.zeotropic ? getSatTemp(id, psig, 'dew') : null;
+}
+
+// ── Build refrigerant grid
+function buildRefGrid() {
+  // Sort: A1 first, then A2L; alphabetically within each group
+  const ids = Object.keys(REFS).sort((a, b) => {
+    const aA2L = REFS[a].safetyClass === 'A2L';
+    const bA2L = REFS[b].safetyClass === 'A2L';
+    if (aA2L !== bA2L) return aA2L ? 1 : -1;
+    return a.localeCompare(b);
+  });
+
+  document.getElementById('refGrid').innerHTML = ids.map(id => {
+    const r = REFS[id];
+    const isA2L = r.safetyClass === 'A2L';
+    const active = id === selRef ? ' active' : '';
+    const cls = `ref-btn${isA2L ? ' a2l' : ''}${active}`;
+    return `<button class="${cls}" data-id="${id}" onclick="selectRef(this)">${r.name}</button>`;
+  }).join('');
+}
+
+window.selectRef = function(btn) {
+  document.querySelectorAll('.ref-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selRef = btn.dataset.id;
+  onSuctPress();
+  onLiqPress();
+};
+
+window.selMeter = function(btn) {
+  document.querySelectorAll('.meter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selSys = btn.dataset.sys;
+  recalc();
+};
+
+// ── Pressure inputs — update sat readouts live
+window.onSuctPress = function() {
+  const p    = parseFloat(document.getElementById('suctPSIG').value);
+  const disp = document.getElementById('suctSatDisp');
+  const err  = document.getElementById('err-suct');
+  const glide = document.getElementById('suctGlide');
+
+  if (isNaN(p) || document.getElementById('suctPSIG').value === '') {
+    disp.textContent = '--'; disp.classList.remove('live');
+    err.classList.remove('show');
+    glide.classList.remove('show');
+    recalc(); return;
+  }
+
+  const s = getSuctSat(selRef, p);   // dew point for zeotropic
+  if (s === null) {
+    disp.textContent = '--'; disp.classList.remove('live');
+    err.classList.add('show');
+    glide.classList.remove('show');
+    recalc(); return;
+  }
+
+  err.classList.remove('show');
+  disp.textContent = s.toFixed(1) + ' F';
+  disp.classList.add('live');
+
+  // Show glide for zeotropic — bubble point alongside dew
+  const bubble = getSuctSatBubble(selRef, p);
+  if (bubble !== null) {
+    const glideVal = +(s - bubble).toFixed(1);
+    glide.textContent = `bubble ${bubble.toFixed(1)} F  ·  glide ${glideVal} F`;
+    glide.classList.add('show');
+  } else {
+    glide.classList.remove('show');
+  }
+
+  recalc();
+};
+
+window.onLiqPress = function() {
+  const p    = parseFloat(document.getElementById('liqPSIG').value);
+  const disp = document.getElementById('liqSatDisp');
+  const err  = document.getElementById('err-liq');
+  const glide = document.getElementById('liqGlide');
+
+  if (isNaN(p) || document.getElementById('liqPSIG').value === '') {
+    disp.textContent = '--'; disp.classList.remove('live');
+    err.classList.remove('show');
+    glide.classList.remove('show');
+    recalc(); return;
+  }
+
+  const s = getLiqSat(selRef, p);   // bubble point for zeotropic
+  if (s === null) {
+    disp.textContent = '--'; disp.classList.remove('live');
+    err.classList.add('show');
+    glide.classList.remove('show');
+    recalc(); return;
+  }
+
+  err.classList.remove('show');
+  disp.textContent = s.toFixed(1) + ' F';
+  disp.classList.add('live');
+
+  // Show glide for zeotropic — dew point alongside bubble
+  const dew = getLiqSatDew(selRef, p);
+  if (dew !== null) {
+    const glideVal = +(dew - s).toFixed(1);
+    glide.textContent = `dew ${dew.toFixed(1)} F  ·  glide ${glideVal} F`;
+    glide.classList.add('show');
+  } else {
+    glide.classList.remove('show');
+  }
+
+  recalc();
+};
+
+// ── Helpers
+function v(id)  { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
+function fv(id) { const n = parseFloat(v(id)); return isNaN(n) ? null : n; }
+function fmt(n, unit = '') { return n === null ? '--' : n.toFixed(1) + (unit ? ' ' + unit : ''); }
+
+function setRow(rowId, valId, value, unit, colorClass) {
+  const row = document.getElementById(rowId);
+  const val = document.getElementById(valId);
+  if (!row || !val) return;
+  if (value === null) {
+    row.className = 'result-row dim';
+    val.className = 'rr-val';
+    val.textContent = '--';
+  } else {
+    row.className = 'result-row' + (colorClass ? ' ' + colorClass : '');
+    val.className = 'rr-val live' + (colorClass ? ' ' + colorClass : '');
+    val.textContent = fmt(value, unit);
+  }
+}
+
+function showRow(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = show ? '' : 'none';
+}
+
+// ── Main calculation
+window.recalc = function() {
+  const suctP = fv('suctPSIG');
+  const suctL = fv('suctLine');
+  const liqP  = fv('liqPSIG');
+  const liqL  = fv('liqLine');
+  const ret   = fv('returnAir');
+  const sup   = fv('supplyAir');
+  const amb   = fv('ambient');
+  const cfm   = fv('cfm');
+
+  // Sat temps — suction uses dew, liquid uses bubble for zeotropics
+  const suctSat = suctP !== null ? getSuctSat(selRef, suctP) : null;
+  const liqSat  = liqP  !== null ? getLiqSat(selRef, liqP)  : null;
+
+  // Derived values
+  const sh = (suctSat !== null && suctL !== null) ? +(suctL - suctSat).toFixed(1) : null;
+  const sc = (liqSat  !== null && liqL  !== null) ? +(liqSat - liqL).toFixed(1)  : null;
+  const cr = (suctP !== null && liqP !== null)
+    ? +((liqP + ATM_PSIA) / (suctP + ATM_PSIA)).toFixed(2) : null;
+
+  const dt       = (ret !== null && sup !== null)      ? +(ret - sup).toFixed(1)         : null;
+  const evapApp  = (ret !== null && suctSat !== null)  ? +(ret - suctSat).toFixed(1)     : null;
+  const condApp  = (liqSat !== null && amb !== null)   ? +(liqSat - amb).toFixed(1)      : null;
+
+  // Superheat color
+  const tgt = TARGETS[selSys];
+  let shColor = null;
+  if (sh !== null) {
+    if (sh < tgt.low)       shColor = 'low';
+    else if (sh > tgt.high) shColor = 'high';
+    else                     shColor = 'ok';
+  }
+
+  // Update suction section
+  setRow('r-suct-pres', 'rv-suct-pres', suctP,   'PSIG', null);
+  setRow('r-suct-sat',  'rv-suct-sat',  suctSat,  'F',   null);
+  setRow('r-suct-line', 'rv-suct-line', suctL,    'F',   null);
+  setRow('r-sh',        'rv-sh',        sh,        'F',   shColor);
+
+  // Update liquid section
+  setRow('r-liq-pres', 'rv-liq-pres', liqP,   'PSIG', null);
+  setRow('r-liq-sat',  'rv-liq-sat',  liqSat,  'F',   null);
+  setRow('r-liq-line', 'rv-liq-line', liqL,    'F',   null);
+  setRow('r-sc',       'rv-sc',       sc,       'F',   null);
+
+  // Compression ratio
+  if (cr !== null) {
+    document.getElementById('rv-cr').textContent = cr.toFixed(2);
+    document.getElementById('rv-cr').className   = 'rr-val live';
+    document.getElementById('r-cr').className    = 'result-row';
+  } else {
+    document.getElementById('rv-cr').textContent = '--';
+    document.getElementById('rv-cr').className   = 'rr-val';
+    document.getElementById('r-cr').className    = 'result-row dim';
+  }
+
+  // Airside — show section header only if any airside data exists
+  const hasAirside = ret !== null || sup !== null || amb !== null || cfm !== null;
+  showRow('hdr-airside', hasAirside);
+  showRow('r-return',    ret !== null);
+  showRow('r-supply',    sup !== null);
+  showRow('r-dt',        dt !== null);
+  showRow('r-evap-app',  evapApp !== null);
+  showRow('r-cond-app',  condApp !== null);
+  showRow('r-ambient',   amb !== null);
+  showRow('r-cfm',       cfm !== null);
+
+  if (ret !== null)     setRow('r-return',   'rv-return',   ret,     'F', null);
+  if (sup !== null)     setRow('r-supply',   'rv-supply',   sup,     'F', null);
+  if (dt !== null)      setRow('r-dt',       'rv-dt',       dt,      'F', null);
+  if (evapApp !== null) setRow('r-evap-app', 'rv-evap-app', evapApp, 'F', null);
+  if (condApp !== null) setRow('r-cond-app', 'rv-cond-app', condApp, 'F', null);
+  if (amb !== null)     setRow('r-ambient',  'rv-ambient',  amb,     'F', null);
+  if (cfm !== null) {
+    document.getElementById('rv-cfm').textContent = cfm.toFixed(0);
+    document.getElementById('rv-cfm').className   = 'rr-val live';
+    document.getElementById('r-cfm').className    = 'result-row';
+  }
+};
+
+// ── Structured calc state — for cross-module analysis
+window.getCalcState = function() {
+  const suctP   = fv('suctPSIG');
+  const suctL   = fv('suctLine');
+  const liqP    = fv('liqPSIG');
+  const liqL    = fv('liqLine');
+  const ret     = fv('returnAir');
+  const sup     = fv('supplyAir');
+  const amb     = fv('ambient');
+  const cfm     = fv('cfm');
+
+  const suctSat = suctP !== null ? getSuctSat(selRef, suctP) : null;
+  const liqSat  = liqP  !== null ? getLiqSat(selRef, liqP)   : null;
+
+  const sh      = (suctSat !== null && suctL !== null) ? +(suctL - suctSat).toFixed(1) : null;
+  const sc      = (liqSat  !== null && liqL  !== null) ? +(liqSat - liqL).toFixed(1)  : null;
+  const cr      = (suctP !== null && liqP !== null)
+    ? +((liqP + ATM_PSIA) / (suctP + ATM_PSIA)).toFixed(2) : null;
+
+  const dt      = (ret !== null && sup !== null)     ? +(ret - sup).toFixed(1)     : null;
+  const evapApp = (ret !== null && suctSat !== null)  ? +(ret - suctSat).toFixed(1) : null;
+  const condApp = (liqSat !== null && amb !== null)   ? +(liqSat - amb).toFixed(1)  : null;
+
+  const ref = REFS[selRef] || {};
+
+  return {
+    refrigerant: ref.name || null,
+    zeotropic: ref.zeotropic || false,
+    meteringDevice: selSys,
+    suctionPressure: suctP, suctionSatTemp: suctSat, suctionLineTemp: suctL,
+    superheat: sh,
+    liquidPressure: liqP, liquidSatTemp: liqSat, liquidLineTemp: liqL,
+    subcooling: sc,
+    compressionRatio: cr,
+    returnAir: ret, supplyAir: sup, dt,
+    ambient: amb, cfm,
+    evaporatorApproach: evapApp,
+    condenserApproach: condApp
+  };
+};
+
+// ── Report block — callable by main tool as getReportBlock(context)
+window.getReportBlock = function(context) {
+  const suctP   = fv('suctPSIG');
+  const suctL   = fv('suctLine');
+  const liqP    = fv('liqPSIG');
+  const liqL    = fv('liqLine');
+  const ret     = fv('returnAir');
+  const sup     = fv('supplyAir');
+  const amb     = fv('ambient');
+  const cfm     = fv('cfm');
+  const suctSat = suctP !== null ? getSuctSat(selRef, suctP) : null;
+  const liqSat  = liqP  !== null ? getLiqSat(selRef, liqP)  : null;
+  const sh      = (suctSat !== null && suctL !== null) ? +(suctL - suctSat).toFixed(1)  : null;
+  const sc      = (liqSat  !== null && liqL  !== null) ? +(liqSat - liqL).toFixed(1)   : null;
+  const cr      = (suctP !== null && liqP !== null)    ? +((liqP + ATM_PSIA) / (suctP + ATM_PSIA)).toFixed(2) : null;
+  const dt      = (ret !== null && sup !== null)       ? +(ret - sup).toFixed(1)         : null;
+  const evapApp = (ret !== null && suctSat !== null)   ? +(ret - suctSat).toFixed(1)    : null;
+  const condApp = (liqSat !== null && amb !== null)    ? +(liqSat - amb).toFixed(1)     : null;
+
+  const pad = (s, w = 20) => String(s).padEnd(w);
+  const d   = (n, unit = '') => n === null ? '--' : n.toFixed(1) + (unit ? ' ' + unit : '');
+  const dc  = (n) => n === null ? '--' : n.toFixed(2);
+
+  const lines = [];
+
+  if (context) {
+    lines.push('REFRIGERATION ANALYSIS');
+    lines.push(context.date || new Date().toLocaleDateString('en-US'));
+    lines.push('');
+    if (context.unitNum)  lines.push(pad('Unit:')     + context.unitNum);
+    if (context.make)     lines.push(pad('Make:')     + context.make);
+    if (context.model)    lines.push(pad('Model:')    + context.model);
+    if (context.serial)   lines.push(pad('Serial:')   + context.serial);
+    if (context.location) lines.push(pad('Location:') + context.location);
+    if (context.tech)     lines.push(pad('Tech:')     + context.tech);
+    lines.push('');
+  } else {
+    lines.push('REFRIGERATION ANALYSIS');
+    lines.push(new Date().toLocaleDateString('en-US') + '  ' +
+               new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+    lines.push('');
+  }
+
+  const ref = REFS[selRef];
+  lines.push(pad('Refrigerant:') + ref.name + (ref.zeotropic ? ' (zeotropic)' : ''));
+  lines.push(pad('Metering:')    + (selSys === 'txv' ? 'TXV / EEV' : 'Fixed Orifice'));
+  lines.push('');
+  lines.push('SUCTION');
+  lines.push(pad('Suction:')  + d(suctP,   'PSIG'));
+  lines.push(pad('Sat Temp:') + d(suctSat, 'F') + (ref.zeotropic ? ' (dew)' : ''));
+  lines.push(pad('Line Temp:')+ d(suctL,   'F'));
+  lines.push(pad('Superheat:')+ d(sh,      'F'));
+  lines.push('');
+  lines.push('LIQUID');
+  lines.push(pad('Liquid:')   + d(liqP,   'PSIG'));
+  lines.push(pad('Sat Temp:') + d(liqSat, 'F') + (ref.zeotropic ? ' (bubble)' : ''));
+  lines.push(pad('Line Temp:')+ d(liqL,   'F'));
+  lines.push(pad('Subcooling:')+ d(sc,    'F'));
+  lines.push('');
+  lines.push('SYSTEM');
+  lines.push(pad('Compression Ratio:') + dc(cr));
+
+  const hasAirside = ret !== null || sup !== null || amb !== null || cfm !== null;
+  if (hasAirside) {
+    lines.push('');
+    lines.push('AIRSIDE');
+    if (ret !== null)     lines.push(pad('Return Air:')      + d(ret,     'F'));
+    if (sup !== null)     lines.push(pad('Supply Air:')      + d(sup,     'F'));
+    if (dt !== null)      lines.push(pad('Delta T:')         + d(dt,      'F'));
+    if (evapApp !== null) lines.push(pad('Evap Approach:')   + d(evapApp, 'F'));
+    if (amb !== null)     lines.push(pad('Outdoor Ambient:') + d(amb,     'F'));
+    if (condApp !== null) lines.push(pad('Cond Approach:')   + d(condApp, 'F'));
+    if (cfm !== null)     lines.push(pad('CFM:')             + cfm.toFixed(0));
+  }
+
+  return lines.join('\n');
+};
+
+// ── Standalone report modal
+window.openReport = function() {
+  document.getElementById('reportText').textContent = window.getReportBlock();
+  document.getElementById('reportOverlay').classList.add('open');
+};
+
+window.closeReport = function() {
+  document.getElementById('reportOverlay').classList.remove('open');
+};
+
+window.copyReport = function() {
+  const txt = document.getElementById('reportText').textContent;
+  navigator.clipboard?.writeText(txt)
+    .then(() => toast('Copied'))
+    .catch(() => toast('Copy failed'));
+};
+
+window.downloadReport = function() {
+  const txt  = document.getElementById('reportText').textContent;
+  const date = new Date().toISOString().slice(0, 10);
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(new Blob([txt], { type: 'text/plain' }));
+  a.download = `refrigeration_${date}.txt`;
+  a.click();
+  toast('Saved');
+};
+
+// ── Toast
+let _tt;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_tt);
+  _tt = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── Boot
+buildRefGrid();
+
+if (window.HVAC_EMBEDDED) {
+  document.getElementById('standaloneBar').style.display = 'none';
+}
+
+</script>
+</body>
+</html>

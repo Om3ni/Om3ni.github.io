@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Airflow Analysis · HVAC Tools</title>
+<link rel="stylesheet" href="../base.css">
+<style>
+/* ── Airflow-specific styles ── */
+
+/* CFM calc button */
+.cfm-calc-btn {
+  width: 100%; padding: 10px; border-radius: 3px;
+  border: 1px solid var(--orange-lo); background: var(--surface2);
+  color: var(--orange-hi); font-family: var(--ui); font-weight: 600;
+  font-size: .82rem; letter-spacing: .08em; text-transform: uppercase;
+  cursor: pointer; transition: all .12s; margin-top: 6px;
+}
+.cfm-calc-btn:active { background: var(--orange-dim); }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="hdr-back" href="../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Airflow Analysis</div>
+    <div class="hdr-sub">Delta T · Sensible Heat · Mixed Air · OA%</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- TEMPERATURE SPLIT -->
+  <label class="fl">Air Temperatures</label>
+  <div class="input-pair">
+    <div>
+      <label class="fl" for="returnAir">Return Air</label>
+      <div class="iw">
+        <input type="number" id="returnAir" inputmode="decimal" placeholder="--" step="0.1" oninput="recalc()">
+        <span class="iw-unit">F</span>
+      </div>
+    </div>
+    <div>
+      <label class="fl" for="supplyAir">Supply Air</label>
+      <div class="iw">
+        <input type="number" id="supplyAir" inputmode="decimal" placeholder="--" step="0.1" oninput="recalc()">
+        <span class="iw-unit">F</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CFM -->
+  <div class="sec">
+    <div class="sec-lbl">CFM</div>
+
+    <div class="fg">
+      <label class="fl" for="cfmInput">Known CFM</label>
+      <div class="iw">
+        <input type="number" id="cfmInput" inputmode="decimal" placeholder="--" step="1" oninput="onCFMInput()">
+        <span class="iw-unit">CFM</span>
+      </div>
+      <div class="hint">Enter if known. Add Heat Module to calculate from BTU and temperature rise.</div>
+    </div>
+
+    <!-- FPM PATH -->
+    <div class="fg">
+      <label class="fl">Calculate from FPM</label>
+      <div class="hint warn" style="margin-bottom:8px">
+        Use this method for duct heaters and unit heaters. Temperature rise across a duct heater is not a reliable CFM method due to element bypass air. Measure FPM at the duct face with an anemometer or velometer.
+      </div>
+      <div class="input-trio">
+        <div>
+          <label class="fl" for="fpm">FPM</label>
+          <div class="iw">
+            <input type="number" id="fpm" inputmode="decimal" placeholder="--" step="1" oninput="calcFPM()">
+            <span class="iw-unit">FPM</span>
+          </div>
+        </div>
+        <div>
+          <label class="fl" for="ductW">Width</label>
+          <div class="iw">
+            <input type="number" id="ductW" inputmode="decimal" placeholder="--" step="0.5" oninput="calcFPM()">
+            <span class="iw-unit">in</span>
+          </div>
+        </div>
+        <div>
+          <label class="fl" for="ductH">Height</label>
+          <div class="iw">
+            <input type="number" id="ductH" inputmode="decimal" placeholder="--" step="0.5" oninput="calcFPM()">
+            <span class="iw-unit">in</span>
+          </div>
+        </div>
+      </div>
+      <div class="sat-line" id="fpmResult" style="display:none; margin-top:6px; background:var(--surface); border:1px solid var(--border); border-radius:3px; padding:8px 10px; display:none; justify-content:space-between; align-items:center;">
+        <span style="font-family:var(--mono);font-size:.63rem;color:var(--text-mute);text-transform:uppercase;letter-spacing:.06em">Calculated CFM</span>
+        <span style="font-family:var(--mono);font-size:.92rem;color:var(--orange-hi)" id="fpmCFMDisp">--</span>
+      </div>
+      <button class="cfm-calc-btn" id="useFPMBtn" style="display:none" onclick="applyFPMCFM()">Use This CFM</button>
+    </div>
+  </div>
+
+  <!-- MIXED AIR -->
+  <div class="sec">
+    <div class="sec-lbl">Mixed Air — Optional</div>
+    <div class="hint" style="margin-bottom:10px">
+      Measure at the mixed air plenum between the damper section and the coil. Requires return air and outdoor ambient.
+    </div>
+
+    <div class="input-pair">
+      <div>
+        <label class="fl" for="mixedAir">Mixed Air Temp</label>
+        <div class="iw">
+          <input type="number" id="mixedAir" inputmode="decimal" placeholder="--" step="0.1" oninput="recalc()">
+          <span class="iw-unit">F</span>
+        </div>
+      </div>
+      <div>
+        <label class="fl" for="ambient">Outdoor Ambient</label>
+        <div class="iw">
+          <input type="number" id="ambient" inputmode="decimal" placeholder="--" step="0.1" oninput="recalc()">
+          <span class="iw-unit">F</span>
+        </div>
+      </div>
+    </div>
+    <div class="hint">OA% = (Mixed Air - Return) / (Ambient - Return) x 100</div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results">
+
+    <div class="result-sec-hdr">Temperature</div>
+
+    <div class="result-row dim" id="r-return">
+      <div class="rr-left">
+        <span class="rr-label">Return Air</span>
+      </div>
+      <span class="rr-val" id="rv-return">--</span>
+    </div>
+
+    <div class="result-row dim" id="r-supply">
+      <div class="rr-left">
+        <span class="rr-label">Supply Air</span>
+      </div>
+      <span class="rr-val" id="rv-supply">--</span>
+    </div>
+
+    <div class="result-row dim" id="r-dt">
+      <div class="rr-left">
+        <span class="rr-label">Delta T</span>
+      </div>
+      <span class="rr-val" id="rv-dt">--</span>
+    </div>
+
+    <div class="result-sec-hdr" id="hdr-cfm-sec">CFM &amp; Heat</div>
+
+    <div class="result-row dim" id="r-cfm">
+      <div class="rr-left">
+        <span class="rr-label">CFM</span>
+        <span class="rr-sub" id="cfm-src"></span>
+      </div>
+      <span class="rr-val" id="rv-cfm">--</span>
+    </div>
+
+    <div class="result-row dim" id="r-sensible" style="display:none">
+      <div class="rr-left">
+        <span class="rr-label">Sensible Heat</span>
+        <span class="rr-sub">1.08 x CFM x Delta T</span>
+      </div>
+      <span class="rr-val" id="rv-sensible">--</span>
+    </div>
+
+    <div class="result-sec-hdr" id="hdr-mixed" style="display:none">Mixed Air</div>
+
+    <div class="result-row dim" id="r-mixed" style="display:none">
+      <div class="rr-left">
+        <span class="rr-label">Mixed Air Temp</span>
+      </div>
+      <span class="rr-val" id="rv-mixed">--</span>
+    </div>
+
+    <div class="result-row dim" id="r-ambient" style="display:none">
+      <div class="rr-left">
+        <span class="rr-label">Outdoor Ambient</span>
+      </div>
+      <span class="rr-val" id="rv-ambient">--</span>
+    </div>
+
+    <div class="result-row dim" id="r-oa-pct" style="display:none">
+      <div class="rr-left">
+        <span class="rr-label">OA Percentage</span>
+        <span class="rr-sub">(Mixed - Return) / (Ambient - Return)</span>
+      </div>
+      <span class="rr-val" id="rv-oa-pct">--</span>
+    </div>
+
+    <div class="result-row dim" id="r-oa-cfm" style="display:none">
+      <div class="rr-left">
+        <span class="rr-label">OA CFM</span>
+        <span class="rr-sub">OA% x Total CFM</span>
+      </div>
+      <span class="rr-val" id="rv-oa-cfm">--</span>
+    </div>
+
+    <div class="result-row dim" id="r-ra-cfm" style="display:none">
+      <div class="rr-left">
+        <span class="rr-label">Return Air CFM</span>
+        <span class="rr-sub">Total CFM - OA CFM</span>
+      </div>
+      <span class="rr-val" id="rv-ra-cfm">--</span>
+    </div>
+
+  </div>
+
+</main>
+
+<div id="standaloneBar">
+  <button class="btn btn-ghost" onclick="openReport()">Export Report</button>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="modal-overlay" id="reportOverlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">Airflow Report</span>
+      <button class="modal-close" onclick="closeReport()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <pre class="report-pre" id="reportText"></pre>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="copyReport()">Copy</button>
+      <button class="btn btn-primary" onclick="downloadReport()">Save .txt</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+
+// ── Helpers
+function fv(id) { const n = parseFloat(document.getElementById(id)?.value); return isNaN(n) ? null : n; }
+function d(n, unit='', decimals=1) { return n === null ? '--' : n.toFixed(decimals) + (unit ? ' ' + unit : ''); }
+
+function setRow(rowId, valId, value, unit, decimals=1, show=true) {
+  const row = document.getElementById(rowId);
+  const val = document.getElementById(valId);
+  if (!row || !val) return;
+  row.style.display = show ? '' : 'none';
+  if (value === null) {
+    row.className = 'result-row dim';
+    val.className = 'rr-val';
+    val.textContent = '--';
+  } else {
+    row.className = 'result-row live';
+    val.className = 'rr-val live';
+    val.textContent = d(value, unit, decimals);
+  }
+}
+
+function showEl(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = show ? '' : 'none';
+}
+
+// ── State
+let cfmSource = null; // 'manual' | 'fpm'
+let fpmCFMVal = null;
+
+// ── FPM calculation
+window.calcFPM = function() {
+  const fpm  = fv('fpm');
+  const w    = fv('ductW');
+  const h    = fv('ductH');
+  const res  = document.getElementById('fpmResult');
+  const disp = document.getElementById('fpmCFMDisp');
+  const btn  = document.getElementById('useFPMBtn');
+
+  if (fpm !== null && w !== null && h !== null) {
+    const area = (w * h) / 144;
+    fpmCFMVal  = Math.round(fpm * area);
+    disp.textContent = fpmCFMVal + ' CFM';
+    res.style.display  = 'flex';
+    btn.style.display  = 'block';
+  } else {
+    fpmCFMVal = null;
+    res.style.display  = 'none';
+    btn.style.display  = 'none';
+  }
+};
+
+window.applyFPMCFM = function() {
+  if (fpmCFMVal === null) return;
+  document.getElementById('cfmInput').value = fpmCFMVal;
+  cfmSource = 'fpm';
+  recalc();
+  toast('CFM set to ' + fpmCFMVal);
+};
+
+window.onCFMInput = function() {
+  cfmSource = 'manual';
+  recalc();
+};
+
+// ── Main calculation
+window.recalc = function() {
+  const ret   = fv('returnAir');
+  const sup   = fv('supplyAir');
+  const cfm   = fv('cfmInput');
+  const mixed = fv('mixedAir');
+  const amb   = fv('ambient');
+
+  // Core
+  const dt       = (ret !== null && sup !== null) ? +(ret - sup).toFixed(1) : null;
+  const sensible = (cfm !== null && dt !== null)  ? Math.round(1.08 * cfm * dt) : null;
+
+  // Mixed air
+  const oaPct = (mixed !== null && ret !== null && amb !== null && (amb - ret) !== 0)
+    ? +((mixed - ret) / (amb - ret) * 100).toFixed(1) : null;
+  const oaCFM = (oaPct !== null && cfm !== null) ? Math.round(oaPct / 100 * cfm) : null;
+  const raCFM = (oaCFM !== null && cfm !== null) ? cfm - oaCFM : null;
+
+  // Temperature results
+  setRow('r-return',  'rv-return',  ret,  'F');
+  setRow('r-supply',  'rv-supply',  sup,  'F');
+  setRow('r-dt',      'rv-dt',      dt,   'F');
+
+  // CFM result
+  setRow('r-cfm', 'rv-cfm', cfm, 'CFM', 0);
+  if (cfm !== null) {
+    const src = document.getElementById('cfm-src');
+    if (src) src.textContent = cfmSource === 'fpm' ? 'calculated from FPM' : 'manual entry';
+  }
+
+  // Sensible heat — only show when CFM + DT are both present
+  showEl('r-sensible', sensible !== null);
+  setRow('r-sensible', 'rv-sensible', sensible, 'BTU/h', 0, sensible !== null);
+
+  // Mixed air section — only show when mixed air or ambient has data
+  const hasMixed = mixed !== null || amb !== null;
+  showEl('hdr-mixed', hasMixed);
+  showEl('r-mixed',   mixed !== null);
+  showEl('r-ambient', amb   !== null);
+  showEl('r-oa-pct',  oaPct !== null);
+  showEl('r-oa-cfm',  oaCFM !== null);
+  showEl('r-ra-cfm',  raCFM !== null);
+
+  if (mixed !== null) setRow('r-mixed',   'rv-mixed',   mixed,  'F');
+  if (amb   !== null) setRow('r-ambient', 'rv-ambient', amb,    'F');
+  if (oaPct !== null) setRow('r-oa-pct',  'rv-oa-pct',  oaPct,  '%');
+  if (oaCFM !== null) setRow('r-oa-cfm',  'rv-oa-cfm',  oaCFM, 'CFM', 0);
+  if (raCFM !== null) setRow('r-ra-cfm',  'rv-ra-cfm',  raCFM, 'CFM', 0);
+};
+
+// ── Structured calc state — for cross-module analysis
+window.getCalcState = function() {
+  const ret   = fv('returnAir');
+  const sup   = fv('supplyAir');
+  const cfm   = fv('cfmInput');
+  const mixed = fv('mixedAir');
+  const amb   = fv('ambient');
+  const fpm   = fv('fpm');
+  const ductW = fv('ductW');
+  const ductH = fv('ductH');
+
+  const dt       = (ret !== null && sup !== null) ? +(ret - sup).toFixed(1) : null;
+  const sensible = (cfm !== null && dt !== null)  ? Math.round(1.08 * cfm * dt) : null;
+  const oaPct    = (mixed !== null && ret !== null && amb !== null && (amb - ret) !== 0)
+    ? +((mixed - ret) / (amb - ret) * 100).toFixed(1) : null;
+  const oaCFM    = (oaPct !== null && cfm !== null) ? Math.round(oaPct / 100 * cfm) : null;
+  const raCFM    = (oaCFM !== null && cfm !== null) ? cfm - oaCFM : null;
+  const ductArea = (ductW !== null && ductH !== null) ? +(ductW * ductH / 144).toFixed(2) : null;
+  const fpmCFM   = (fpm !== null && ductArea !== null) ? Math.round(fpm * ductArea) : null;
+
+  return {
+    returnAir: ret, supplyAir: sup, dt, sensible,
+    cfm, cfmSource,
+    fpm, ductW, ductH, ductArea, fpmCFM,
+    mixedAir: mixed, ambient: amb,
+    oaPct, oaCFM, raCFM
+  };
+};
+
+// ── Report block — callable by main tool as getReportBlock(context)
+window.getReportBlock = function(context) {
+  const ret    = fv('returnAir');
+  const sup    = fv('supplyAir');
+  const cfm    = fv('cfmInput');
+  const mixed  = fv('mixedAir');
+  const amb    = fv('ambient');
+  const fpm    = fv('fpm');
+  const ductW  = fv('ductW');
+  const ductH  = fv('ductH');
+
+  const dt       = (ret !== null && sup !== null) ? +(ret - sup).toFixed(1) : null;
+  const sensible = (cfm !== null && dt !== null)  ? Math.round(1.08 * cfm * dt) : null;
+  const oaPct    = (mixed !== null && ret !== null && amb !== null && (amb - ret) !== 0)
+    ? +((mixed - ret) / (amb - ret) * 100).toFixed(1) : null;
+  const oaCFM    = (oaPct !== null && cfm !== null) ? Math.round(oaPct / 100 * cfm) : null;
+  const raCFM    = (oaCFM !== null && cfm !== null) ? cfm - oaCFM : null;
+  const fpmCFM   = (fpm !== null && ductW !== null && ductH !== null)
+    ? Math.round(fpm * (ductW * ductH / 144)) : null;
+
+  const pad = (s, w=22) => String(s).padEnd(w);
+  const dv  = (n, unit='', dec=1) => n === null ? '--' : n.toFixed(dec) + (unit ? ' ' + unit : '');
+
+  let lines = [];
+
+  if (!context) {
+    lines.push('AIRFLOW ANALYSIS');
+    lines.push(new Date().toLocaleDateString('en-US') + '  ' +
+      new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}));
+    lines.push('');
+  }
+
+  lines.push('AIRFLOW');
+  lines.push(pad('Return Air:')  + dv(ret,  'F'));
+  lines.push(pad('Supply Air:')  + dv(sup,  'F'));
+  lines.push(pad('Delta T:')     + dv(dt,   'F'));
+
+  if (cfm !== null) {
+    lines.push('');
+    const srcNote = cfmSource === 'fpm' ? ' (from FPM)' : ' (manual)';
+    lines.push(pad('CFM:') + Math.round(cfm) + srcNote);
+    if (sensible !== null) lines.push(pad('Sensible Heat:') + Math.round(sensible) + ' BTU/h');
+  }
+
+  if (fpmCFM !== null && cfmSource === 'fpm') {
+    lines.push(pad('FPM:')        + dv(fpm, '', 0));
+    lines.push(pad('Duct Size:')  + ductW + ' x ' + ductH + ' in');
+    lines.push(pad('Duct Area:')  + ((ductW * ductH) / 144).toFixed(2) + ' ft2');
+  }
+
+  if (mixed !== null || amb !== null || oaPct !== null) {
+    lines.push('');
+    lines.push('MIXED AIR');
+    if (ret   !== null) lines.push(pad('Return Air:')    + dv(ret,   'F'));
+    if (mixed !== null) lines.push(pad('Mixed Air:')     + dv(mixed, 'F'));
+    if (amb   !== null) lines.push(pad('Outdoor Ambient:') + dv(amb, 'F'));
+    if (oaPct !== null) lines.push(pad('OA Percentage:') + dv(oaPct, '%'));
+    if (oaCFM !== null) lines.push(pad('OA CFM:')        + Math.round(oaCFM));
+    if (raCFM !== null) lines.push(pad('Return Air CFM:') + Math.round(raCFM));
+  }
+
+  return lines.join('\n');
+};
+
+// ── Standalone report modal
+window.openReport = function() {
+  document.getElementById('reportText').textContent = window.getReportBlock();
+  document.getElementById('reportOverlay').classList.add('open');
+};
+window.closeReport = function() {
+  document.getElementById('reportOverlay').classList.remove('open');
+};
+window.copyReport = function() {
+  navigator.clipboard?.writeText(document.getElementById('reportText').textContent)
+    .then(() => toast('Copied')).catch(() => toast('Copy failed'));
+};
+window.downloadReport = function() {
+  const txt  = document.getElementById('reportText').textContent;
+  const date = new Date().toISOString().slice(0,10);
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(new Blob([txt], {type:'text/plain'}));
+  a.download = `airflow_${date}.txt`;
+  a.click();
+  toast('Saved');
+};
+
+// ── Toast
+let _tt;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_tt);
+  _tt = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── Boot
+if (window.HVAC_EMBEDDED) {
+  document.getElementById('standaloneBar').style.display = 'none';
+}
+
+</script>
+</body>
+</html>

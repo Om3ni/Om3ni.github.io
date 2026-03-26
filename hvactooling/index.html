@@ -1,34 +1,11 @@
-  -<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Field Entry</title>
+<link rel="stylesheet" href="base.css">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
-
-:root {
-  --bg:        #0f0f0f;
-  --surface:   #181818;
-  --surface2:  #222222;
-  --border:    #2e2e2e;
-  --orange:    #c85a00;
-  --orange-hi: #e86d10;
-  --orange-lo: #7a3800;
-  --orange-dim:#2a1200;
-  --text:      #e0d8d0;
-  --text-dim:  #887870;
-  --text-mute: #504540;
-  --green:     #1e4a1e;
-  --green-hi:  #4a9a4a;
-  --red:       #5a1a1a;
-  --red-hi:    #bb3333;
-  --mono:      'Share Tech Mono', monospace;
-  --ui:        'Rajdhani', sans-serif;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body { background: var(--bg); color: var(--text); font-family: var(--ui); font-size: 16px; min-height: 100vh; }
 
 /* ── GATE ── */
 #gate {
@@ -73,37 +50,19 @@ body { background: var(--bg); color: var(--text); font-family: var(--ui); font-s
 /* ── APP ── */
 #app { display: none; }
 
-header {
-  background: var(--surface); border-bottom: 2px solid var(--orange);
-  padding: 10px 14px; display: flex; align-items: center; gap: 10px;
-  position: sticky; top: 0; z-index: 100;
-}
-.hdr-back { background: none; border: none; color: var(--orange); font-size: 1.25rem; cursor: pointer; padding: 2px 8px 2px 0; flex-shrink: 0; line-height: 1; }
+/* Index-specific header elements */
 .hdr-name { font-family: var(--mono); font-size: .76rem; color: var(--orange-hi); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hdr-badge {
   background: var(--orange-dim); border: 1px solid var(--orange-lo); color: var(--orange-hi);
   font-family: var(--mono); font-size: .7rem; padding: 3px 9px; border-radius: 3px; letter-spacing: .06em; flex-shrink: 0;
 }
 
-/* ── TABS ── */
-.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); }
-.tab {
-  flex: 1; padding: 10px 0; text-align: center; font-family: var(--ui); font-weight: 600;
-  font-size: .8rem; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--text-mute); cursor: pointer; border-bottom: 2px solid transparent; transition: all .12s;
-}
-.tab.active { color: var(--orange-hi); border-bottom-color: var(--orange); }
+/* Index overrides */
+.panel { padding: 16px; padding-bottom: 48px; }
 
-/* ── PANELS ── */
-.panel { display: none; padding: 16px; padding-bottom: 48px; }
-.panel.active { display: block; }
-
-/* ── FORM ── */
+/* ── FORM (index overrides) ── */
 .fg { margin-bottom: 13px; }
-label.fl {
-  display: block; font-size: .7rem; font-weight: 700; letter-spacing: .15em;
-  text-transform: uppercase; color: var(--text-dim); margin-bottom: 5px;
-}
+label.fl { font-size: .7rem; letter-spacing: .15em; margin-bottom: 5px; }
 input[type=text], input[type=number], textarea {
   width: 100%; background: var(--surface2); border: 1px solid var(--border);
   border-radius: 3px; color: var(--text); font-family: var(--mono); font-size: .92rem;
@@ -116,7 +75,7 @@ textarea { resize: vertical; min-height: 72px; }
 .row3 { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
 
 .sec { border: none; border-top: 1px solid var(--border); margin: 18px 0 14px; }
-.sec-lbl { font-size: .67rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--orange-lo); margin-bottom: 12px; }
+.sec-lbl { margin-bottom: 12px; }
 
 /* ── Y/N ── */
 .yn { display: flex; gap: 7px; }
@@ -129,15 +88,9 @@ textarea { resize: vertical; min-height: 72px; }
 .yn-b.n.on { background: var(--red);   border-color: var(--red-hi);   color: #f5bbbb; }
 .yn-b.na.on { background: var(--orange-dim); border-color: var(--orange-lo); color: var(--orange-hi); }
 
-/* ── BUTTONS ── */
-.btn {
-  display: block; width: 100%; padding: 13px; border-radius: 3px; border: none;
-  font-family: var(--ui); font-weight: 700; font-size: .95rem; letter-spacing: .12em;
-  text-transform: uppercase; cursor: pointer; transition: all .12s; margin-bottom: 10px;
-}
-.btn-primary { background: var(--orange); color: #fff; }
-.btn-primary:active { background: var(--orange-hi); }
-.btn-ghost { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+/* ── BUTTONS (index overrides + unique) ── */
+.btn { margin-bottom: 10px; }
+.btn-ghost { color: var(--text-dim); border: 1px solid var(--border); }
 .btn-ghost:active { border-color: var(--orange); color: var(--orange-hi); }
 .btn-export { background: var(--surface2); color: var(--orange-hi); border: 1px solid var(--orange-lo); }
 .btn-export:active { background: var(--orange-dim); }
@@ -213,6 +166,85 @@ textarea { resize: vertical; min-height: 72px; }
 
 .empty { color: var(--text-mute); font-family: var(--mono); font-size: .76rem; text-align: center; padding: 28px 0; }
 
+/* ── INLINE MODULES ── */
+#module-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+#module-list:empty { margin-bottom: 0; }
+.module-slot {
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--orange); border-radius: 3px;
+  overflow: hidden;
+}
+.module-slot-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; background: var(--surface2); border-bottom: 1px solid var(--border);
+}
+.module-slot-title {
+  font-family: var(--ui); font-weight: 700; font-size: .72rem;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--orange-hi);
+}
+.module-slot-del {
+  background: none; border: none; color: var(--text-mute); font-size: 1rem;
+  cursor: pointer; padding: 2px 6px;
+}
+.module-slot-del:active { color: var(--red-hi); }
+.module-slot iframe {
+  width: 100%; border: none; display: block;
+  min-height: 300px; background: var(--bg);
+}
+.module-picker {
+  display: none; grid-template-columns: 1fr 1fr; gap: 6px;
+  margin-bottom: 10px;
+}
+.module-picker.open { display: grid; }
+.module-pick-btn {
+  padding: 10px; border-radius: 3px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text-dim);
+  font-family: var(--ui); font-weight: 600; font-size: .8rem;
+  letter-spacing: .08em; text-transform: uppercase;
+  cursor: pointer; text-align: center; transition: all .1s;
+}
+.module-pick-btn:active { border-color: var(--orange); color: var(--orange-hi); }
+
+/* ── TOOLS TAB ── */
+.tool-grid { display: flex; flex-direction: column; gap: 8px; }
+.tool-btn {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--orange-lo); border-radius: 3px;
+  padding: 14px 14px; cursor: pointer; transition: border-left-color .12s;
+  text-decoration: none;
+}
+.tool-btn:active { border-left-color: var(--orange); }
+.tool-btn-name {
+  font-family: var(--ui); font-weight: 700; font-size: .88rem;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--orange-hi);
+}
+.tool-btn-desc {
+  font-family: var(--mono); font-size: .62rem; color: var(--text-mute);
+  letter-spacing: .03em; margin-top: 2px;
+}
+#tool-frame-wrap {
+  position: fixed; inset: 0; z-index: 150;
+  background: var(--bg); display: none; flex-direction: column;
+}
+#tool-frame-wrap.open { display: flex; }
+#tool-frame-bar {
+  background: var(--surface); border-bottom: 2px solid var(--orange);
+  padding: 8px 14px; display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+#tool-frame-bar button {
+  background: none; border: none; color: var(--orange); font-size: 1.25rem;
+  cursor: pointer; padding: 2px 8px 2px 0; line-height: 1;
+}
+#tool-frame-bar span {
+  font-family: var(--ui); font-weight: 700; font-size: .88rem;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--text);
+}
+#tool-frame {
+  flex: 1; border: none; width: 100%; background: var(--bg);
+}
+
 /* ── TOAST ── */
 #toast {
   position: fixed; bottom: 20px; left: 50%;
@@ -261,6 +293,7 @@ textarea { resize: vertical; min-height: 72px; }
     <div class="tab active" data-tab="entry" onclick="switchTab(this)">Entry</div>
     <div class="tab" data-tab="queue" onclick="switchTab(this)">Queue</div>
     <div class="tab" data-tab="parts" onclick="switchTab(this)">Parts</div>
+    <div class="tab" data-tab="tools" onclick="switchTab(this)">Tools</div>
     <div class="tab" data-tab="export" onclick="switchTab(this)">Export</div>
   </div>
 
@@ -418,6 +451,17 @@ textarea { resize: vertical; min-height: 72px; }
       <textarea id="f-notes" placeholder="Faults, observations, parts needed..."></textarea>
     </div>
 
+    <!-- MODULE SLOTS -->
+    <div id="module-list"></div>
+    <button class="btn btn-add" onclick="showModulePicker()">+ Add Module</button>
+    <div class="module-picker" id="module-picker">
+      <div class="module-pick-btn" onclick="addModule('electrical', 'Electrical')">Electrical</div>
+      <div class="module-pick-btn" onclick="addModule('heat', 'Heat')">Heat</div>
+      <div class="module-pick-btn" onclick="addModule('refrigeration', 'Refrigeration')">Refrigeration</div>
+      <div class="module-pick-btn" onclick="addModule('airflow', 'Airflow')">Airflow</div>
+      <div class="module-pick-btn" onclick="addModule('motors', 'Motors')">Motors</div>
+    </div>
+
     <button class="btn btn-primary" onclick="addRecord()">+ Add to Queue</button>
     <button class="btn btn-ghost"   onclick="clearForm()">Clear Form</button>
 
@@ -433,6 +477,42 @@ textarea { resize: vertical; min-height: 72px; }
     <div id="partsBody"></div>
   </div>
 
+  <!-- TOOLS TAB -->
+  <div class="panel" id="tab-tools">
+    <div class="tool-grid">
+      <div class="tool-btn" onclick="openTool('electrical', 'Electrical Analysis')">
+        <div>
+          <div class="tool-btn-name">Electrical</div>
+          <div class="tool-btn-desc">Supply voltage · Phase imbalance · Transformers</div>
+        </div>
+      </div>
+      <div class="tool-btn" onclick="openTool('heat', 'Heat Analysis')">
+        <div>
+          <div class="tool-btn-name">Heat</div>
+          <div class="tool-btn-desc">BTU output · Temperature rise · CFM</div>
+        </div>
+      </div>
+      <div class="tool-btn" onclick="openTool('refrigeration', 'Refrigeration Analysis')">
+        <div>
+          <div class="tool-btn-name">Refrigeration</div>
+          <div class="tool-btn-desc">Superheat · Subcooling · Compression ratio</div>
+        </div>
+      </div>
+      <div class="tool-btn" onclick="openTool('airflow', 'Airflow Analysis')">
+        <div>
+          <div class="tool-btn-name">Airflow</div>
+          <div class="tool-btn-desc">Delta T · Sensible heat · Mixed air · OA%</div>
+        </div>
+      </div>
+      <div class="tool-btn" onclick="openTool('motors', 'Motor Analysis')">
+        <div>
+          <div class="tool-btn-name">Motors</div>
+          <div class="tool-btn-desc">PSC · 3-Phase · ECM · Windings · Insulation</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- EXPORT TAB -->
   <div class="panel" id="tab-export">
     <p style="color:var(--text-dim);font-family:var(--mono);font-size:.75rem;line-height:1.7;margin-bottom:22px;">
@@ -444,6 +524,15 @@ textarea { resize: vertical; min-height: 72px; }
     <hr class="sec" style="margin-top:24px;">
     <button class="btn btn-danger" onclick="doNuke()">Clear All Records</button>
   </div>
+</div>
+
+<!-- ══ TOOL FRAME ══ -->
+<div id="tool-frame-wrap">
+  <div id="tool-frame-bar">
+    <button onclick="closeTool()">&#8592;</button>
+    <span id="tool-frame-title"></span>
+  </div>
+  <iframe id="tool-frame"></iframe>
 </div>
 
 <div id="toast"></div>
@@ -606,6 +695,7 @@ function addRecord() {
     done:     document.getElementById('f-done').value,
     date:     new Date().toLocaleDateString('en-US'),
     notes:    document.getElementById('f-notes').value.trim(),
+    modules:  getModuleReports({ embedded: true }),
   };
 
   const recs = getRecords(session);
@@ -628,6 +718,10 @@ function clearForm() {
   document.getElementById('prev-f1').textContent = '';
   document.getElementById('prev-f2').textContent = '';
   document.getElementById('prev-b1').textContent = '';
+  // Clear inline modules
+  moduleSlots = [];
+  document.getElementById('module-list').innerHTML = '';
+  document.getElementById('module-picker').classList.remove('open');
 }
 
 // ── Badge ──────────────────────────────────────────────────────────────────
@@ -769,6 +863,143 @@ function toast(msg) {
   el.classList.add('show');
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+// ── Inline modules ───────────────────────────────────────────────────────
+let moduleSlots = []; // { id, name, title }
+let moduleId = 0;
+
+function showModulePicker() {
+  document.getElementById('module-picker').classList.toggle('open');
+}
+
+function addModule(name, title) {
+  moduleId++;
+  const mid = moduleId;
+  moduleSlots.push({ id: mid, name, title });
+  document.getElementById('module-picker').classList.remove('open');
+  renderModuleSlots();
+}
+
+function removeModule(mid) {
+  moduleSlots = moduleSlots.filter(m => m.id !== mid);
+  renderModuleSlots();
+}
+
+function renderModuleSlots() {
+  const list = document.getElementById('module-list');
+  list.innerHTML = moduleSlots.map(m => `
+    <div class="module-slot" id="mod-slot-${m.id}">
+      <div class="module-slot-hdr">
+        <span class="module-slot-title">${m.title}</span>
+        <button class="module-slot-del" onclick="removeModule(${m.id})">&#10005;</button>
+      </div>
+      <iframe id="mod-frame-${m.id}" src="tools/${m.name}.html"></iframe>
+    </div>
+  `).join('');
+
+  // Wait for each iframe to load, then set embedded mode and auto-resize
+  moduleSlots.forEach(m => {
+    const frame = document.getElementById('mod-frame-' + m.id);
+    if (!frame) return;
+    frame.onload = function() {
+      try {
+        const doc = frame.contentDocument;
+        const win = frame.contentWindow;
+        win.HVAC_EMBEDDED = true;
+        // Hide module header and standalone bar
+        const hdr = doc.querySelector('header');
+        if (hdr) hdr.style.display = 'none';
+        const bar = doc.getElementById('standaloneBar');
+        if (bar) bar.style.display = 'none';
+        // Auto-resize iframe to content
+        resizeModuleFrame(frame);
+        // Re-resize on input (content may grow/shrink)
+        doc.addEventListener('input', () => resizeModuleFrame(frame));
+        doc.addEventListener('click', () => setTimeout(() => resizeModuleFrame(frame), 100));
+      } catch(e) { /* cross-origin safety */ }
+    };
+  });
+}
+
+function resizeModuleFrame(frame) {
+  try {
+    const body = frame.contentDocument.body;
+    if (body) {
+      frame.style.height = body.scrollHeight + 'px';
+    }
+  } catch(e) {}
+}
+
+function getModuleReports(context) {
+  const blocks = [];
+  moduleSlots.forEach(m => {
+    try {
+      const frame = document.getElementById('mod-frame-' + m.id);
+      if (frame && frame.contentWindow && frame.contentWindow.getReportBlock) {
+        const block = frame.contentWindow.getReportBlock(context);
+        if (block) blocks.push(block);
+      }
+    } catch(e) {}
+  });
+  return blocks;
+}
+
+function getModuleStates() {
+  const states = {};
+  moduleSlots.forEach(m => {
+    try {
+      const frame = document.getElementById('mod-frame-' + m.id);
+      if (frame && frame.contentWindow && frame.contentWindow.getCalcState) {
+        states[m.name] = frame.contentWindow.getCalcState();
+      }
+    } catch(e) {}
+  });
+  return states;
+}
+
+// ── Tool launcher ────────────────────────────────────────────────────────
+let activeTool = null;
+
+function openTool(name, title) {
+  activeTool = name;
+  document.getElementById('tool-frame-title').textContent = title;
+  const frame = document.getElementById('tool-frame');
+
+  frame.onload = function() {
+    try {
+      // Set embedded flag and hide standalone UI
+      frame.contentWindow.HVAC_EMBEDDED = true;
+      const doc = frame.contentDocument;
+      // Hide module header (we have our own bar)
+      const hdr = doc.querySelector('header');
+      if (hdr) hdr.style.display = 'none';
+      // Hide standalone report bar
+      const bar = doc.getElementById('standaloneBar');
+      if (bar) bar.style.display = 'none';
+    } catch(e) { /* cross-origin safety */ }
+  };
+
+  frame.src = 'tools/' + name + '.html';
+  document.getElementById('tool-frame-wrap').classList.add('open');
+}
+
+function closeTool() {
+  const frame = document.getElementById('tool-frame');
+  document.getElementById('tool-frame-wrap').classList.remove('open');
+  frame.src = 'about:blank';
+  activeTool = null;
+}
+
+function getToolReportBlock(context) {
+  if (!activeTool) return null;
+  try {
+    const frame = document.getElementById('tool-frame');
+    if (frame.contentWindow && frame.contentWindow.getReportBlock) {
+      return frame.contentWindow.getReportBlock(context);
+    }
+  } catch(e) { /* cross-origin safety */ }
+  return null;
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────
