@@ -1353,9 +1353,15 @@ function initModuleFrame(mid) {
       resizeModuleFrame(frame);
       // Sync shared fields across all modules
       syncSharedFields();
-      // Re-resize and re-sync on input
+      // Re-resize and re-sync on input and clicks (tab switches, etc.)
       doc.addEventListener('input', () => { resizeModuleFrame(frame); syncSharedFields(); });
-      doc.addEventListener('click', () => setTimeout(() => { resizeModuleFrame(frame); syncSharedFields(); }, 100));
+      doc.addEventListener('click', () => {
+        // Immediate + delayed resize to catch tab switches and dynamic content
+        resizeModuleFrame(frame);
+        syncSharedFields();
+        setTimeout(() => resizeModuleFrame(frame), 50);
+        setTimeout(() => resizeModuleFrame(frame), 200);
+      });
     } catch(e) { /* cross-origin safety */ }
   };
 }
