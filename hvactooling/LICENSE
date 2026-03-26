@@ -4,12 +4,20 @@ Copyright (c) 2026 Om3ni. All rights reserved.
 
 GRANT OF USE
 
-This software is made available for use free of charge to:
+This software is made available for use free of charge to individual
+HVAC/R technicians for personal field use. No registration or
+attribution is required.
 
-  - Individual HVAC/R technicians for personal field use
-  - Companies with annual gross revenue under $5,000,000 USD
+COMMERCIAL USE
 
-No registration or attribution is required for qualifying use.
+Use of this software for commercial gain — including but not limited
+to deployment within a company, integration into a commercial product
+or service, or use by employees of a commercial organization — requires
+a commercial license.
+
+Commercial licensing is set at 3% of revenue attributable to use of
+the software. Commercial licenses must be requested from and approved
+by the copyright holder prior to use.
 
 RESTRICTIONS
 
@@ -18,9 +26,9 @@ and architecture, is the intellectual property of the copyright holder.
 
 You may NOT, without a commercial license:
 
+  - Use this software for commercial gain
   - Copy, modify, or distribute the source code
   - Deploy the source code internally within a commercial organization
-    exceeding the revenue threshold above
   - Create derivative works based on this software
   - Reverse-engineer, decompile, or extract design patterns for use
     in competing products
@@ -31,9 +39,9 @@ a grant of rights beyond those explicitly stated above.
 
 COMMERCIAL LICENSING
 
-Organizations exceeding the revenue threshold, or wishing to use
-the source code internally, may obtain a commercial license.
-Contact the copyright holder for terms.
+To request a commercial license, contact the copyright holder.
+Unauthorized commercial use constitutes infringement of intellectual
+property rights and may be subject to legal action.
 
 DISCLAIMER
 
