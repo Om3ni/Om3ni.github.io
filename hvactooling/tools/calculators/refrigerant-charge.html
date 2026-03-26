@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Line Charge · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+.phase-grid.tri { grid-template-columns: 1fr 1fr 1fr; }
+.phase-grid.six { grid-template-columns: 1fr 1fr 1fr; }
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Line Charge</div>
+    <div class="hdr-sub">Refrigerant per Lineset Length</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Refrigerant Type</div>
+    <div class="phase-grid" id="refGrid">
+      <button class="phase-btn active" data-val="R-410A">R-410A</button>
+      <button class="phase-btn" data-val="R-22">R-22</button>
+      <button class="phase-btn" data-val="R-134a">R-134a</button>
+      <button class="phase-btn" data-val="R-407C">R-407C</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Liquid Line OD</div>
+    <div class="phase-grid six" id="sizeGrid">
+      <button class="phase-btn active" data-val="1/4">1/4"</button>
+      <button class="phase-btn" data-val="3/8">3/8"</button>
+      <button class="phase-btn" data-val="1/2">1/2"</button>
+      <button class="phase-btn" data-val="5/8">5/8"</button>
+      <button class="phase-btn" data-val="3/4">3/4"</button>
+      <button class="phase-btn" data-val="7/8">7/8"</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Lineset Length</div>
+    <div class="fg">
+      <div class="iw">
+        <input type="number" id="inLength" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">ft</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="readout">
+    <span class="readout-lbl">Charge Rate</span>
+    <span class="readout-val" id="rateVal">— oz/ft</span>
+  </div>
+
+  <div class="results" id="results">
+    <div class="result-row dim" id="rowOz">
+      <div class="rr-left">
+        <div class="rr-label">Additional Charge</div>
+        <div class="rr-sub">Total ounces</div>
+      </div>
+      <div class="rr-val" id="valOz">— oz</div>
+    </div>
+    <div class="result-row dim" id="rowLbs">
+      <div class="rr-left">
+        <div class="rr-label">Converted</div>
+        <div class="rr-sub">Pounds + ounces</div>
+      </div>
+      <div class="rr-val" id="valLbs">— lb — oz</div>
+    </div>
+  </div>
+
+  <div class="hint">Based on liquid line only. Factory charge typically covers 15-25 ft. Add for length beyond factory.</div>
+</main>
+<script>
+'use strict';
+function init() {
+  var table = {
+    'R-410A': { '1/4': 0.31, '3/8': 0.78, '1/2': 1.46, '5/8': 2.34, '3/4': 3.44, '7/8': 4.76 },
+    'R-22':   { '1/4': 0.28, '3/8': 0.71, '1/2': 1.33, '5/8': 2.13, '3/4': 3.13, '7/8': 4.33 },
+    'R-134a': { '1/4': 0.27, '3/8': 0.69, '1/2': 1.28, '5/8': 2.06, '3/4': 3.02, '7/8': 4.18 },
+    'R-407C': { '1/4': 0.29, '3/8': 0.73, '1/2': 1.36, '5/8': 2.18, '3/4': 3.21, '7/8': 4.44 }
+  };
+
+  var selRef = 'R-410A';
+  var selSize = '1/4';
+
+  var refBtns = document.querySelectorAll('#refGrid .phase-btn');
+  var sizeBtns = document.querySelectorAll('#sizeGrid .phase-btn');
+  var inLength = document.getElementById('inLength');
+
+  function setActive(btns, val) {
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('active', btns[i].getAttribute('data-val') === val);
+    }
+  }
+
+  function calc() {
+    var rate = table[selRef][selSize];
+    var len = parseFloat(inLength.value);
+
+    document.getElementById('rateVal').textContent = rate.toFixed(2) + ' oz/ft';
+    document.getElementById('rateVal').classList.add('live');
+
+    if (!len || len <= 0) {
+      document.getElementById('rowOz').className = 'result-row dim';
+      document.getElementById('rowLbs').className = 'result-row dim';
+      document.getElementById('valOz').className = 'rr-val';
+      document.getElementById('valLbs').className = 'rr-val';
+      document.getElementById('valOz').textContent = '— oz';
+      document.getElementById('valLbs').textContent = '— lb — oz';
+      return;
+    }
+
+    var totalOz = rate * len;
+    var lbs = Math.floor(totalOz / 16);
+    var remOz = totalOz % 16;
+
+    document.getElementById('valOz').textContent = totalOz.toFixed(1) + ' oz';
+    document.getElementById('valLbs').textContent = lbs + ' lb ' + remOz.toFixed(1) + ' oz';
+    document.getElementById('rowOz').className = 'result-row live';
+    document.getElementById('rowLbs').className = 'result-row live';
+    document.getElementById('valOz').className = 'rr-val live';
+    document.getElementById('valLbs').className = 'rr-val live';
+  }
+
+  for (var i = 0; i < refBtns.length; i++) {
+    refBtns[i].addEventListener('click', function() {
+      selRef = this.getAttribute('data-val');
+      setActive(refBtns, selRef);
+      calc();
+    });
+  }
+
+  for (var j = 0; j < sizeBtns.length; j++) {
+    sizeBtns[j].addEventListener('click', function() {
+      selSize = this.getAttribute('data-val');
+      setActive(sizeBtns, selSize);
+      calc();
+    });
+  }
+
+  inLength.addEventListener('input', calc);
+  calc();
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

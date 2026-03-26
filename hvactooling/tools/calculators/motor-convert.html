@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Motor Conversions · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Motor Conversions</div>
+    <div class="hdr-sub">HP · kW · BTU/h · Tons</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Enter Any One Value</div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Horsepower</label>
+        <div class="iw">
+          <input type="number" id="inHP" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">HP</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Kilowatts</label>
+        <div class="iw">
+          <input type="number" id="inKW" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">kW</span>
+        </div>
+      </div>
+    </div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">BTU per Hour</label>
+        <div class="iw">
+          <input type="number" id="inBTU" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">BTU/h</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Tons (Refrigeration)</label>
+        <div class="iw">
+          <input type="number" id="inTons" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">tons</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="results">
+    <div class="result-row dim" id="rowHP">
+      <div class="rr-left">
+        <div class="rr-label">Horsepower</div>
+        <div class="rr-sub">1 HP = 0.7457 kW</div>
+      </div>
+      <div class="rr-val" id="valHP">— HP</div>
+    </div>
+    <div class="result-row dim" id="rowKW">
+      <div class="rr-left">
+        <div class="rr-label">Kilowatts</div>
+        <div class="rr-sub">1 kW = 1.341 HP</div>
+      </div>
+      <div class="rr-val" id="valKW">— kW</div>
+    </div>
+    <div class="result-row dim" id="rowBTU">
+      <div class="rr-left">
+        <div class="rr-label">BTU/h</div>
+        <div class="rr-sub">1 HP = 2,544.43 BTU/h</div>
+      </div>
+      <div class="rr-val" id="valBTU">— BTU/h</div>
+    </div>
+    <div class="result-row dim" id="rowTons">
+      <div class="rr-left">
+        <div class="rr-label">Tons (Refrigeration)</div>
+        <div class="rr-sub">1 ton = 12,000 BTU/h</div>
+      </div>
+      <div class="rr-val" id="valTons">— tons</div>
+    </div>
+  </div>
+
+  <div class="hint">Mechanical horsepower. 1 ton = 12,000 BTU/h.</div>
+</main>
+<script>
+'use strict';
+function init() {
+  var ids = ['inHP', 'inKW', 'inBTU', 'inTons'];
+  var fields = {};
+  ids.forEach(function(id) { fields[id] = document.getElementById(id); });
+
+  var rowIds = ['rowHP', 'rowKW', 'rowBTU', 'rowTons'];
+  var valIds = ['valHP', 'valKW', 'valBTU', 'valTons'];
+
+  // Conversion constants (all relative to HP)
+  var HP_TO_KW = 0.7457;
+  var HP_TO_BTU = 2544.43;
+  var HP_TO_TONS = 0.2121;
+
+  var activeField = null;
+
+  function fmt(n) {
+    if (n === null || isNaN(n) || !isFinite(n)) return '—';
+    if (Math.abs(n) >= 1000) return Math.round(n).toLocaleString();
+    if (Math.abs(n) >= 1) return n.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+    return n.toPrecision(4);
+  }
+
+  function reset() {
+    rowIds.forEach(function(id) { document.getElementById(id).className = 'result-row dim'; });
+    valIds.forEach(function(id) { document.getElementById(id).className = 'rr-val'; });
+    document.getElementById('valHP').textContent = '— HP';
+    document.getElementById('valKW').textContent = '— kW';
+    document.getElementById('valBTU').textContent = '— BTU/h';
+    document.getElementById('valTons').textContent = '— tons';
+  }
+
+  function calc(sourceId) {
+    var val = parseFloat(fields[sourceId].value);
+    if (!val && val !== 0) { reset(); return; }
+
+    var hp;
+    switch (sourceId) {
+      case 'inHP':   hp = val; break;
+      case 'inKW':   hp = val / HP_TO_KW; break;
+      case 'inBTU':  hp = val / HP_TO_BTU; break;
+      case 'inTons': hp = val / HP_TO_TONS; break;
+    }
+
+    var kw = hp * HP_TO_KW;
+    var btu = hp * HP_TO_BTU;
+    var tons = hp * HP_TO_TONS;
+
+    document.getElementById('valHP').textContent = fmt(hp) + ' HP';
+    document.getElementById('valKW').textContent = fmt(kw) + ' kW';
+    document.getElementById('valBTU').textContent = fmt(btu) + ' BTU/h';
+    document.getElementById('valTons').textContent = fmt(tons) + ' tons';
+
+    rowIds.forEach(function(id) { document.getElementById(id).className = 'result-row live'; });
+    valIds.forEach(function(id) { document.getElementById(id).className = 'rr-val live'; });
+  }
+
+  ids.forEach(function(id) {
+    fields[id].addEventListener('focus', function() { activeField = id; });
+    fields[id].addEventListener('input', function() {
+      // Clear other fields so user knows which is the source
+      ids.forEach(function(otherId) {
+        if (otherId !== id) fields[otherId].value = '';
+      });
+      calc(id);
+    });
+  });
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

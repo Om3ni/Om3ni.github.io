@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Breaker Sizing · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+.phase-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Breaker Sizing</div>
+    <div class="hdr-sub">NEC Standard Sizes · 125% Rule</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Load</div>
+    <div class="fg">
+      <label class="fl">Load Amps</label>
+      <div class="iw">
+        <input type="number" id="inAmps" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">A</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Continuous Load</div>
+    <div class="phase-grid" id="contGrid">
+      <button class="phase-btn active" data-c="y">Yes (125%)</button>
+      <button class="phase-btn" data-c="n">No (100%)</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Phase</div>
+    <div class="phase-grid-3" id="phaseGrid">
+      <button class="phase-btn active" data-ph="1">1-Pole</button>
+      <button class="phase-btn" data-ph="2">2-Pole</button>
+      <button class="phase-btn" data-ph="3">3-Pole</button>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="result-row dim" id="rowCalc">
+      <div class="rr-left">
+        <div class="rr-label">Calculated Load</div>
+        <div class="rr-sub" id="subCalc">—</div>
+      </div>
+      <div class="rr-val" id="valCalc">— A</div>
+    </div>
+    <div class="result-row dim" id="rowBreaker">
+      <div class="rr-left">
+        <div class="rr-label">Minimum Breaker</div>
+        <div class="rr-sub" id="subBreaker">Next standard NEC size up</div>
+      </div>
+      <div class="rr-val" id="valBreaker">— A</div>
+    </div>
+    <div class="result-row dim" id="rowPoles">
+      <div class="rr-left">
+        <div class="rr-label">Breaker Config</div>
+        <div class="rr-sub" id="subPoles">—</div>
+      </div>
+      <div class="rr-val" id="valPoles">—</div>
+    </div>
+  </div>
+  <div class="hint" id="hintText"></div>
+</main>
+<script>
+'use strict';
+function init() {
+  var stdSizes = [15,20,25,30,35,40,45,50,60,70,80,90,100,110,125,150,175,200,225,250,300,350,400,450,500,600];
+  var continuous = true;
+  var poles = 1;
+
+  var inAmps = document.getElementById('inAmps');
+  var contBtns = document.querySelectorAll('#contGrid .phase-btn');
+  var phaseBtns = document.querySelectorAll('#phaseGrid .phase-btn');
+
+  var rowCalc = document.getElementById('rowCalc');
+  var rowBreaker = document.getElementById('rowBreaker');
+  var rowPoles = document.getElementById('rowPoles');
+  var valCalc = document.getElementById('valCalc');
+  var valBreaker = document.getElementById('valBreaker');
+  var valPoles = document.getElementById('valPoles');
+  var subCalc = document.getElementById('subCalc');
+  var subBreaker = document.getElementById('subBreaker');
+  var subPoles = document.getElementById('subPoles');
+  var hintText = document.getElementById('hintText');
+
+  contBtns.forEach(function(b) {
+    b.addEventListener('click', function() {
+      continuous = b.dataset.c === 'y';
+      contBtns.forEach(function(x) { x.classList.toggle('active', x.dataset.c === b.dataset.c); });
+      calc();
+    });
+  });
+
+  phaseBtns.forEach(function(b) {
+    b.addEventListener('click', function() {
+      poles = parseInt(b.dataset.ph);
+      phaseBtns.forEach(function(x) { x.classList.toggle('active', x.dataset.ph === b.dataset.ph); });
+      calc();
+    });
+  });
+
+  function calc() {
+    var amps = parseFloat(inAmps.value);
+
+    rowCalc.className = 'result-row dim';
+    rowBreaker.className = 'result-row dim';
+    rowPoles.className = 'result-row dim';
+    valCalc.className = 'rr-val';
+    valBreaker.className = 'rr-val';
+    valPoles.className = 'rr-val';
+    valCalc.textContent = '— A';
+    valBreaker.textContent = '— A';
+    valPoles.textContent = '—';
+    subCalc.textContent = '—';
+    subBreaker.textContent = 'Next standard NEC size up';
+    subPoles.textContent = '—';
+    hintText.textContent = '';
+    hintText.className = 'hint';
+
+    if (isNaN(amps) || amps <= 0) return;
+
+    var factor = continuous ? 1.25 : 1.0;
+    var calcAmps = amps * factor;
+
+    valCalc.textContent = calcAmps.toFixed(1) + ' A';
+    if (continuous) {
+      subCalc.textContent = amps.toFixed(1) + 'A × 125% (continuous)';
+    } else {
+      subCalc.textContent = amps.toFixed(1) + 'A × 100% (non-continuous)';
+    }
+    rowCalc.className = 'result-row live';
+    valCalc.className = 'rr-val live';
+
+    // Find next standard size
+    var breakerSize = -1;
+    for (var i = 0; i < stdSizes.length; i++) {
+      if (stdSizes[i] >= calcAmps) { breakerSize = stdSizes[i]; break; }
+    }
+
+    if (breakerSize === -1) {
+      valBreaker.textContent = 'Exceeds 600A';
+      rowBreaker.className = 'result-row live high';
+      valBreaker.className = 'rr-val high';
+      hintText.textContent = 'Load exceeds maximum standard breaker size (600A).';
+      hintText.className = 'hint warn';
+      return;
+    }
+
+    valBreaker.textContent = breakerSize + ' A';
+    subBreaker.textContent = 'NEC standard size ≥ ' + calcAmps.toFixed(1) + 'A';
+    rowBreaker.className = 'result-row live ok';
+    valBreaker.className = 'rr-val ok';
+
+    var poleLabel = poles + '-Pole';
+    valPoles.textContent = poleLabel;
+    subPoles.textContent = breakerSize + 'A / ' + poles + 'P breaker';
+    rowPoles.className = 'result-row live';
+    valPoles.className = 'rr-val live';
+  }
+
+  inAmps.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

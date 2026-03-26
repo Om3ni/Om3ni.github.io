@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Temperature Conversion · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Temperature Conversion</div>
+    <div class="hdr-sub">F · C · R · K</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Enter Any One Value</div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Fahrenheit</label>
+        <div class="iw">
+          <input type="number" id="inF" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">°F</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Celsius</label>
+        <div class="iw">
+          <input type="number" id="inC" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">°C</span>
+        </div>
+      </div>
+    </div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Rankine</label>
+        <div class="iw">
+          <input type="number" id="inR" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">°R</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Kelvin</label>
+        <div class="iw">
+          <input type="number" id="inK" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">K</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="results">
+    <div class="result-row dim" id="rowF">
+      <div class="rr-left">
+        <div class="rr-label">Fahrenheit</div>
+        <div class="rr-sub">°F = °C × 9/5 + 32</div>
+      </div>
+      <div class="rr-val" id="valF">— °F</div>
+    </div>
+    <div class="result-row dim" id="rowC">
+      <div class="rr-left">
+        <div class="rr-label">Celsius</div>
+        <div class="rr-sub">°C = (°F − 32) × 5/9</div>
+      </div>
+      <div class="rr-val" id="valC">— °C</div>
+    </div>
+    <div class="result-row dim" id="rowR">
+      <div class="rr-left">
+        <div class="rr-label">Rankine</div>
+        <div class="rr-sub">°R = °F + 459.67</div>
+      </div>
+      <div class="rr-val" id="valR">— °R</div>
+    </div>
+    <div class="result-row dim" id="rowK">
+      <div class="rr-left">
+        <div class="rr-label">Kelvin</div>
+        <div class="rr-sub">K = °C + 273.15</div>
+      </div>
+      <div class="rr-val" id="valK">— K</div>
+    </div>
+  </div>
+</main>
+<script>
+'use strict';
+function init() {
+  var inF = document.getElementById('inF');
+  var inC = document.getElementById('inC');
+  var inR = document.getElementById('inR');
+  var inK = document.getElementById('inK');
+
+  var rowF = document.getElementById('rowF');
+  var rowC = document.getElementById('rowC');
+  var rowR = document.getElementById('rowR');
+  var rowK = document.getElementById('rowK');
+  var valF = document.getElementById('valF');
+  var valC = document.getElementById('valC');
+  var valR = document.getElementById('valR');
+  var valK = document.getElementById('valK');
+
+  var inputs = [inF, inC, inR, inK];
+  var rows = [rowF, rowC, rowR, rowK];
+  var valEls = [valF, valC, valR, valK];
+
+  function fmt(n) {
+    if (n === null || isNaN(n)) return '—';
+    return parseFloat(n.toFixed(4)).toString();
+  }
+
+  function reset() {
+    rows.forEach(function(r) { r.className = 'result-row dim'; });
+    valEls.forEach(function(v) { v.className = 'rr-val'; });
+    valF.textContent = '— °F';
+    valC.textContent = '— °C';
+    valR.textContent = '— °R';
+    valK.textContent = '— K';
+  }
+
+  function show(f, c, r, k) {
+    valF.textContent = fmt(f) + ' °F';
+    valC.textContent = fmt(c) + ' °C';
+    valR.textContent = fmt(r) + ' °R';
+    valK.textContent = fmt(k) + ' K';
+    rows.forEach(function(row) { row.className = 'result-row live'; });
+    valEls.forEach(function(v) { v.className = 'rr-val live'; });
+  }
+
+  function onInput(source) {
+    return function() {
+      // Clear other inputs
+      inputs.forEach(function(inp) { if (inp !== source) inp.value = ''; });
+
+      var val = parseFloat(source.value);
+      if (source.value === '' || isNaN(val)) { reset(); return; }
+
+      var f, c, r, k;
+      if (source === inF) {
+        f = val; c = (f - 32) * 5 / 9; r = f + 459.67; k = c + 273.15;
+      } else if (source === inC) {
+        c = val; f = c * 9 / 5 + 32; k = c + 273.15; r = f + 459.67;
+      } else if (source === inR) {
+        r = val; f = r - 459.67; c = (f - 32) * 5 / 9; k = c + 273.15;
+      } else {
+        k = val; c = k - 273.15; f = c * 9 / 5 + 32; r = f + 459.67;
+      }
+
+      show(f, c, r, k);
+    };
+  }
+
+  inputs.forEach(function(inp) {
+    inp.addEventListener('input', onInput(inp));
+  });
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

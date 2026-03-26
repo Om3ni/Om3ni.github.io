@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ohm's Law · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+.calc-hint {
+  margin-top: 12px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Ohm's Law</div>
+    <div class="hdr-sub">Voltage · Current · Resistance · Power</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Enter Any Two Values</div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Voltage</label>
+        <div class="iw">
+          <input type="number" id="inV" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">V</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Current</label>
+        <div class="iw">
+          <input type="number" id="inI" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">A</span>
+        </div>
+      </div>
+    </div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Resistance</label>
+        <div class="iw">
+          <input type="number" id="inR" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">&Omega;</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Power</label>
+        <div class="iw">
+          <input type="number" id="inP" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">W</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="result-row dim" id="rowV">
+      <div class="rr-left">
+        <div class="rr-label">Voltage</div>
+        <div class="rr-sub">V = I × R &nbsp;|&nbsp; V = √(P × R) &nbsp;|&nbsp; V = P / I</div>
+      </div>
+      <div class="rr-val" id="valV">— V</div>
+    </div>
+    <div class="result-row dim" id="rowI">
+      <div class="rr-left">
+        <div class="rr-label">Current</div>
+        <div class="rr-sub">I = V / R &nbsp;|&nbsp; I = P / V &nbsp;|&nbsp; I = √(P / R)</div>
+      </div>
+      <div class="rr-val" id="valI">— A</div>
+    </div>
+    <div class="result-row dim" id="rowR">
+      <div class="rr-left">
+        <div class="rr-label">Resistance</div>
+        <div class="rr-sub">R = V / I &nbsp;|&nbsp; R = V² / P &nbsp;|&nbsp; R = P / I²</div>
+      </div>
+      <div class="rr-val" id="valR">— Ω</div>
+    </div>
+    <div class="result-row dim" id="rowP">
+      <div class="rr-left">
+        <div class="rr-label">Power</div>
+        <div class="rr-sub">P = V × I &nbsp;|&nbsp; P = I² × R &nbsp;|&nbsp; P = V² / R</div>
+      </div>
+      <div class="rr-val" id="valP">— W</div>
+    </div>
+  </div>
+
+  <div class="calc-hint">
+    <div class="hint" id="hintText">Enter any two values to calculate the others.</div>
+  </div>
+</main>
+<script>
+'use strict';
+function init() {
+  var ids = ['inV','inI','inR','inP'];
+  var fields = {};
+  ids.forEach(function(id) { fields[id] = document.getElementById(id); });
+
+  var rows = {
+    inV: document.getElementById('rowV'),
+    inI: document.getElementById('rowI'),
+    inR: document.getElementById('rowR'),
+    inP: document.getElementById('rowP')
+  };
+  var vals = {
+    inV: document.getElementById('valV'),
+    inI: document.getElementById('valI'),
+    inR: document.getElementById('valR'),
+    inP: document.getElementById('valP')
+  };
+  var hint = document.getElementById('hintText');
+
+  function fmt(n) {
+    if (n === null || n === undefined || isNaN(n) || !isFinite(n)) return '—';
+    if (Math.abs(n) >= 1000) return n.toFixed(1);
+    if (Math.abs(n) >= 1) return n.toFixed(3);
+    return n.toPrecision(4);
+  }
+
+  function calc() {
+    var v = fields.inV.value !== '' ? parseFloat(fields.inV.value) : null;
+    var i = fields.inI.value !== '' ? parseFloat(fields.inI.value) : null;
+    var r = fields.inR.value !== '' ? parseFloat(fields.inR.value) : null;
+    var p = fields.inP.value !== '' ? parseFloat(fields.inP.value) : null;
+
+    var entered = [];
+    var computed = [];
+    if (v !== null) entered.push('V'); else computed.push('V');
+    if (i !== null) entered.push('I'); else computed.push('I');
+    if (r !== null) entered.push('R'); else computed.push('R');
+    if (p !== null) entered.push('P'); else computed.push('P');
+
+    // Reset
+    ids.forEach(function(id) {
+      rows[id].className = 'result-row dim';
+      vals[id].className = 'rr-val';
+    });
+
+    if (entered.length < 2) {
+      vals.inV.textContent = '— V';
+      vals.inI.textContent = '— A';
+      vals.inR.textContent = '— Ω';
+      vals.inP.textContent = '— W';
+      hint.textContent = 'Enter any two values to calculate the others.';
+      return;
+    }
+
+    // Solve for unknowns
+    if (v !== null && i !== null) {
+      if (r === null) r = v / i;
+      if (p === null) p = v * i;
+    } else if (v !== null && r !== null) {
+      if (i === null) i = v / r;
+      if (p === null) p = v * v / r;
+    } else if (v !== null && p !== null) {
+      if (i === null) i = p / v;
+      if (r === null) r = v * v / p;
+    } else if (i !== null && r !== null) {
+      if (v === null) v = i * r;
+      if (p === null) p = i * i * r;
+    } else if (i !== null && p !== null) {
+      if (v === null) v = p / i;
+      if (r === null) r = p / (i * i);
+    } else if (r !== null && p !== null) {
+      if (v === null) v = Math.sqrt(p * r);
+      if (i === null) i = Math.sqrt(p / r);
+    }
+
+    vals.inV.textContent = fmt(v) + ' V';
+    vals.inI.textContent = fmt(i) + ' A';
+    vals.inR.textContent = fmt(r) + ' Ω';
+    vals.inP.textContent = fmt(p) + ' W';
+
+    // Highlight
+    ids.forEach(function(id) {
+      rows[id].className = 'result-row live';
+      vals[id].className = 'rr-val live';
+    });
+
+    hint.textContent = 'Entered: ' + entered.join(', ') + '  →  Calculated: ' + computed.join(', ');
+  }
+
+  ids.forEach(function(id) {
+    fields[id].addEventListener('input', calc);
+  });
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

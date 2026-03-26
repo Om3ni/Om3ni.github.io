@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Gas Pipe Sizing · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+.pipe-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.pipe-table th, .pipe-table td {
+  font-family: var(--mono); font-size: .72rem; padding: 6px 6px;
+  text-align: right; border-bottom: 1px solid var(--border);
+}
+.pipe-table th { color: var(--text-mute); font-size: .6rem; letter-spacing: .08em; text-transform: uppercase; text-align: right; }
+.pipe-table th:first-child, .pipe-table td:first-child { text-align: left; }
+.pipe-table td { color: var(--text-mute); }
+.pipe-table td.ok { color: var(--green-hi); font-weight: 700; }
+.pipe-table td.under { color: var(--red-hi); }
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Gas Pipe Sizing</div>
+    <div class="hdr-sub">IFGC · Natural Gas · LP</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Load</div>
+    <div class="fg">
+      <label class="fl">Total BTU/h</label>
+      <div class="iw">
+        <input type="number" id="inBTU" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">BTU/h</span>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Longest Pipe Run</label>
+      <div class="iw">
+        <input type="number" id="inRun" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">ft</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Gas Type</div>
+    <div class="phase-grid" id="gasGrid">
+      <button class="phase-btn active" data-val="NG">Natural</button>
+      <button class="phase-btn" data-val="LP">LP</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Inlet Pressure</div>
+    <div class="phase-grid" id="pressGrid">
+      <button class="phase-btn active" data-val="0.5">Low (0.5 PSI)</button>
+      <button class="phase-btn" data-val="2">2 PSI</button>
+    </div>
+  </div>
+
+  <div class="results">
+    <div class="result-row dim" id="rowMin">
+      <div class="rr-left">
+        <div class="rr-label">Minimum Pipe Size</div>
+        <div class="rr-sub">Meets BTU demand at run length</div>
+      </div>
+      <div class="rr-val" id="valMin">—</div>
+    </div>
+    <div class="result-row dim" id="rowCap">
+      <div class="rr-left">
+        <div class="rr-label">Capacity at Size</div>
+        <div class="rr-sub">Maximum BTU/h at this size</div>
+      </div>
+      <div class="rr-val" id="valCap">—</div>
+    </div>
+    <div class="result-row dim" id="rowRec">
+      <div class="rr-left">
+        <div class="rr-label">Recommended</div>
+        <div class="rr-sub">Next size up for margin</div>
+      </div>
+      <div class="rr-val" id="valRec">—</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Capacity Table (adjusted)</div>
+    <table class="pipe-table">
+      <thead>
+        <tr>
+          <th>Size</th><th>Capacity</th>
+        </tr>
+      </thead>
+      <tbody id="tblBody"></tbody>
+    </table>
+  </div>
+
+  <div class="hint">Based on IFGC tables for steel/black iron pipe. CSST requires manufacturer sizing. Local codes may vary.</div>
+</main>
+<script>
+'use strict';
+function init() {
+  /* IFGC Table 402.4 — Natural Gas, 0.5 PSI inlet, steel pipe
+     lengths: 10, 20, 30, 50, 75, 100
+     sizes: 1/2, 3/4, 1, 1-1/4, 1-1/2, 2 (all in kBTU) */
+  var lengths = [10, 20, 30, 50, 75, 100];
+  var sizes = ['1/2"', '3/4"', '1"', '1-1/4"', '1-1/2"', '2"'];
+  var baseTable = [
+    [175, 360, 680, 1400, 2100, 3950],
+    [120, 250, 465,  950, 1460, 2750],
+    [ 97, 200, 375,  770, 1180, 2200],
+    [ 73, 152, 285,  585,  890, 1680],
+    [ 59, 122, 228,  468,  715, 1340],
+    [ 50, 104, 195,  400,  610, 1150]
+  ];
+
+  var selGas = 'NG';
+  var selPress = '0.5';
+
+  var gasBtns = document.querySelectorAll('#gasGrid .phase-btn');
+  var pressBtns = document.querySelectorAll('#pressGrid .phase-btn');
+  var inBTU = document.getElementById('inBTU');
+  var inRun = document.getElementById('inRun');
+
+  function setActive(btns, val) {
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('active', btns[i].getAttribute('data-val') === val);
+    }
+  }
+
+  function interpolate(run, sizeIdx) {
+    if (run <= lengths[0]) return baseTable[0][sizeIdx];
+    if (run >= lengths[lengths.length - 1]) return baseTable[lengths.length - 1][sizeIdx];
+    for (var i = 0; i < lengths.length - 1; i++) {
+      if (run >= lengths[i] && run <= lengths[i + 1]) {
+        var frac = (run - lengths[i]) / (lengths[i + 1] - lengths[i]);
+        return baseTable[i][sizeIdx] + frac * (baseTable[i + 1][sizeIdx] - baseTable[i][sizeIdx]);
+      }
+    }
+    return baseTable[lengths.length - 1][sizeIdx];
+  }
+
+  function getMultiplier() {
+    var m = 1;
+    if (selGas === 'LP') m *= 2.5;
+    if (selPress === '2') m *= 2.0;
+    return m;
+  }
+
+  function fmtK(v) {
+    if (v >= 1000) return (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'M';
+    return Math.round(v) + 'k';
+  }
+
+  function calc() {
+    var btu = parseFloat(inBTU.value) || 0;
+    var run = parseFloat(inRun.value) || 0;
+    var mult = getMultiplier();
+    var btuK = btu / 1000;
+
+    var tbody = document.getElementById('tblBody');
+    tbody.innerHTML = '';
+
+    if (run <= 0) {
+      document.getElementById('rowMin').className = 'result-row dim';
+      document.getElementById('rowCap').className = 'result-row dim';
+      document.getElementById('rowRec').className = 'result-row dim';
+      document.getElementById('valMin').textContent = '—';
+      document.getElementById('valCap').textContent = '—';
+      document.getElementById('valRec').textContent = '—';
+      return;
+    }
+
+    var caps = [];
+    for (var s = 0; s < sizes.length; s++) {
+      var cap = interpolate(run, s) * mult;
+      caps.push(cap);
+      var tr = document.createElement('tr');
+      var tdSize = document.createElement('td');
+      tdSize.textContent = sizes[s];
+      var tdCap = document.createElement('td');
+      tdCap.textContent = fmtK(cap) + ' BTU/h';
+      if (btuK > 0) {
+        if (cap >= btuK) { tdCap.className = 'ok'; } else { tdCap.className = 'under'; }
+      }
+      tr.appendChild(tdSize);
+      tr.appendChild(tdCap);
+      tbody.appendChild(tr);
+    }
+
+    if (btu <= 0) {
+      document.getElementById('rowMin').className = 'result-row dim';
+      document.getElementById('rowCap').className = 'result-row dim';
+      document.getElementById('rowRec').className = 'result-row dim';
+      document.getElementById('valMin').textContent = '—';
+      document.getElementById('valCap').textContent = '—';
+      document.getElementById('valRec').textContent = '—';
+      return;
+    }
+
+    var minIdx = -1;
+    for (var i = 0; i < caps.length; i++) {
+      if (caps[i] >= btuK) { minIdx = i; break; }
+    }
+
+    if (minIdx === -1) {
+      document.getElementById('rowMin').className = 'result-row high';
+      document.getElementById('valMin').className = 'rr-val high';
+      document.getElementById('valMin').textContent = 'Exceeds 2"';
+      document.getElementById('rowCap').className = 'result-row dim';
+      document.getElementById('valCap').textContent = '—';
+      document.getElementById('rowRec').className = 'result-row dim';
+      document.getElementById('valRec').textContent = '—';
+      return;
+    }
+
+    document.getElementById('rowMin').className = 'result-row live';
+    document.getElementById('valMin').className = 'rr-val live';
+    document.getElementById('valMin').textContent = sizes[minIdx];
+
+    document.getElementById('rowCap').className = 'result-row live';
+    document.getElementById('valCap').className = 'rr-val live';
+    document.getElementById('valCap').textContent = fmtK(caps[minIdx]) + ' BTU/h';
+
+    if (minIdx + 1 < sizes.length) {
+      document.getElementById('rowRec').className = 'result-row live';
+      document.getElementById('valRec').className = 'rr-val live';
+      document.getElementById('valRec').textContent = sizes[minIdx + 1];
+    } else {
+      document.getElementById('rowRec').className = 'result-row live';
+      document.getElementById('valRec').className = 'rr-val live';
+      document.getElementById('valRec').textContent = sizes[minIdx] + ' (max)';
+    }
+  }
+
+  for (var i = 0; i < gasBtns.length; i++) {
+    gasBtns[i].addEventListener('click', function() {
+      selGas = this.getAttribute('data-val');
+      setActive(gasBtns, selGas);
+      calc();
+    });
+  }
+  for (var j = 0; j < pressBtns.length; j++) {
+    pressBtns[j].addEventListener('click', function() {
+      selPress = this.getAttribute('data-val');
+      setActive(pressBtns, selPress);
+      calc();
+    });
+  }
+
+  inBTU.addEventListener('input', calc);
+  inRun.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

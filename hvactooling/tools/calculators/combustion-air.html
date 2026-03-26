@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Combustion Air · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+.phase-grid.tri { grid-template-columns: 1fr 1fr 1fr; }
+.vol-toggle { display: flex; gap: 6px; margin-bottom: 8px; }
+.vol-toggle button {
+  flex: 1; padding: 7px; border-radius: 3px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text-mute);
+  font-family: var(--ui); font-weight: 600; font-size: .75rem;
+  letter-spacing: .06em; cursor: pointer; text-align: center;
+  text-transform: uppercase; transition: all .1s;
+}
+.vol-toggle button.active { background: var(--orange-dim); border-color: var(--orange); color: var(--orange-hi); }
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Combustion Air</div>
+    <div class="hdr-sub">IFGC Requirements</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Appliance Load</div>
+    <div class="fg">
+      <label class="fl">Total BTU/h Input</label>
+      <div class="iw">
+        <input type="number" id="inBTU" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">BTU/h</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Room Volume</div>
+    <div class="vol-toggle" id="volToggle">
+      <button class="active" data-mode="dims">L × W × H</button>
+      <button data-mode="direct">Direct Cu Ft</button>
+    </div>
+    <div id="dimsInput">
+      <div class="input-trio">
+        <div class="fg">
+          <label class="fl">Length</label>
+          <div class="iw">
+            <input type="number" id="inL" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">ft</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Width</label>
+          <div class="iw">
+            <input type="number" id="inW" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">ft</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Height</label>
+          <div class="iw">
+            <input type="number" id="inH" inputmode="decimal" placeholder="8" value="8">
+            <span class="iw-unit">ft</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="directInput" style="display:none;">
+      <div class="fg">
+        <label class="fl">Volume</label>
+        <div class="iw">
+          <input type="number" id="inVol" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">cu ft</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Air Source</div>
+    <div class="phase-grid tri" id="airGrid">
+      <button class="phase-btn active" data-val="indoor">Indoor Only</button>
+      <button class="phase-btn" data-val="one">One Opening</button>
+      <button class="phase-btn" data-val="two">Two Openings</button>
+    </div>
+  </div>
+
+  <div class="readout">
+    <span class="readout-lbl">Room Volume</span>
+    <span class="readout-val" id="volVal">— cu ft</span>
+  </div>
+
+  <div class="results">
+    <div class="result-row dim" id="rowAdequate">
+      <div class="rr-left">
+        <div class="rr-label">Room Adequacy</div>
+        <div class="rr-sub" id="subAdequate">Indoor air — 50 cu ft per 1000 BTU/h</div>
+      </div>
+      <div class="rr-val" id="valAdequate">—</div>
+    </div>
+    <div class="result-row dim" id="rowArea">
+      <div class="rr-left">
+        <div class="rr-label">Required Free Area</div>
+        <div class="rr-sub" id="subArea">Per opening</div>
+      </div>
+      <div class="rr-val" id="valArea">— sq in</div>
+    </div>
+    <div class="result-row dim" id="rowDuct">
+      <div class="rr-left">
+        <div class="rr-label">Equivalent Round Duct</div>
+        <div class="rr-sub">Diameter for free area</div>
+      </div>
+      <div class="rr-val" id="valDuct">— in</div>
+    </div>
+  </div>
+
+  <div class="hint">Per IFGC Section 304. Louvers and grilles typically have 75% free area — size accordingly.</div>
+</main>
+<script>
+'use strict';
+function init() {
+  var selAir = 'indoor';
+  var volMode = 'dims';
+
+  var airBtns = document.querySelectorAll('#airGrid .phase-btn');
+  var volBtns = document.querySelectorAll('#volToggle button');
+  var inBTU = document.getElementById('inBTU');
+  var inL = document.getElementById('inL');
+  var inW = document.getElementById('inW');
+  var inH = document.getElementById('inH');
+  var inVol = document.getElementById('inVol');
+
+  function setActive(btns, val, attr) {
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('active', btns[i].getAttribute(attr) === val);
+    }
+  }
+
+  function getVolume() {
+    if (volMode === 'dims') {
+      var l = parseFloat(inL.value) || 0;
+      var w = parseFloat(inW.value) || 0;
+      var h = parseFloat(inH.value) || 0;
+      return l * w * h;
+    }
+    return parseFloat(inVol.value) || 0;
+  }
+
+  function calc() {
+    var btu = parseFloat(inBTU.value) || 0;
+    var vol = getVolume();
+
+    if (vol > 0) {
+      document.getElementById('volVal').textContent = Math.round(vol) + ' cu ft';
+      document.getElementById('volVal').classList.add('live');
+    } else {
+      document.getElementById('volVal').textContent = '— cu ft';
+      document.getElementById('volVal').classList.remove('live');
+    }
+
+    if (btu <= 0) {
+      resetResults();
+      return;
+    }
+
+    var btuK = btu / 1000;
+
+    if (selAir === 'indoor') {
+      document.getElementById('subAdequate').textContent = 'Indoor air — 50 cu ft per 1000 BTU/h';
+      var reqVol = btuK * 50;
+      if (vol > 0) {
+        var adequate = vol >= reqVol;
+        document.getElementById('rowAdequate').className = 'result-row ' + (adequate ? 'ok' : 'high');
+        document.getElementById('valAdequate').className = 'rr-val ' + (adequate ? 'ok' : 'high');
+        document.getElementById('valAdequate').textContent = adequate ? 'Adequate' : 'Too Small';
+        document.getElementById('subAdequate').textContent = 'Need ' + Math.round(reqVol).toLocaleString() + ' cu ft, have ' + Math.round(vol).toLocaleString();
+      } else {
+        document.getElementById('rowAdequate').className = 'result-row live';
+        document.getElementById('valAdequate').className = 'rr-val live';
+        document.getElementById('valAdequate').textContent = Math.round(reqVol).toLocaleString() + ' cu ft req';
+      }
+      document.getElementById('rowArea').className = 'result-row dim';
+      document.getElementById('valArea').textContent = 'N/A';
+      document.getElementById('rowDuct').className = 'result-row dim';
+      document.getElementById('valDuct').textContent = 'N/A';
+    } else {
+      var divisor = selAir === 'one' ? 3000 : 4000;
+      var label = selAir === 'one' ? '1 sq in per 3000 BTU/h' : '1 sq in per 4000 BTU/h per opening';
+      var area = Math.max(100, btu / divisor);
+
+      document.getElementById('subArea').textContent = label;
+      document.getElementById('rowArea').className = 'result-row live';
+      document.getElementById('valArea').className = 'rr-val live';
+      document.getElementById('valArea').textContent = Math.ceil(area) + ' sq in';
+
+      var diam = Math.sqrt(4 * area / Math.PI);
+      document.getElementById('rowDuct').className = 'result-row live';
+      document.getElementById('valDuct').className = 'rr-val live';
+      document.getElementById('valDuct').textContent = diam.toFixed(1) + '" dia';
+
+      if (vol > 0) {
+        var reqVol2 = btuK * 50;
+        var adequate2 = vol >= reqVol2;
+        document.getElementById('rowAdequate').className = 'result-row ' + (adequate2 ? 'ok' : 'warn');
+        document.getElementById('valAdequate').className = 'rr-val ' + (adequate2 ? 'ok' : 'warn');
+        document.getElementById('valAdequate').textContent = adequate2 ? 'Unconfined' : 'Confined';
+        document.getElementById('subAdequate').textContent = adequate2 ? 'Room meets unconfined threshold' : 'Room is confined — openings required';
+      } else {
+        document.getElementById('rowAdequate').className = 'result-row dim';
+        document.getElementById('valAdequate').textContent = '—';
+        document.getElementById('subAdequate').textContent = 'Enter room volume to check';
+      }
+    }
+  }
+
+  function resetResults() {
+    document.getElementById('rowAdequate').className = 'result-row dim';
+    document.getElementById('valAdequate').className = 'rr-val';
+    document.getElementById('valAdequate').textContent = '—';
+    document.getElementById('rowArea').className = 'result-row dim';
+    document.getElementById('valArea').className = 'rr-val';
+    document.getElementById('valArea').textContent = '— sq in';
+    document.getElementById('rowDuct').className = 'result-row dim';
+    document.getElementById('valDuct').className = 'rr-val';
+    document.getElementById('valDuct').textContent = '— in';
+  }
+
+  for (var i = 0; i < airBtns.length; i++) {
+    airBtns[i].addEventListener('click', function() {
+      selAir = this.getAttribute('data-val');
+      setActive(airBtns, selAir, 'data-val');
+      calc();
+    });
+  }
+
+  for (var j = 0; j < volBtns.length; j++) {
+    volBtns[j].addEventListener('click', function() {
+      volMode = this.getAttribute('data-mode');
+      setActive(volBtns, volMode, 'data-mode');
+      document.getElementById('dimsInput').style.display = volMode === 'dims' ? '' : 'none';
+      document.getElementById('directInput').style.display = volMode === 'direct' ? '' : 'none';
+      calc();
+    });
+  }
+
+  inBTU.addEventListener('input', calc);
+  inL.addEventListener('input', calc);
+  inW.addEventListener('input', calc);
+  inH.addEventListener('input', calc);
+  inVol.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CFM per Ton · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">CFM per Ton</div>
+    <div class="hdr-sub">Airflow Rule Check</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">System Capacity</div>
+    <label class="fl">Input Mode</label>
+    <div class="phase-grid" id="modeGrid">
+      <div class="phase-btn active" data-mode="tons">Tons</div>
+      <div class="phase-btn" data-mode="btuh">BTU/h</div>
+    </div>
+    <div class="fg">
+      <label class="fl" id="capLabel">System Capacity</label>
+      <div class="iw">
+        <input type="number" id="inCap" inputmode="decimal" placeholder="—">
+        <span class="iw-unit" id="capUnit">tons</span>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Measured CFM</label>
+      <div class="iw">
+        <input type="number" id="inCfm" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">CFM</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="readout">
+    <span class="readout-lbl">Effective Tons</span>
+    <span class="readout-val" id="rdTons">—</span>
+  </div>
+
+  <div class="results">
+    <div class="result-row dim" id="rowRatio">
+      <div class="rr-left">
+        <div class="rr-label">CFM / Ton</div>
+        <div class="rr-sub" id="subRatio">—</div>
+      </div>
+      <div class="rr-val" id="valRatio">—</div>
+    </div>
+    <div class="result-row dim" id="rowExpected">
+      <div class="rr-left">
+        <div class="rr-label">Expected CFM</div>
+        <div class="rr-sub">At 400 CFM/ton standard design</div>
+      </div>
+      <div class="rr-val" id="valExpected">—</div>
+    </div>
+    <div class="result-row dim" id="rowRange">
+      <div class="rr-left">
+        <div class="rr-label">Normal Range</div>
+        <div class="rr-sub">350–450 CFM/ton</div>
+      </div>
+      <div class="rr-val" id="valRange">—</div>
+    </div>
+  </div>
+
+  <div class="hint">Standard design: 400 CFM/ton. Humid climates may target 350 for better dehumidification.</div>
+</main>
+<script>
+'use strict';
+function init() {
+  var inCap = document.getElementById('inCap');
+  var inCfm = document.getElementById('inCfm');
+  var capUnit = document.getElementById('capUnit');
+  var capLabel = document.getElementById('capLabel');
+  var rdTons = document.getElementById('rdTons');
+  var rowRatio = document.getElementById('rowRatio');
+  var valRatio = document.getElementById('valRatio');
+  var subRatio = document.getElementById('subRatio');
+  var rowExpected = document.getElementById('rowExpected');
+  var valExpected = document.getElementById('valExpected');
+  var rowRange = document.getElementById('rowRange');
+  var valRange = document.getElementById('valRange');
+  var modeGrid = document.getElementById('modeGrid');
+  var modeBtns = modeGrid.querySelectorAll('.phase-btn');
+
+  var mode = 'tons';
+
+  modeBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      modeBtns.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      mode = btn.getAttribute('data-mode');
+      if (mode === 'tons') {
+        capUnit.textContent = 'tons';
+        capLabel.textContent = 'System Capacity';
+      } else {
+        capUnit.textContent = 'BTU/h';
+        capLabel.textContent = 'System Capacity';
+      }
+      calc();
+    });
+  });
+
+  function calc() {
+    var capRaw = parseFloat(inCap.value);
+    var cfm = parseFloat(inCfm.value);
+
+    var tons = NaN;
+    if (!isNaN(capRaw) && capRaw > 0) {
+      tons = mode === 'btuh' ? capRaw / 12000 : capRaw;
+    }
+
+    if (!isNaN(tons) && tons > 0) {
+      rdTons.textContent = tons.toFixed(2) + ' tons';
+      rdTons.classList.add('live');
+    } else {
+      rdTons.textContent = '—';
+      rdTons.classList.remove('live');
+    }
+
+    if (isNaN(tons) || tons <= 0 || isNaN(cfm) || cfm <= 0) {
+      rowRatio.className = 'result-row dim';
+      valRatio.className = 'rr-val';
+      valRatio.textContent = '—';
+      subRatio.textContent = '—';
+      rowExpected.className = 'result-row dim';
+      valExpected.className = 'rr-val';
+      valExpected.textContent = '—';
+      rowRange.className = 'result-row dim';
+      valRange.className = 'rr-val';
+      valRange.textContent = '—';
+
+      if (!isNaN(tons) && tons > 0) {
+        var exp = tons * 400;
+        var lo = tons * 350;
+        var hi = tons * 450;
+        rowExpected.className = 'result-row live';
+        valExpected.className = 'rr-val live';
+        valExpected.textContent = Math.round(exp) + ' CFM';
+        rowRange.className = 'result-row live';
+        valRange.className = 'rr-val live';
+        valRange.textContent = Math.round(lo) + '–' + Math.round(hi) + ' CFM';
+      }
+      return;
+    }
+
+    var ratio = cfm / tons;
+    var status, statusClass, statusMsg;
+
+    if (ratio < 300) {
+      status = 'LOW';
+      statusClass = 'low';
+      statusMsg = 'Low — possible coil icing, reduced capacity';
+    } else if (ratio < 350) {
+      status = 'MARGINAL LOW';
+      statusClass = 'warn';
+      statusMsg = 'Marginal low';
+    } else if (ratio <= 450) {
+      status = 'NORMAL';
+      statusClass = 'ok';
+      statusMsg = 'Normal range';
+    } else if (ratio <= 500) {
+      status = 'MARGINAL HIGH';
+      statusClass = 'warn';
+      statusMsg = 'Marginal high — reduced dehumidification';
+    } else {
+      status = 'HIGH';
+      statusClass = 'high';
+      statusMsg = 'High — poor latent capacity';
+    }
+
+    rowRatio.className = 'result-row live ' + statusClass;
+    valRatio.className = 'rr-val live ' + statusClass;
+    valRatio.textContent = ratio.toFixed(1);
+    subRatio.textContent = statusMsg;
+
+    var exp = tons * 400;
+    var lo = tons * 350;
+    var hi = tons * 450;
+
+    rowExpected.className = 'result-row live';
+    valExpected.className = 'rr-val live';
+    valExpected.textContent = Math.round(exp) + ' CFM';
+
+    rowRange.className = 'result-row live';
+    valRange.className = 'rr-val live';
+    valRange.textContent = Math.round(lo) + '–' + Math.round(hi) + ' CFM';
+  }
+
+  inCap.addEventListener('input', calc);
+  inCfm.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

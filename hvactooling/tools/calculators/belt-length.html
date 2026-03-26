@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Belt Length · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Belt Length</div>
+    <div class="hdr-sub">V-Belt Sizing</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Pulley &amp; Distance</div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Large Pulley Dia.</label>
+        <div class="iw">
+          <input type="number" id="inD" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">in</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Small Pulley Dia.</label>
+        <div class="iw">
+          <input type="number" id="inDd" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">in</span>
+        </div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Center Distance</label>
+      <div class="iw">
+        <input type="number" id="inC" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">in</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="results">
+    <div class="result-row dim" id="rowLen">
+      <div class="rr-left">
+        <div class="rr-label">Pitch Length</div>
+        <div class="rr-sub">L = 2C + &pi;/2(D+d) + (D-d)&sup2;/(4C)</div>
+      </div>
+      <div class="rr-val" id="valLen">—</div>
+    </div>
+    <div class="result-row dim" id="rowRatio">
+      <div class="rr-left">
+        <div class="rr-label">Speed Ratio</div>
+        <div class="rr-sub">Large &div; Small pulley diameter</div>
+      </div>
+      <div class="rr-val" id="valRatio">—</div>
+    </div>
+    <div class="result-row dim" id="rowWrap">
+      <div class="rr-left">
+        <div class="rr-label">Belt Wrap</div>
+        <div class="rr-sub" id="subWrap">On small sheave</div>
+      </div>
+      <div class="rr-val" id="valWrap">—</div>
+    </div>
+  </div>
+
+  <div class="hint">Measure pitch diameter, not OD. Minimum wrap angle: 120°. Below 120° requires idler pulley.</div>
+</main>
+<script>
+'use strict';
+function init() {
+  var inD = document.getElementById('inD');
+  var inDd = document.getElementById('inDd');
+  var inC = document.getElementById('inC');
+  var rowLen = document.getElementById('rowLen');
+  var valLen = document.getElementById('valLen');
+  var rowRatio = document.getElementById('rowRatio');
+  var valRatio = document.getElementById('valRatio');
+  var rowWrap = document.getElementById('rowWrap');
+  var valWrap = document.getElementById('valWrap');
+  var subWrap = document.getElementById('subWrap');
+
+  var rows = [rowLen, rowRatio, rowWrap];
+  var vals = [valLen, valRatio, valWrap];
+
+  function resetAll() {
+    rows.forEach(function(r) { r.className = 'result-row dim'; });
+    vals.forEach(function(v) { v.className = 'rr-val'; });
+    valLen.textContent = '—';
+    valRatio.textContent = '—';
+    valWrap.textContent = '—';
+    subWrap.textContent = 'On small sheave';
+  }
+
+  function calc() {
+    var D = parseFloat(inD.value);
+    var d = parseFloat(inDd.value);
+    var Cc = parseFloat(inC.value);
+
+    if (isNaN(D) || isNaN(d) || D <= 0 || d <= 0) { resetAll(); return; }
+
+    // Speed ratio available with just D and d
+    var ratio = D / d;
+    rowRatio.className = 'result-row live';
+    valRatio.className = 'rr-val live';
+    valRatio.textContent = ratio.toFixed(3) + ':1';
+
+    if (isNaN(Cc) || Cc <= 0) {
+      rowLen.className = 'result-row dim';
+      valLen.className = 'rr-val';
+      valLen.textContent = '—';
+      rowWrap.className = 'result-row dim';
+      valWrap.className = 'rr-val';
+      valWrap.textContent = '—';
+      subWrap.textContent = 'On small sheave';
+      return;
+    }
+
+    // Belt pitch length
+    var L = 2 * Cc + (Math.PI / 2) * (D + d) + ((D - d) * (D - d)) / (4 * Cc);
+
+    rowLen.className = 'result-row live';
+    valLen.className = 'rr-val live';
+    valLen.textContent = L.toFixed(2) + '"';
+
+    // Belt wrap angle on small pulley
+    var wrap = 180 - 60 * (D - d) / Cc;
+
+    var wrapClass, wrapMsg;
+    if (wrap < 120) {
+      wrapClass = 'warn';
+      wrapMsg = 'Below 120° — idler pulley required';
+    } else {
+      wrapClass = 'ok';
+      wrapMsg = 'On small sheave — adequate';
+    }
+
+    rowWrap.className = 'result-row live ' + wrapClass;
+    valWrap.className = 'rr-val live ' + wrapClass;
+    valWrap.textContent = wrap.toFixed(1) + '°';
+    subWrap.textContent = wrapMsg;
+  }
+
+  inD.addEventListener('input', calc);
+  inDd.addEventListener('input', calc);
+  inC.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

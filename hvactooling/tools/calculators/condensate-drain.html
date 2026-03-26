@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Condensate Drain · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Condensate Drain</div>
+    <div class="hdr-sub">Drain Line Sizing</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">System Information</div>
+    <label class="fl">Capacity Input Mode</label>
+    <div class="phase-grid" id="modeGrid">
+      <div class="phase-btn active" data-mode="tons">Tons</div>
+      <div class="phase-btn" data-mode="btuh">BTU/h</div>
+    </div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Unit Capacity</label>
+        <div class="iw">
+          <input type="number" id="inCap" inputmode="decimal" placeholder="—">
+          <span class="iw-unit" id="capUnit">tons</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Number of Units</label>
+        <div class="iw">
+          <input type="number" id="inUnits" inputmode="numeric" placeholder="1" value="1" min="1">
+          <span class="iw-unit">units</span>
+        </div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Horizontal Run Length</label>
+      <div class="iw">
+        <input type="number" id="inRun" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">ft</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="readout">
+    <span class="readout-lbl">Total Tonnage</span>
+    <span class="readout-val" id="rdTons">—</span>
+  </div>
+
+  <div class="results">
+    <div class="result-row dim" id="rowMin">
+      <div class="rr-left">
+        <div class="rr-label">Minimum Drain Size</div>
+        <div class="rr-sub">Per IMC Table 307.2.1</div>
+      </div>
+      <div class="rr-val" id="valMin">—</div>
+    </div>
+    <div class="result-row dim" id="rowRec">
+      <div class="rr-left">
+        <div class="rr-label">Recommended Size</div>
+        <div class="rr-sub" id="subRec">—</div>
+      </div>
+      <div class="rr-val" id="valRec">—</div>
+    </div>
+    <div class="result-row dim" id="rowSlope">
+      <div class="rr-left">
+        <div class="rr-label">Slope Requirement</div>
+        <div class="rr-sub">Minimum for horizontal runs</div>
+      </div>
+      <div class="rr-val" id="valSlope">—</div>
+    </div>
+    <div class="result-row dim" id="rowDrop">
+      <div class="rr-left">
+        <div class="rr-label">Total Drop</div>
+        <div class="rr-sub">Over horizontal run length</div>
+      </div>
+      <div class="rr-val" id="valDrop">—</div>
+    </div>
+  </div>
+
+  <div class="hint">Per IMC Table 307.2.1. Maintain minimum 1/8 in/ft slope. P-trap required on negative pressure units.</div>
+</main>
+<script>
+'use strict';
+function init() {
+  var inCap = document.getElementById('inCap');
+  var inUnits = document.getElementById('inUnits');
+  var inRun = document.getElementById('inRun');
+  var capUnit = document.getElementById('capUnit');
+  var rdTons = document.getElementById('rdTons');
+  var rowMin = document.getElementById('rowMin');
+  var valMin = document.getElementById('valMin');
+  var rowRec = document.getElementById('rowRec');
+  var valRec = document.getElementById('valRec');
+  var subRec = document.getElementById('subRec');
+  var rowSlope = document.getElementById('rowSlope');
+  var valSlope = document.getElementById('valSlope');
+  var rowDrop = document.getElementById('rowDrop');
+  var valDrop = document.getElementById('valDrop');
+  var modeGrid = document.getElementById('modeGrid');
+  var modeBtns = modeGrid.querySelectorAll('.phase-btn');
+
+  var mode = 'tons';
+
+  var sizes = [
+    { max: 20, size: '3/4"' },
+    { max: 40, size: '1"' },
+    { max: 90, size: '1-1/4"' },
+    { max: 125, size: '1-1/2"' },
+    { max: 250, size: '2"' }
+  ];
+  var sizeOrder = ['3/4"', '1"', '1-1/4"', '1-1/2"', '2"'];
+
+  modeBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      modeBtns.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      mode = btn.getAttribute('data-mode');
+      capUnit.textContent = mode === 'btuh' ? 'BTU/h' : 'tons';
+      calc();
+    });
+  });
+
+  function getMinSize(tons) {
+    for (var i = 0; i < sizes.length; i++) {
+      if (tons <= sizes[i].max) return sizes[i].size;
+    }
+    return '> 2"';
+  }
+
+  function nextSizeUp(size) {
+    var idx = sizeOrder.indexOf(size);
+    if (idx < 0 || idx >= sizeOrder.length - 1) return size;
+    return sizeOrder[idx + 1];
+  }
+
+  function calc() {
+    var capRaw = parseFloat(inCap.value);
+    var units = parseInt(inUnits.value) || 1;
+    var runLen = parseFloat(inRun.value);
+
+    var tonsPerUnit = NaN;
+    if (!isNaN(capRaw) && capRaw > 0) {
+      tonsPerUnit = mode === 'btuh' ? capRaw / 12000 : capRaw;
+    }
+
+    var totalTons = tonsPerUnit * units;
+
+    if (!isNaN(totalTons) && totalTons > 0) {
+      rdTons.textContent = totalTons.toFixed(1) + ' tons';
+      rdTons.classList.add('live');
+    } else {
+      rdTons.textContent = '—';
+      rdTons.classList.remove('live');
+      rowMin.className = 'result-row dim';
+      valMin.className = 'rr-val';
+      valMin.textContent = '—';
+      rowRec.className = 'result-row dim';
+      valRec.className = 'rr-val';
+      valRec.textContent = '—';
+      subRec.textContent = '—';
+      rowSlope.className = 'result-row dim';
+      valSlope.className = 'rr-val';
+      valSlope.textContent = '—';
+      rowDrop.className = 'result-row dim';
+      valDrop.className = 'rr-val';
+      valDrop.textContent = '—';
+      return;
+    }
+
+    var minSize = getMinSize(totalTons);
+    var overCapacity = totalTons > 250;
+
+    rowMin.className = overCapacity ? 'result-row live warn' : 'result-row live';
+    valMin.className = overCapacity ? 'rr-val live warn' : 'rr-val live';
+    valMin.textContent = minSize;
+
+    var needUpsize = (!isNaN(runLen) && runLen > 50) || units > 1;
+    var recSize = needUpsize ? nextSizeUp(minSize) : minSize;
+    var reasons = [];
+    if (!isNaN(runLen) && runLen > 50) reasons.push('run > 50 ft');
+    if (units > 1) reasons.push('multiple units');
+
+    rowRec.className = 'result-row live';
+    valRec.className = 'rr-val live';
+    valRec.textContent = recSize;
+    subRec.textContent = needUpsize ? 'Upsized: ' + reasons.join(', ') : 'Same as minimum';
+
+    rowSlope.className = 'result-row live';
+    valSlope.className = 'rr-val live';
+    valSlope.textContent = '1/8" / ft';
+
+    if (!isNaN(runLen) && runLen > 0) {
+      var drop = runLen / 8;
+      rowDrop.className = 'result-row live';
+      valDrop.className = 'rr-val live';
+      valDrop.textContent = drop.toFixed(2) + '"';
+    } else {
+      rowDrop.className = 'result-row dim';
+      valDrop.className = 'rr-val';
+      valDrop.textContent = '—';
+    }
+  }
+
+  inCap.addEventListener('input', calc);
+  inUnits.addEventListener('input', calc);
+  inRun.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

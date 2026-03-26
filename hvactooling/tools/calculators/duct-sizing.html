@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Duct Sizing · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+.rect-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+.rect-table th, .rect-table td {
+  font-family: var(--mono); font-size: .75rem; padding: 6px 8px;
+  text-align: left; border-bottom: 1px solid var(--border);
+}
+.rect-table th { color: var(--text-mute); font-size: .62rem; letter-spacing: .1em; text-transform: uppercase; }
+.rect-table td { color: var(--text-dim); }
+.rect-table td.live { color: var(--text); }
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Duct Sizing</div>
+    <div class="hdr-sub">CFM · Velocity · Round & Rectangular</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Inputs</div>
+    <div class="fg">
+      <label class="fl">Airflow</label>
+      <div class="iw">
+        <input type="number" id="inCFM" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">CFM</span>
+      </div>
+    </div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Friction Rate</label>
+        <div class="iw">
+          <input type="number" id="inFriction" inputmode="decimal" placeholder="0.08" value="0.08">
+          <span class="iw-unit">in.wg/100ft</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Max Velocity</label>
+        <div class="iw">
+          <input type="number" id="inVelocity" inputmode="decimal" placeholder="900" value="900">
+          <span class="iw-unit">FPM</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="result-row dim" id="rowRound">
+      <div class="rr-left">
+        <div class="rr-label">Round Duct</div>
+        <div class="rr-sub">Nearest standard size</div>
+      </div>
+      <div class="rr-val" id="valRound">— in</div>
+    </div>
+    <div class="result-row dim" id="rowCalc">
+      <div class="rr-left">
+        <div class="rr-label">Calculated Diameter</div>
+        <div class="rr-sub">Exact from CFM / velocity</div>
+      </div>
+      <div class="rr-val" id="valCalc">— in</div>
+    </div>
+    <div class="result-row dim" id="rowActVel">
+      <div class="rr-left">
+        <div class="rr-label">Actual Velocity</div>
+        <div class="rr-sub">At selected round size</div>
+      </div>
+      <div class="rr-val" id="valActVel">— FPM</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Rectangular Equivalents</div>
+    <table class="rect-table">
+      <thead><tr><th>Ratio</th><th>Size (W x H)</th><th>D<sub>eq</sub></th></tr></thead>
+      <tbody id="rectBody">
+        <tr><td>1:1</td><td id="rect11">— x —</td><td id="deq11">—</td></tr>
+        <tr><td>4:3</td><td id="rect43">— x —</td><td id="deq43">—</td></tr>
+        <tr><td>2:1</td><td id="rect21">— x —</td><td id="deq21">—</td></tr>
+        <tr><td>3:1</td><td id="rect31">— x —</td><td id="deq31">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="hint">Sizes based on velocity method. Verify against friction chart for pressure drop.</div>
+</main>
+<script>
+'use strict';
+function init() {
+  var inCFM = document.getElementById('inCFM');
+  var inFriction = document.getElementById('inFriction');
+  var inVelocity = document.getElementById('inVelocity');
+  var stdSizes = [6,7,8,9,10,12,14,16,18,20,22,24];
+  var ratios = [
+    { key: '11', r: 1 },
+    { key: '43', r: 4/3 },
+    { key: '21', r: 2 },
+    { key: '31', r: 3 }
+  ];
+
+  function nearestStd(d) {
+    var best = stdSizes[0];
+    for (var i = 0; i < stdSizes.length; i++) {
+      if (stdSizes[i] >= d) { best = stdSizes[i]; break; }
+      best = stdSizes[i];
+    }
+    if (best < d) best = stdSizes[stdSizes.length - 1];
+    return best;
+  }
+
+  function rectEquiv(area, ratio) {
+    // area = W * H, W = ratio * H => area = ratio * H^2 => H = sqrt(area/ratio)
+    var h = Math.sqrt(area / ratio);
+    var w = ratio * h;
+    // round to nearest 0.5 inch
+    w = Math.round(w * 2) / 2;
+    h = Math.round(h * 2) / 2;
+    // D_eq = 1.3 * (a*b)^0.625 / (a+b)^0.25
+    var deq = 1.3 * Math.pow(w * h, 0.625) / Math.pow(w + h, 0.25);
+    return { w: w, h: h, deq: deq };
+  }
+
+  function calc() {
+    var cfm = parseFloat(inCFM.value);
+    var maxVel = parseFloat(inVelocity.value);
+
+    if (!cfm || cfm <= 0 || !maxVel || maxVel <= 0) {
+      document.getElementById('rowRound').className = 'result-row dim';
+      document.getElementById('rowCalc').className = 'result-row dim';
+      document.getElementById('rowActVel').className = 'result-row dim';
+      document.getElementById('valRound').className = 'rr-val';
+      document.getElementById('valCalc').className = 'rr-val';
+      document.getElementById('valActVel').className = 'rr-val';
+      document.getElementById('valRound').textContent = '— in';
+      document.getElementById('valCalc').textContent = '— in';
+      document.getElementById('valActVel').textContent = '— FPM';
+      ratios.forEach(function(r) {
+        document.getElementById('rect' + r.key).textContent = '— x —';
+        document.getElementById('deq' + r.key).textContent = '—';
+      });
+      return;
+    }
+
+    // Area in sq ft, then diameter in inches
+    var areaSqFt = cfm / maxVel;
+    var areaSqIn = areaSqFt * 144;
+    var diam = Math.sqrt(4 * areaSqIn / Math.PI);
+    var stdDiam = nearestStd(diam);
+
+    // Actual velocity at standard size
+    var stdAreaSqFt = (Math.PI * Math.pow(stdDiam, 2) / 4) / 144;
+    var actVel = cfm / stdAreaSqFt;
+
+    document.getElementById('valRound').textContent = stdDiam + '" dia';
+    document.getElementById('valCalc').textContent = diam.toFixed(1) + '"';
+    document.getElementById('valActVel').textContent = Math.round(actVel) + ' FPM';
+
+    var velClass = actVel > maxVel * 1.1 ? 'warn' : '';
+    document.getElementById('rowRound').className = 'result-row live';
+    document.getElementById('rowCalc').className = 'result-row live';
+    document.getElementById('rowActVel').className = 'result-row live' + (velClass ? ' ' + velClass : '');
+    document.getElementById('valRound').className = 'rr-val live';
+    document.getElementById('valCalc').className = 'rr-val live';
+    document.getElementById('valActVel').className = 'rr-val live' + (velClass ? ' ' + velClass : '');
+
+    // Rectangular equivalents using the round area
+    ratios.forEach(function(r) {
+      var eq = rectEquiv(areaSqIn, r.r);
+      document.getElementById('rect' + r.key).textContent = eq.w.toFixed(1) + '" x ' + eq.h.toFixed(1) + '"';
+      document.getElementById('rect' + r.key).className = 'live';
+      document.getElementById('deq' + r.key).textContent = eq.deq.toFixed(1) + '"';
+      document.getElementById('deq' + r.key).className = 'live';
+    });
+  }
+
+  inCFM.addEventListener('input', calc);
+  inFriction.addEventListener('input', calc);
+  inVelocity.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

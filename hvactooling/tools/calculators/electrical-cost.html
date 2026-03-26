@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Operating Cost · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+.alt-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
+.alt-toggle button {
+  flex: 1; padding: 7px; border-radius: 3px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text-mute);
+  font-family: var(--ui); font-weight: 600; font-size: .75rem;
+  letter-spacing: .06em; cursor: pointer; text-align: center;
+  text-transform: uppercase; transition: all .1s;
+}
+.alt-toggle button.active { background: var(--orange-dim); border-color: var(--orange); color: var(--orange-hi); }
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Operating Cost</div>
+    <div class="hdr-sub">kW · Hours · Rate</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Power Input</div>
+    <div class="alt-toggle" id="modeToggle">
+      <button class="active" data-mode="kw">kW / Watts</button>
+      <button data-mode="va">Voltage × Amps</button>
+    </div>
+
+    <div id="kwMode">
+      <div class="input-pair">
+        <div class="fg">
+          <label class="fl">Power</label>
+          <div class="iw">
+            <input type="number" id="inKW" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">kW</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Or Watts</label>
+          <div class="iw">
+            <input type="number" id="inWatts" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">W</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="vaMode" style="display:none;">
+      <div class="input-pair">
+        <div class="fg">
+          <label class="fl">Voltage</label>
+          <div class="iw">
+            <input type="number" id="inVolts" inputmode="decimal" placeholder="240">
+            <span class="iw-unit">V</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Amps</label>
+          <div class="iw">
+            <input type="number" id="inAmps" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">A</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Usage</div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Hours / Day</label>
+        <div class="iw">
+          <input type="number" id="inHours" inputmode="decimal" placeholder="8" value="8">
+          <span class="iw-unit">hrs</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Days / Month</label>
+        <div class="iw">
+          <input type="number" id="inDays" inputmode="decimal" placeholder="30" value="30">
+          <span class="iw-unit">days</span>
+        </div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Electricity Rate</label>
+      <div class="iw">
+        <input type="number" id="inRate" inputmode="decimal" placeholder="0.12" value="0.12" step="0.01">
+        <span class="iw-unit">$/kWh</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="readout">
+    <span class="readout-lbl">Power</span>
+    <span class="readout-val" id="kwVal">— kW</span>
+  </div>
+
+  <div class="results">
+    <div class="result-sec-hdr">Energy</div>
+    <div class="result-row dim" id="rowKwhDay">
+      <div class="rr-left">
+        <div class="rr-label">Per Day</div>
+      </div>
+      <div class="rr-val" id="valKwhDay">— kWh</div>
+    </div>
+    <div class="result-row dim" id="rowKwhMo">
+      <div class="rr-left">
+        <div class="rr-label">Per Month</div>
+      </div>
+      <div class="rr-val" id="valKwhMo">— kWh</div>
+    </div>
+    <div class="result-row dim" id="rowKwhYr">
+      <div class="rr-left">
+        <div class="rr-label">Per Year</div>
+      </div>
+      <div class="rr-val" id="valKwhYr">— kWh</div>
+    </div>
+    <div class="result-sec-hdr">Cost</div>
+    <div class="result-row dim" id="rowCostDay">
+      <div class="rr-left">
+        <div class="rr-label">Per Day</div>
+      </div>
+      <div class="rr-val" id="valCostDay">—</div>
+    </div>
+    <div class="result-row dim" id="rowCostMo">
+      <div class="rr-left">
+        <div class="rr-label">Per Month</div>
+      </div>
+      <div class="rr-val" id="valCostMo">—</div>
+    </div>
+    <div class="result-row dim" id="rowCostYr">
+      <div class="rr-left">
+        <div class="rr-label">Per Year</div>
+      </div>
+      <div class="rr-val" id="valCostYr">—</div>
+    </div>
+  </div>
+
+  <div class="hint">Estimate only. Actual costs vary with demand charges and rate tiers.</div>
+</main>
+<script>
+'use strict';
+function init() {
+  var mode = 'kw';
+  var modeBtns = document.querySelectorAll('#modeToggle button');
+  var inKW = document.getElementById('inKW');
+  var inWatts = document.getElementById('inWatts');
+  var inVolts = document.getElementById('inVolts');
+  var inAmps = document.getElementById('inAmps');
+  var inHours = document.getElementById('inHours');
+  var inDays = document.getElementById('inDays');
+  var inRate = document.getElementById('inRate');
+
+  function getKW() {
+    if (mode === 'va') {
+      var v = parseFloat(inVolts.value) || 0;
+      var a = parseFloat(inAmps.value) || 0;
+      return (v * a) / 1000;
+    }
+    var kw = parseFloat(inKW.value) || 0;
+    var w = parseFloat(inWatts.value) || 0;
+    if (kw > 0) return kw;
+    if (w > 0) return w / 1000;
+    return 0;
+  }
+
+  function fmt(v) {
+    if (v >= 100) return '$' + Math.round(v).toLocaleString();
+    if (v >= 1) return '$' + v.toFixed(2);
+    return '$' + v.toFixed(3);
+  }
+
+  function setRow(id, cls, val) {
+    document.getElementById('row' + id).className = 'result-row ' + cls;
+    document.getElementById('val' + id).className = 'rr-val ' + cls;
+    document.getElementById('val' + id).textContent = val;
+  }
+
+  function calc() {
+    var kw = getKW();
+    var hrs = parseFloat(inHours.value) || 0;
+    var days = parseFloat(inDays.value) || 0;
+    var rate = parseFloat(inRate.value) || 0;
+
+    if (kw > 0) {
+      document.getElementById('kwVal').textContent = kw.toFixed(2) + ' kW';
+      document.getElementById('kwVal').classList.add('live');
+    } else {
+      document.getElementById('kwVal').textContent = '— kW';
+      document.getElementById('kwVal').classList.remove('live');
+    }
+
+    // Sync kW ↔ watts in kw mode
+    if (mode === 'kw') {
+      if (document.activeElement === inKW && parseFloat(inKW.value) > 0) {
+        inWatts.value = '';
+      } else if (document.activeElement === inWatts && parseFloat(inWatts.value) > 0) {
+        inKW.value = '';
+      }
+    }
+
+    if (kw <= 0 || hrs <= 0) {
+      setRow('KwhDay', 'dim', '— kWh');
+      setRow('KwhMo', 'dim', '— kWh');
+      setRow('KwhYr', 'dim', '— kWh');
+      setRow('CostDay', 'dim', '—');
+      setRow('CostMo', 'dim', '—');
+      setRow('CostYr', 'dim', '—');
+      return;
+    }
+
+    var kwhDay = kw * hrs;
+    var kwhMo = kwhDay * days;
+    var kwhYr = kwhMo * 12;
+
+    setRow('KwhDay', 'live', kwhDay.toFixed(1) + ' kWh');
+    setRow('KwhMo', 'live', kwhMo.toFixed(0) + ' kWh');
+    setRow('KwhYr', 'live', Math.round(kwhYr).toLocaleString() + ' kWh');
+
+    if (rate > 0) {
+      setRow('CostDay', 'live', fmt(kwhDay * rate));
+      setRow('CostMo', 'live', fmt(kwhMo * rate));
+      setRow('CostYr', 'live', fmt(kwhYr * rate));
+    } else {
+      setRow('CostDay', 'dim', '—');
+      setRow('CostMo', 'dim', '—');
+      setRow('CostYr', 'dim', '—');
+    }
+  }
+
+  for (var i = 0; i < modeBtns.length; i++) {
+    modeBtns[i].addEventListener('click', function() {
+      mode = this.getAttribute('data-mode');
+      for (var k = 0; k < modeBtns.length; k++) {
+        modeBtns[k].classList.toggle('active', modeBtns[k].getAttribute('data-mode') === mode);
+      }
+      document.getElementById('kwMode').style.display = mode === 'kw' ? '' : 'none';
+      document.getElementById('vaMode').style.display = mode === 'va' ? '' : 'none';
+      calc();
+    });
+  }
+
+  inKW.addEventListener('input', calc);
+  inWatts.addEventListener('input', calc);
+  inVolts.addEventListener('input', calc);
+  inAmps.addEventListener('input', calc);
+  inHours.addEventListener('input', calc);
+  inDays.addEventListener('input', calc);
+  inRate.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

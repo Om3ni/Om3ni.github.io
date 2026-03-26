@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Wire Sizing · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+.volt-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Wire Sizing</div>
+    <div class="hdr-sub">NEC Ampacity · Voltage Drop</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Load</div>
+    <div class="fg">
+      <label class="fl">Load Amps</label>
+      <div class="iw">
+        <input type="number" id="inAmps" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">A</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Voltage</div>
+    <div class="volt-grid" id="voltGrid">
+      <button class="phase-btn" data-v="120">120</button>
+      <button class="phase-btn" data-v="208">208</button>
+      <button class="phase-btn active" data-v="240">240</button>
+      <button class="phase-btn" data-v="277">277</button>
+      <button class="phase-btn" data-v="480">480</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Distance (One-Way)</div>
+    <div class="fg">
+      <label class="fl">Feet</label>
+      <div class="iw">
+        <input type="number" id="inDist" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">ft</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Phase</div>
+    <div class="phase-grid" id="phaseGrid">
+      <button class="phase-btn active" data-ph="1">1-Phase</button>
+      <button class="phase-btn" data-ph="3">3-Phase</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Conductor</div>
+    <div class="phase-grid" id="matGrid">
+      <button class="phase-btn active" data-mat="cu">Copper</button>
+      <button class="phase-btn" data-mat="al">Aluminum</button>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="result-row dim" id="rowGauge">
+      <div class="rr-left">
+        <div class="rr-label">Minimum Wire Size</div>
+        <div class="rr-sub" id="subGauge">Based on NEC 75°C ampacity</div>
+      </div>
+      <div class="rr-val" id="valGauge">—</div>
+    </div>
+    <div class="result-row dim" id="rowDrop">
+      <div class="rr-left">
+        <div class="rr-label">Voltage Drop</div>
+        <div class="rr-sub" id="subDrop">At minimum gauge</div>
+      </div>
+      <div class="rr-val" id="valDrop">— %</div>
+    </div>
+    <div class="result-row dim" id="rowRec">
+      <div class="rr-left">
+        <div class="rr-label">Recommended Size</div>
+        <div class="rr-sub" id="subRec">For ≤ 3% voltage drop</div>
+      </div>
+      <div class="rr-val" id="valRec">—</div>
+    </div>
+  </div>
+  <div class="hint" id="hintText"></div>
+</main>
+<script>
+'use strict';
+function init() {
+  var gauges = ['14','12','10','8','6','4','3','2','1','1/0','2/0','3/0','4/0','250','300','350','400','500'];
+  var cmils = [4110,6530,10380,16510,26240,41740,52620,66360,83690,105600,133100,167800,211600,250000,300000,350000,400000,500000];
+  var ampCu = [15,20,30,40,55,70,85,95,110,125,145,165,195,215,240,260,280,320];
+  var ampAl = [0,15,25,30,40,55,65,75,85,100,115,130,150,170,190,210,225,260];
+  var labels = ['14 AWG','12 AWG','10 AWG','8 AWG','6 AWG','4 AWG','3 AWG','2 AWG','1 AWG','1/0 AWG','2/0 AWG','3/0 AWG','4/0 AWG','250 kcmil','300 kcmil','350 kcmil','400 kcmil','500 kcmil'];
+
+  var voltage = 240;
+  var phase = 1;
+  var mat = 'cu';
+
+  var inAmps = document.getElementById('inAmps');
+  var inDist = document.getElementById('inDist');
+  var voltBtns = document.querySelectorAll('#voltGrid .phase-btn');
+  var phaseBtns = document.querySelectorAll('#phaseGrid .phase-btn');
+  var matBtns = document.querySelectorAll('#matGrid .phase-btn');
+
+  var rowGauge = document.getElementById('rowGauge');
+  var rowDrop = document.getElementById('rowDrop');
+  var rowRec = document.getElementById('rowRec');
+  var valGauge = document.getElementById('valGauge');
+  var valDrop = document.getElementById('valDrop');
+  var valRec = document.getElementById('valRec');
+  var subGauge = document.getElementById('subGauge');
+  var subDrop = document.getElementById('subDrop');
+  var subRec = document.getElementById('subRec');
+  var hintText = document.getElementById('hintText');
+
+  function setActive(btns, attr, val) {
+    btns.forEach(function(b) { b.classList.toggle('active', b.getAttribute(attr) === String(val)); });
+  }
+
+  voltBtns.forEach(function(b) {
+    b.addEventListener('click', function() { voltage = parseInt(b.dataset.v); setActive(voltBtns, 'data-v', voltage); calc(); });
+  });
+  phaseBtns.forEach(function(b) {
+    b.addEventListener('click', function() { phase = parseInt(b.dataset.ph); setActive(phaseBtns, 'data-ph', phase); calc(); });
+  });
+  matBtns.forEach(function(b) {
+    b.addEventListener('click', function() { mat = b.dataset.mat; setActive(matBtns, 'data-mat', mat); calc(); });
+  });
+
+  function calcVdrop(gaugeIdx, amps, dist) {
+    var K = mat === 'cu' ? 12.9 : 21.2;
+    var multiplier = phase === 3 ? 1.732 : 1;
+    var vd = (2 * K * multiplier * amps * dist) / cmils[gaugeIdx];
+    return vd;
+  }
+
+  function calc() {
+    var amps = parseFloat(inAmps.value);
+    var dist = parseFloat(inDist.value);
+    var ampTable = mat === 'cu' ? ampCu : ampAl;
+
+    // Reset
+    rowGauge.className = 'result-row dim';
+    rowDrop.className = 'result-row dim';
+    rowRec.className = 'result-row dim';
+    valGauge.className = 'rr-val';
+    valDrop.className = 'rr-val';
+    valRec.className = 'rr-val';
+    valGauge.textContent = '—';
+    valDrop.textContent = '— %';
+    valRec.textContent = '—';
+    subGauge.textContent = 'Based on NEC 75°C ampacity';
+    subDrop.textContent = 'At minimum gauge';
+    subRec.textContent = 'For ≤ 3% voltage drop';
+    hintText.textContent = '';
+
+    if (isNaN(amps) || amps <= 0) return;
+
+    // Find minimum gauge by ampacity
+    var minIdx = -1;
+    for (var g = 0; g < gauges.length; g++) {
+      if (ampTable[g] >= amps) { minIdx = g; break; }
+    }
+    if (minIdx === -1) {
+      valGauge.textContent = 'Exceeds table';
+      rowGauge.className = 'result-row live high';
+      valGauge.className = 'rr-val high';
+      hintText.textContent = 'Load exceeds maximum ampacity in NEC table.';
+      hintText.className = 'hint warn';
+      return;
+    }
+
+    valGauge.textContent = labels[minIdx];
+    subGauge.textContent = ampTable[minIdx] + 'A rated (' + (mat === 'cu' ? 'Copper' : 'Aluminum') + ' 75°C)';
+    rowGauge.className = 'result-row live';
+    valGauge.className = 'rr-val live';
+
+    if (isNaN(dist) || dist <= 0) {
+      hintText.textContent = 'Enter distance to calculate voltage drop.';
+      return;
+    }
+
+    // Voltage drop at minimum gauge
+    var vd = calcVdrop(minIdx, amps, dist);
+    var pct = (vd / voltage) * 100;
+    valDrop.textContent = pct.toFixed(2) + ' %';
+    subDrop.textContent = vd.toFixed(2) + 'V drop at ' + labels[minIdx];
+
+    if (pct <= 3) {
+      rowDrop.className = 'result-row live ok';
+      valDrop.className = 'rr-val ok';
+      valRec.textContent = labels[minIdx];
+      subRec.textContent = 'Minimum gauge meets ≤ 3% drop';
+      rowRec.className = 'result-row live ok';
+      valRec.className = 'rr-val ok';
+    } else {
+      rowDrop.className = 'result-row live high';
+      valDrop.className = 'rr-val high';
+
+      // Find gauge that gets ≤ 3%
+      var recIdx = -1;
+      for (var j = minIdx; j < gauges.length; j++) {
+        var testVd = calcVdrop(j, amps, dist);
+        var testPct = (testVd / voltage) * 100;
+        if (testPct <= 3) { recIdx = j; break; }
+      }
+      if (recIdx !== -1) {
+        var recVd = calcVdrop(recIdx, amps, dist);
+        var recPct = (recVd / voltage) * 100;
+        valRec.textContent = labels[recIdx];
+        subRec.textContent = recPct.toFixed(2) + '% drop (' + recVd.toFixed(2) + 'V)';
+        rowRec.className = 'result-row live ok';
+        valRec.className = 'rr-val ok';
+      } else {
+        valRec.textContent = 'Exceeds table';
+        subRec.textContent = 'No standard size achieves ≤ 3%';
+        rowRec.className = 'result-row live high';
+        valRec.className = 'rr-val high';
+      }
+      hintText.textContent = 'Voltage drop exceeds 3% at minimum ampacity gauge — upsizing recommended.';
+      hintText.className = 'hint warn';
+    }
+  }
+
+  inAmps.addEventListener('input', calc);
+  inDist.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

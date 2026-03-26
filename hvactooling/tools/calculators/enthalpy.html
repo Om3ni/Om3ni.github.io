@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Enthalpy · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Enthalpy</div>
+    <div class="hdr-sub">From Dry Bulb &amp; Wet Bulb</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Temperature Inputs</div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Dry Bulb</label>
+        <div class="iw">
+          <input type="number" id="inTdb" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">&deg;F</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Wet Bulb</label>
+        <div class="iw">
+          <input type="number" id="inTwb" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">&deg;F</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="results">
+    <div class="result-row dim" id="rowH">
+      <div class="rr-left">
+        <div class="rr-label">Enthalpy</div>
+        <div class="rr-sub">h = 0.240·Tdb + W·(1061 + 0.444·Tdb)</div>
+      </div>
+      <div class="rr-val" id="valH">—</div>
+    </div>
+    <div class="result-row dim" id="rowW">
+      <div class="rr-left">
+        <div class="rr-label">Humidity Ratio</div>
+        <div class="rr-sub" id="subW">lb/lb dry air</div>
+      </div>
+      <div class="rr-val" id="valW">—</div>
+    </div>
+    <div class="result-row dim" id="rowGr">
+      <div class="rr-left">
+        <div class="rr-label">Humidity Ratio</div>
+        <div class="rr-sub">grains per lb dry air</div>
+      </div>
+      <div class="rr-val" id="valGr">—</div>
+    </div>
+    <div class="result-row dim" id="rowRH">
+      <div class="rr-left">
+        <div class="rr-label">Relative Humidity</div>
+        <div class="rr-sub">Approximate at standard pressure</div>
+      </div>
+      <div class="rr-val" id="valRH">—</div>
+    </div>
+    <div class="result-row dim" id="rowDp">
+      <div class="rr-left">
+        <div class="rr-label">Dew Point</div>
+        <div class="rr-sub">Temperature at saturation</div>
+      </div>
+      <div class="rr-val" id="valDp">—</div>
+    </div>
+  </div>
+
+  <div class="hint">Standard pressure (14.696 psia). For altitude correction, adjust barometric pressure.</div>
+</main>
+<script>
+'use strict';
+function init() {
+  var inTdb = document.getElementById('inTdb');
+  var inTwb = document.getElementById('inTwb');
+  var rowH = document.getElementById('rowH');
+  var valH = document.getElementById('valH');
+  var rowW = document.getElementById('rowW');
+  var valW = document.getElementById('valW');
+  var subW = document.getElementById('subW');
+  var rowGr = document.getElementById('rowGr');
+  var valGr = document.getElementById('valGr');
+  var rowRH = document.getElementById('rowRH');
+  var valRH = document.getElementById('valRH');
+  var rowDp = document.getElementById('rowDp');
+  var valDp = document.getElementById('valDp');
+
+  var rows = [rowH, rowW, rowGr, rowRH, rowDp];
+  var vals = [valH, valW, valGr, valRH, valDp];
+
+  var P_ATM = 14.696; // psia
+  var A = 54.6329;
+  var B = -12301.686;
+  var C = -5.468;
+
+  function satPressure(tF) {
+    var tR = tF + 459.67;
+    return Math.exp(A + B / tR + C * Math.log(tR));
+  }
+
+  function satHumidityRatio(tF) {
+    var ps = satPressure(tF);
+    return 0.62198 * ps / (P_ATM - ps);
+  }
+
+  function dewPoint(w) {
+    // Iterate to find T where Ws(T) = w
+    var lo = -60, hi = 200, mid;
+    for (var i = 0; i < 60; i++) {
+      mid = (lo + hi) / 2;
+      if (satHumidityRatio(mid) < w) {
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+    return mid;
+  }
+
+  function resetAll() {
+    rows.forEach(function(r) { r.className = 'result-row dim'; });
+    vals.forEach(function(v) { v.className = 'rr-val'; });
+    valH.textContent = '—';
+    valW.textContent = '—';
+    valGr.textContent = '—';
+    valRH.textContent = '—';
+    valDp.textContent = '—';
+  }
+
+  function calc() {
+    var tdb = parseFloat(inTdb.value);
+    var twb = parseFloat(inTwb.value);
+
+    if (isNaN(tdb) || isNaN(twb)) { resetAll(); return; }
+    if (twb > tdb) { resetAll(); return; }
+
+    // Saturation humidity ratio at wet bulb
+    var ws_wb = satHumidityRatio(twb);
+
+    // Actual humidity ratio from wet bulb depression
+    var w = ((1093 - 0.556 * twb) * ws_wb - 0.240 * (tdb - twb)) / (1093 + 0.444 * tdb - twb);
+    if (w < 0) w = 0;
+
+    // Enthalpy
+    var h = 0.240 * tdb + w * (1061 + 0.444 * tdb);
+
+    // Relative humidity
+    var ws_db = satHumidityRatio(tdb);
+    var rh = (w / ws_db) * 100;
+    if (rh > 100) rh = 100;
+    if (rh < 0) rh = 0;
+
+    // Dew point
+    var dp = dewPoint(w);
+
+    // Grains
+    var grains = w * 7000;
+
+    // Display
+    rows.forEach(function(r) { r.className = 'result-row live'; });
+    vals.forEach(function(v) { v.className = 'rr-val live'; });
+
+    valH.textContent = h.toFixed(2) + ' BTU/lb';
+    valW.textContent = w.toFixed(6) + ' lb/lb';
+    subW.textContent = 'lb moisture per lb dry air';
+    valGr.textContent = grains.toFixed(1) + ' gr/lb';
+    valRH.textContent = rh.toFixed(1) + '%';
+    valDp.textContent = dp.toFixed(1) + ' °F';
+  }
+
+  inTdb.addEventListener('input', calc);
+  inTwb.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

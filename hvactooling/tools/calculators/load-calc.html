@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Load Estimate · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+.sel-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Load Estimate</div>
+    <div class="hdr-sub">Rule of Thumb · BTU/sq ft</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Building</div>
+    <div class="fg">
+      <label class="fl">Square Footage</label>
+      <div class="iw">
+        <input type="number" id="inSqft" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">sq ft</span>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Ceiling Height</label>
+      <div class="iw">
+        <input type="number" id="inCeiling" inputmode="decimal" placeholder="8" value="8">
+        <span class="iw-unit">ft</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Climate Zone</div>
+    <div class="sel-grid-3">
+      <button class="phase-btn" id="btnHot" data-btu="30">Hot / Humid<br><span style="font-family:var(--mono);font-size:.62rem;color:var(--text-mute)">30 BTU/sqft</span></button>
+      <button class="phase-btn active" id="btnMixed" data-btu="25">Mixed<br><span style="font-family:var(--mono);font-size:.62rem;color:var(--text-mute)">25 BTU/sqft</span></button>
+      <button class="phase-btn" id="btnCold" data-btu="20">Cold<br><span style="font-family:var(--mono);font-size:.62rem;color:var(--text-mute)">20 BTU/sqft</span></button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Construction Quality</div>
+    <div class="sel-grid-3">
+      <button class="phase-btn" id="btnPoor" data-factor="1.2">Poor<br><span style="font-family:var(--mono);font-size:.62rem;color:var(--text-mute)">1.2x</span></button>
+      <button class="phase-btn active" id="btnAvg" data-factor="1.0">Average<br><span style="font-family:var(--mono);font-size:.62rem;color:var(--text-mute)">1.0x</span></button>
+      <button class="phase-btn" id="btnGood" data-factor="0.8">Good<br><span style="font-family:var(--mono);font-size:.62rem;color:var(--text-mute)">0.8x</span></button>
+    </div>
+  </div>
+
+  <div class="results">
+    <div class="result-row dim" id="rowBTU">
+      <div class="rr-left">
+        <div class="rr-label">Cooling Load</div>
+        <div class="rr-sub">Estimated BTU/h</div>
+      </div>
+      <div class="rr-val" id="valBTU">— BTU/h</div>
+    </div>
+    <div class="result-row dim" id="rowTons">
+      <div class="rr-left">
+        <div class="rr-label">Equivalent Tons</div>
+        <div class="rr-sub">1 ton = 12,000 BTU/h</div>
+      </div>
+      <div class="rr-val" id="valTons">— tons</div>
+    </div>
+    <div class="result-row dim" id="rowCFM">
+      <div class="rr-left">
+        <div class="rr-label">Recommended CFM</div>
+        <div class="rr-sub">400 CFM per ton</div>
+      </div>
+      <div class="rr-val" id="valCFM">— CFM</div>
+    </div>
+  </div>
+
+  <div class="hint">Rule of thumb only. Manual J required for system design.</div>
+</main>
+<script>
+'use strict';
+function init() {
+  var inSqft = document.getElementById('inSqft');
+  var inCeiling = document.getElementById('inCeiling');
+
+  var climateBtns = [document.getElementById('btnHot'), document.getElementById('btnMixed'), document.getElementById('btnCold')];
+  var constBtns = [document.getElementById('btnPoor'), document.getElementById('btnAvg'), document.getElementById('btnGood')];
+
+  var climateBtu = 25;
+  var constFactor = 1.0;
+
+  function setToggle(btns, active, cb) {
+    btns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        btns.forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        cb(btn);
+        calc();
+      });
+    });
+  }
+
+  setToggle(climateBtns, 'btnMixed', function(btn) {
+    climateBtu = parseFloat(btn.getAttribute('data-btu'));
+  });
+
+  setToggle(constBtns, 'btnAvg', function(btn) {
+    constFactor = parseFloat(btn.getAttribute('data-factor'));
+  });
+
+  function calc() {
+    var sqft = parseFloat(inSqft.value);
+    var ceiling = parseFloat(inCeiling.value) || 8;
+
+    if (!sqft || sqft <= 0) {
+      document.getElementById('rowBTU').className = 'result-row dim';
+      document.getElementById('rowTons').className = 'result-row dim';
+      document.getElementById('rowCFM').className = 'result-row dim';
+      document.getElementById('valBTU').className = 'rr-val';
+      document.getElementById('valTons').className = 'rr-val';
+      document.getElementById('valCFM').className = 'rr-val';
+      document.getElementById('valBTU').textContent = '— BTU/h';
+      document.getElementById('valTons').textContent = '— tons';
+      document.getElementById('valCFM').textContent = '— CFM';
+      return;
+    }
+
+    var ceilingAdj = ceiling > 8 ? (ceiling / 8) : 1;
+    var btu = sqft * climateBtu * constFactor * ceilingAdj;
+    var tons = btu / 12000;
+    var cfm = tons * 400;
+
+    document.getElementById('valBTU').textContent = Math.round(btu).toLocaleString() + ' BTU/h';
+    document.getElementById('valTons').textContent = tons.toFixed(2) + ' tons';
+    document.getElementById('valCFM').textContent = Math.round(cfm).toLocaleString() + ' CFM';
+
+    ['rowBTU','rowTons','rowCFM'].forEach(function(id) { document.getElementById(id).className = 'result-row live'; });
+    ['valBTU','valTons','valCFM'].forEach(function(id) { document.getElementById(id).className = 'rr-val live'; });
+  }
+
+  inSqft.addEventListener('input', calc);
+  inCeiling.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

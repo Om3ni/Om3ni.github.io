@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pressure Conversion · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Pressure Conversion</div>
+    <div class="hdr-sub">PSIG · kPa · Bar · inHg · mmHg</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Enter Any One Value</div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">PSIG</label>
+        <div class="iw">
+          <input type="number" id="inPsi" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">psig</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">kPa</label>
+        <div class="iw">
+          <input type="number" id="inKpa" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">kPa</span>
+        </div>
+      </div>
+    </div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Bar</label>
+        <div class="iw">
+          <input type="number" id="inBar" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">bar</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">inHg</label>
+        <div class="iw">
+          <input type="number" id="inInhg" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">inHg</span>
+        </div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">mmHg</label>
+      <div class="iw">
+        <input type="number" id="inMmhg" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">mmHg</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="results">
+    <div class="result-row dim" id="rowPsi">
+      <div class="rr-left">
+        <div class="rr-label">PSIG</div>
+        <div class="rr-sub">Base unit</div>
+      </div>
+      <div class="rr-val" id="valPsi">— psig</div>
+    </div>
+    <div class="result-row dim" id="rowKpa">
+      <div class="rr-left">
+        <div class="rr-label">kPa</div>
+        <div class="rr-sub">1 psi = 6.89476 kPa</div>
+      </div>
+      <div class="rr-val" id="valKpa">— kPa</div>
+    </div>
+    <div class="result-row dim" id="rowBar">
+      <div class="rr-left">
+        <div class="rr-label">Bar</div>
+        <div class="rr-sub">1 psi = 0.0689476 bar</div>
+      </div>
+      <div class="rr-val" id="valBar">— bar</div>
+    </div>
+    <div class="result-row dim" id="rowInhg">
+      <div class="rr-left">
+        <div class="rr-label">inHg</div>
+        <div class="rr-sub">1 psi = 2.03602 inHg</div>
+      </div>
+      <div class="rr-val" id="valInhg">— inHg</div>
+    </div>
+    <div class="result-row dim" id="rowMmhg">
+      <div class="rr-left">
+        <div class="rr-label">mmHg</div>
+        <div class="rr-sub">1 psi = 51.7149 mmHg</div>
+      </div>
+      <div class="rr-val" id="valMmhg">— mmHg</div>
+    </div>
+  </div>
+</main>
+<script>
+'use strict';
+function init() {
+  var KPA = 6.89476;
+  var BAR = 0.0689476;
+  var INHG = 2.03602;
+  var MMHG = 51.7149;
+
+  var inPsi = document.getElementById('inPsi');
+  var inKpa = document.getElementById('inKpa');
+  var inBar = document.getElementById('inBar');
+  var inInhg = document.getElementById('inInhg');
+  var inMmhg = document.getElementById('inMmhg');
+
+  var inputs = [inPsi, inKpa, inBar, inInhg, inMmhg];
+
+  var rowIds = ['rowPsi','rowKpa','rowBar','rowInhg','rowMmhg'];
+  var valIds = ['valPsi','valKpa','valBar','valInhg','valMmhg'];
+  var rows = rowIds.map(function(id) { return document.getElementById(id); });
+  var vals = valIds.map(function(id) { return document.getElementById(id); });
+  var units = [' psig',' kPa',' bar',' inHg',' mmHg'];
+
+  function fmt(n) {
+    if (n === null || isNaN(n)) return '—';
+    if (Math.abs(n) >= 1000) return n.toFixed(2);
+    if (Math.abs(n) >= 1) return n.toFixed(4);
+    if (n === 0) return '0';
+    return n.toPrecision(5);
+  }
+
+  function reset() {
+    rows.forEach(function(r) { r.className = 'result-row dim'; });
+    vals.forEach(function(v, i) { v.className = 'rr-val'; v.textContent = '—' + units[i]; });
+  }
+
+  function show(psi, kpa, bar, inhg, mmhg) {
+    var arr = [psi, kpa, bar, inhg, mmhg];
+    arr.forEach(function(v, i) {
+      vals[i].textContent = fmt(v) + units[i];
+      rows[i].className = 'result-row live';
+      vals[i].className = 'rr-val live';
+    });
+  }
+
+  function onInput(source) {
+    return function() {
+      inputs.forEach(function(inp) { if (inp !== source) inp.value = ''; });
+      var val = parseFloat(source.value);
+      if (source.value === '' || isNaN(val)) { reset(); return; }
+
+      var psi;
+      if (source === inPsi) psi = val;
+      else if (source === inKpa) psi = val / KPA;
+      else if (source === inBar) psi = val / BAR;
+      else if (source === inInhg) psi = val / INHG;
+      else psi = val / MMHG;
+
+      show(psi, psi * KPA, psi * BAR, psi * INHG, psi * MMHG);
+    };
+  }
+
+  inputs.forEach(function(inp) {
+    inp.addEventListener('input', onInput(inp));
+  });
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

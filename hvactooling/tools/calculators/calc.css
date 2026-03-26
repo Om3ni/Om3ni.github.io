@@ -1,0 +1,11 @@
+/* ══════════════════════════════════════════════
+   Calculator theme override
+   Remaps orange accent → blue for utility calculators
+   ══════════════════════════════════════════════ */
+
+:root {
+  --orange:     #2a6db5;
+  --orange-hi:  #4a9de8;
+  --orange-lo:  #1a4a7a;
+  --orange-dim: #0a1a2e;
+}

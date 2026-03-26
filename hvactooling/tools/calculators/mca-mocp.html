@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MCA / MOCP · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">MCA / MOCP</div>
+    <div class="hdr-sub">Minimum Circuit Ampacity · Max Overcurrent</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Phase</div>
+    <div class="phase-grid">
+      <button class="phase-btn active" id="btn1ph">1-Phase</button>
+      <button class="phase-btn" id="btn3ph">3-Phase</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Motor Loads</div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Compressor RLA</label>
+        <div class="iw">
+          <input type="number" id="inRLA" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">A</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Fan Motor FLA</label>
+        <div class="iw">
+          <input type="number" id="inFan" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">A</span>
+        </div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Additional Loads (optional)</label>
+      <div class="iw">
+        <input type="number" id="inExtra" inputmode="decimal" placeholder="0">
+        <span class="iw-unit">A</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="results">
+    <div class="result-row dim" id="rowMCA">
+      <div class="rr-left">
+        <div class="rr-label">MCA</div>
+        <div class="rr-sub">Minimum Circuit Ampacity</div>
+      </div>
+      <div class="rr-val" id="valMCA">— A</div>
+    </div>
+    <div class="result-row dim" id="rowMOCP">
+      <div class="rr-left">
+        <div class="rr-label">MOCP</div>
+        <div class="rr-sub">Max Overcurrent Protection</div>
+      </div>
+      <div class="rr-val" id="valMOCP">— A</div>
+    </div>
+    <div class="result-row dim" id="rowWire">
+      <div class="rr-left">
+        <div class="rr-label">Min Wire Gauge</div>
+        <div class="rr-sub">NEC 75°C copper</div>
+      </div>
+      <div class="rr-val" id="valWire">—</div>
+    </div>
+  </div>
+
+  <div class="hint">Per NEC 440.33 and 440.22. Verify against unit nameplate MCA/MOCP when available.</div>
+</main>
+<script>
+'use strict';
+function init() {
+  var inRLA = document.getElementById('inRLA');
+  var inFan = document.getElementById('inFan');
+  var inExtra = document.getElementById('inExtra');
+  var btn1ph = document.getElementById('btn1ph');
+  var btn3ph = document.getElementById('btn3ph');
+
+  var breakerSizes = [15,20,25,30,35,40,45,50,60,70,80,90,100,110,125,150,175,200,225,250,300];
+
+  var wireTable = [
+    { gauge: '14 AWG', amps: 15 },
+    { gauge: '12 AWG', amps: 20 },
+    { gauge: '10 AWG', amps: 30 },
+    { gauge: '8 AWG',  amps: 40 },
+    { gauge: '6 AWG',  amps: 55 },
+    { gauge: '4 AWG',  amps: 70 },
+    { gauge: '3 AWG',  amps: 85 },
+    { gauge: '2 AWG',  amps: 95 },
+    { gauge: '1 AWG',  amps: 110 },
+    { gauge: '1/0 AWG', amps: 125 },
+    { gauge: '2/0 AWG', amps: 145 },
+    { gauge: '3/0 AWG', amps: 165 },
+    { gauge: '4/0 AWG', amps: 195 }
+  ];
+
+  function nextBreaker(amps) {
+    for (var i = 0; i < breakerSizes.length; i++) {
+      if (breakerSizes[i] >= amps) return breakerSizes[i];
+    }
+    return breakerSizes[breakerSizes.length - 1];
+  }
+
+  function minWire(mca) {
+    for (var i = 0; i < wireTable.length; i++) {
+      if (wireTable[i].amps >= mca) return wireTable[i].gauge;
+    }
+    return '> 4/0 AWG';
+  }
+
+  btn1ph.addEventListener('click', function() {
+    btn1ph.classList.add('active');
+    btn3ph.classList.remove('active');
+    calc();
+  });
+  btn3ph.addEventListener('click', function() {
+    btn3ph.classList.add('active');
+    btn1ph.classList.remove('active');
+    calc();
+  });
+
+  function calc() {
+    var rla = parseFloat(inRLA.value) || 0;
+    var fan = parseFloat(inFan.value) || 0;
+    var extra = parseFloat(inExtra.value) || 0;
+
+    if (rla <= 0 && fan <= 0) {
+      ['rowMCA','rowMOCP','rowWire'].forEach(function(id) { document.getElementById(id).className = 'result-row dim'; });
+      document.getElementById('valMCA').className = 'rr-val';
+      document.getElementById('valMOCP').className = 'rr-val';
+      document.getElementById('valWire').className = 'rr-val';
+      document.getElementById('valMCA').textContent = '— A';
+      document.getElementById('valMOCP').textContent = '— A';
+      document.getElementById('valWire').textContent = '—';
+      return;
+    }
+
+    var loads = [rla, fan].filter(function(v) { return v > 0; });
+    if (loads.length === 0) return;
+
+    var largest = Math.max.apply(null, loads);
+    var sumOthers = 0;
+    loads.forEach(function(v) { sumOthers += v; });
+    sumOthers = sumOthers - largest + extra;
+
+    var mca = (largest * 1.25) + sumOthers;
+    var mocpRaw = (largest * 2.25) + sumOthers;
+    var mocp = nextBreaker(mocpRaw);
+    var wire = minWire(mca);
+
+    document.getElementById('valMCA').textContent = mca.toFixed(1) + ' A';
+    document.getElementById('valMOCP').textContent = mocp + ' A';
+    document.getElementById('valWire').textContent = wire;
+
+    ['rowMCA','rowMOCP','rowWire'].forEach(function(id) { document.getElementById(id).className = 'result-row live'; });
+    ['valMCA','valMOCP','valWire'].forEach(function(id) { document.getElementById(id).className = 'rr-val live'; });
+  }
+
+  inRLA.addEventListener('input', calc);
+  inFan.addEventListener('input', calc);
+  inExtra.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

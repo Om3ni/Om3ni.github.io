@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Capacitor Sizing · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Capacitor Sizing</div>
+    <div class="hdr-sub">PSC Motor Run Capacitor</div>
+  </div>
+</header>
+<main>
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Motor Data</div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Motor Rated Voltage</label>
+        <div class="iw">
+          <input type="number" id="inVolts" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">V</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Motor FLA</label>
+        <div class="iw">
+          <input type="number" id="inAmps" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">A</span>
+        </div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Capacitor Voltage Rating (optional)</label>
+      <div class="iw">
+        <input type="number" id="inCapVolts" inputmode="decimal" placeholder="same as motor">
+        <span class="iw-unit">V</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="results">
+    <div class="result-row dim" id="rowCalc">
+      <div class="rr-left">
+        <div class="rr-label">Calculated MFD</div>
+        <div class="rr-sub">MFD = (Amps × 2652) / Volts</div>
+      </div>
+      <div class="rr-val" id="valCalc">— MFD</div>
+    </div>
+    <div class="result-row dim" id="rowStd">
+      <div class="rr-left">
+        <div class="rr-label">Nearest Standard</div>
+        <div class="rr-sub" id="subTolerance">±6% tolerance range</div>
+      </div>
+      <div class="rr-val" id="valStd">— MFD</div>
+    </div>
+  </div>
+
+  <div class="hint">Approximation for PSC motors. Always verify against manufacturer specs.</div>
+</main>
+<script>
+'use strict';
+function init() {
+  var inVolts = document.getElementById('inVolts');
+  var inAmps = document.getElementById('inAmps');
+  var inCapVolts = document.getElementById('inCapVolts');
+
+  var stdMFD = [3, 4, 5, 7.5, 10, 12.5, 15, 17.5, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80];
+
+  function nearestStd(mfd) {
+    var best = stdMFD[0];
+    var bestDiff = Math.abs(mfd - best);
+    for (var i = 1; i < stdMFD.length; i++) {
+      var diff = Math.abs(mfd - stdMFD[i]);
+      if (diff < bestDiff) { best = stdMFD[i]; bestDiff = diff; }
+    }
+    return best;
+  }
+
+  function calc() {
+    var volts = parseFloat(inVolts.value);
+    var amps = parseFloat(inAmps.value);
+
+    if (!volts || volts <= 0 || !amps || amps <= 0) {
+      document.getElementById('rowCalc').className = 'result-row dim';
+      document.getElementById('rowStd').className = 'result-row dim';
+      document.getElementById('valCalc').className = 'rr-val';
+      document.getElementById('valStd').className = 'rr-val';
+      document.getElementById('valCalc').textContent = '— MFD';
+      document.getElementById('valStd').textContent = '— MFD';
+      document.getElementById('subTolerance').textContent = '±6% tolerance range';
+      return;
+    }
+
+    var mfd = (amps * 2652) / volts;
+    var std = nearestStd(mfd);
+    var lo = (std * 0.94).toFixed(1);
+    var hi = (std * 1.06).toFixed(1);
+
+    document.getElementById('valCalc').textContent = mfd.toFixed(1) + ' MFD';
+    document.getElementById('valStd').textContent = std + ' MFD';
+    document.getElementById('subTolerance').textContent = '±6% range: ' + lo + ' – ' + hi + ' MFD';
+
+    document.getElementById('rowCalc').className = 'result-row live';
+    document.getElementById('rowStd').className = 'result-row live';
+    document.getElementById('valCalc').className = 'rr-val live';
+    document.getElementById('valStd').className = 'rr-val live';
+  }
+
+  inVolts.addEventListener('input', calc);
+  inAmps.addEventListener('input', calc);
+  inCapVolts.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
