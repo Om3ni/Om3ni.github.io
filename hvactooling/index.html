@@ -44,6 +44,21 @@
 }
 .license-contact a { color: var(--orange-lo); text-decoration: none; border-bottom: 1px solid var(--orange-lo); }
 
+/* ── Light mode ── */
+[data-theme="light"] {
+  --bg:         #d8d8d8;
+  --surface:    #c8c8c8;
+  --surface2:   #bfbfbf;
+  --border:     #a0a0a0;
+  --text:       #1a1a1a;
+  --text-dim:   #3a3a3a;
+  --text-mute:  #606060;
+  --orange-dim: #f0dcc8;
+  --green-dim:  #d0e8d0;
+  --red-dim:    #e8d0d0;
+  --yellow-dim: #e8e0c8;
+}
+
 /* ── Index-specific header ── */
 .owner-btn {
   background: none; border: 1px solid var(--border); border-radius: 3px;
@@ -383,6 +398,7 @@ This software is provided "as is" without warranty of any kind, express or impli
     <div class="hdr-title">Field Entry</div>
     <div class="hdr-sub">Field Data · <a href="#" onclick="showLicense();return false" style="color:var(--text-mute);text-decoration:none;border-bottom:1px solid var(--text-mute)">License</a></div>
   </div>
+  <button class="owner-btn" id="themeBtn" onclick="toggleTheme()">light</button>
   <button class="owner-btn" id="ownerBtn" onclick="openOwnerModal()">owner</button>
   <div class="hdr-badge" id="hdrBadge">0</div>
 </header>
@@ -1023,15 +1039,22 @@ function addRecord() {
   };
 
   const recs = getRecords();
-  recs.push(rec);
+  if (editingIndex !== null) {
+    recs[editingIndex] = rec;
+    editingIndex = null;
+    toast('Unit ' + unit + ' updated');
+  } else {
+    recs.push(rec);
+    toast('Unit ' + unit + ' queued');
+  }
   saveRecords(recs);
   updateBadge();
   clearForm();
-  toast('Unit ' + unit + ' queued');
   syncUnitToRepo(rec);
 }
 
 function clearForm() {
+  editingIndex = null;
   ['f-unit','f-name','f-loc','f-make','f-type','f-model','f-serial',
    'f-fw','f-fh','f-fd','f-fqty','f-fsize',
    'f-f2w','f-f2h','f-f2d','f-f2qty','f-f2size',
@@ -1063,13 +1086,13 @@ function renderQueue() {
     let flags = '';
     if (r.working) flags += `<span class="flag ${r.working==='Y'?'f-ok':'f-bad'}">${r.working==='Y'?'OK':'DOWN'}</span>`;
     if (r.done)    flags += `<span class="flag ${r.done==='Y'?'f-ok':'f-pend'}">${r.done==='Y'?'DONE':'PEND'}</span>`;
-    return `<div class="qi">
+    return `<div class="qi" onclick="loadRecord(${i})">
       <div class="qi-info">
         <div class="qi-unit">UNIT ${r.unit}</div>
         <div class="qi-model">${r.model || r.name || '—'}</div>
       </div>
       <div class="qi-flags">${flags}</div>
-      <button class="qi-del" onclick="delRecord(${i})">&#10005;</button>
+      <button class="qi-del" onclick="event.stopPropagation();delRecord(${i})">&#10005;</button>
     </div>`;
   }).join('');
 }
@@ -1080,6 +1103,75 @@ function delRecord(i) {
   saveRecords(recs);
   updateBadge();
   renderQueue();
+}
+
+let editingIndex = null;
+
+function loadRecord(i) {
+  const recs = getRecords();
+  const r = recs[i];
+  if (!r) return;
+  editingIndex = i;
+
+  // Populate form fields
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('f-job', r.job);
+  set('f-unit', r.unit);
+  set('f-name', r.name);
+  set('f-loc', r.loc);
+  set('f-make', r.make);
+  set('f-type', r.type);
+  set('f-model', r.model);
+  set('f-serial', r.serial);
+  set('f-fsize', r.fsize);
+  set('f-fqty', r.fqty);
+  set('f-f2size', r.f2size);
+  set('f-f2qty', r.f2qty);
+  set('f-fchg', r.fchg);
+  set('f-belt', r.belt);
+  set('f-bqty', r.bqty);
+  set('f-bchg', r.bchg);
+  set('f-working', r.working);
+  set('f-done', r.done);
+  set('f-notes', r.notes);
+
+  // Restore Y/N button states
+  document.querySelectorAll('.yn-b').forEach(b => b.classList.remove('on'));
+  const setYN = (hidId, val) => {
+    if (!val) return;
+    const hid = document.getElementById(hidId);
+    if (!hid) return;
+    const yn = hid.closest('.fg')?.querySelector('.yn') || hid.parentElement?.querySelector('.yn');
+    if (!yn) return;
+    yn.querySelectorAll('.yn-b').forEach(b => {
+      if ((b.classList.contains('y') && val === 'Y') ||
+          (b.classList.contains('n') && val === 'N') ||
+          (b.classList.contains('na') && val === 'N/A')) {
+        b.classList.add('on');
+      }
+    });
+  };
+  setYN('f-fchg', r.fchg);
+  setYN('f-bchg', r.bchg);
+  setYN('f-working', r.working);
+  setYN('f-done', r.done);
+
+  // Restore filter/belt previews
+  if (r.fsize) document.getElementById('prev-f1').textContent = r.fsize;
+  if (r.f2size) document.getElementById('prev-f2').textContent = r.f2size;
+  if (r.belt) document.getElementById('prev-b1').textContent = r.belt;
+
+  // Clear modules (can't restore iframe state)
+  moduleSlots = [];
+  document.getElementById('module-list').innerHTML = '';
+
+  // Switch to Home tab
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab="entry"]').classList.add('active');
+  document.getElementById('tab-entry').classList.add('active');
+
+  toast('Editing unit ' + r.unit);
 }
 
 // ── Parts render ───────────────────────────────────────────────────────────
@@ -1781,15 +1873,10 @@ function openTool(name, title) {
 
   frame.onload = function() {
     try {
-      // Set embedded flag and hide standalone UI
-      frame.contentWindow.HVAC_EMBEDDED = true;
       const doc = frame.contentDocument;
       // Hide module header (we have our own bar)
       const hdr = doc.querySelector('header');
       if (hdr) hdr.style.display = 'none';
-      // Hide standalone report bar
-      const bar = doc.getElementById('standaloneBar');
-      if (bar) bar.style.display = 'none';
     } catch(e) { /* cross-origin safety */ }
   };
 
@@ -1832,6 +1919,23 @@ function getToolReportBlock(context) {
   return null;
 }
 
+// ── Theme toggle ─────────────────────────────────────────────────────────
+const THEME_KEY = 'sl_theme';
+
+function applyTheme() {
+  const theme = localStorage.getItem(THEME_KEY) || 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('themeBtn');
+  if (btn) btn.textContent = theme === 'light' ? 'dark' : 'light';
+}
+
+function toggleTheme() {
+  const current = localStorage.getItem(THEME_KEY) || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme();
+}
+
 // ── License gate ──────────────────────────────────────────────────────────
 const LICENSE_KEY = 'sl_license_accepted';
 
@@ -1858,6 +1962,7 @@ function showLicense() {
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────
+applyTheme();
 checkLicense();
 updateBadge();
 updateOwnerUI();

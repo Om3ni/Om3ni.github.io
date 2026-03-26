@@ -230,3 +230,18 @@ main { padding: 14px 14px 80px; max-width: 520px; margin: 0 auto; }
 
 /* ── Standalone bar ── */
 #standaloneBar { padding: 0 14px 14px; max-width: 520px; margin: 0 auto; }
+
+/* ── Light mode ── */
+[data-theme="light"] {
+  --bg:         #d8d8d8;
+  --surface:    #c8c8c8;
+  --surface2:   #bfbfbf;
+  --border:     #a0a0a0;
+  --text:       #1a1a1a;
+  --text-dim:   #3a3a3a;
+  --text-mute:  #606060;
+  --orange-dim: #f0dcc8;
+  --green-dim:  #d0e8d0;
+  --red-dim:    #e8d0d0;
+  --yellow-dim: #e8e0c8;
+}
