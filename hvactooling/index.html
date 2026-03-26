@@ -7,51 +7,48 @@
 <link rel="stylesheet" href="base.css">
 <style>
 
-/* ── GATE ── */
-#gate {
-  min-height: 100vh;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 28px 20px;
+/* ── Index-specific header ── */
+.owner-btn {
+  background: none; border: 1px solid var(--border); border-radius: 3px;
+  color: var(--text-mute); font-family: var(--mono); font-size: .55rem;
+  letter-spacing: .04em; padding: 3px 8px; cursor: pointer;
+  transition: all .12s; flex-shrink: 0;
 }
-.g-wordmark { font-family: var(--ui); font-size: 1.1rem; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; color: var(--orange); margin-bottom: 4px; }
-.g-sub { font-family: var(--mono); font-size: .7rem; color: var(--text-mute); letter-spacing: .08em; margin-bottom: 44px; }
-.g-box { width: 100%; max-width: 380px; }
-.g-lbl { display: block; font-size: .72rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 7px; }
-.g-input {
-  width: 100%; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 3px; color: var(--text); font-family: var(--mono); font-size: .95rem;
-  padding: 14px 14px; outline: none; transition: border-color .15s; margin-bottom: 7px;
-  letter-spacing: .04em;
+.owner-btn:active { border-color: var(--orange-lo); color: var(--text-dim); }
+.owner-btn.active { border-color: var(--green-hi); color: var(--green-hi); }
+
+/* ── Owner modal ── */
+.owner-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.9);
+  z-index: 250; display: none; align-items: center; justify-content: center;
+  padding: 20px;
 }
-.g-input:focus { border-color: var(--orange); }
-.g-hint { font-family: var(--mono); font-size: .68rem; color: var(--text-mute); margin-bottom: 20px; line-height: 1.6; }
-.g-btn {
-  width: 100%; background: var(--orange); border: none; border-radius: 3px;
-  color: #fff; font-family: var(--ui); font-weight: 700; font-size: 1rem;
-  letter-spacing: .14em; text-transform: uppercase; padding: 14px; cursor: pointer;
-  margin-bottom: 28px; transition: background .12s;
-}
-.g-btn:active { background: var(--orange-hi); }
-.g-divider { border: none; border-top: 1px solid var(--border); margin-bottom: 18px; }
-.g-saved-lbl { font-size: .66rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--text-mute); margin-bottom: 10px; }
-.g-list { display: flex; flex-direction: column; gap: 6px; }
-.g-item {
-  display: flex; align-items: center; gap: 8px;
+.owner-overlay.open { display: flex; }
+.owner-modal {
   background: var(--surface); border: 1px solid var(--border);
-  border-left: 3px solid var(--orange-lo); border-radius: 3px;
-  padding: 11px 12px; cursor: pointer; transition: border-left-color .12s;
+  border-radius: 6px; width: 100%; max-width: 420px;
+  max-height: 85vh; overflow-y: auto; padding: 20px;
 }
-.g-item:active { border-left-color: var(--orange); }
-.g-item-name { font-family: var(--mono); font-size: .8rem; color: var(--orange-hi); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.g-item-count { font-family: var(--mono); font-size: .68rem; color: var(--text-mute); white-space: nowrap; }
-.g-item-del { background: none; border: none; color: var(--text-mute); font-size: .95rem; cursor: pointer; padding: 2px 6px; flex-shrink: 0; }
-.g-empty { font-family: var(--mono); font-size: .72rem; color: var(--text-mute); text-align: center; padding: 14px 0; }
+.owner-modal-title {
+  font-family: var(--ui); font-weight: 700; font-size: .88rem;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--orange-hi);
+  margin-bottom: 14px;
+}
+.owner-modal-text {
+  font-family: var(--mono); font-size: .68rem; color: var(--text-dim);
+  line-height: 1.7; letter-spacing: .02em; margin-bottom: 16px;
+}
+.owner-modal-text strong { color: var(--orange-hi); font-weight: 700; }
+.owner-pat-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 3px; color: var(--text); font-family: var(--mono);
+  font-size: .78rem; padding: 10px 12px; outline: none; margin-bottom: 12px;
+  transition: border-color .15s; letter-spacing: .02em;
+}
+.owner-pat-input:focus { border-color: var(--orange); }
+.owner-btn-row { display: flex; gap: 8px; }
+.owner-btn-row .btn { flex: 1; margin: 0; padding: 11px; font-size: .82rem; }
 
-/* ── APP ── */
-#app { display: none; }
-
-/* Index-specific header elements */
-.hdr-name { font-family: var(--mono); font-size: .76rem; color: var(--orange-hi); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hdr-badge {
   background: var(--orange-dim); border: 1px solid var(--orange-lo); color: var(--orange-hi);
   font-family: var(--mono); font-size: .7rem; padding: 3px 9px; border-radius: 3px; letter-spacing: .06em; flex-shrink: 0;
@@ -164,6 +161,19 @@ textarea { resize: vertical; min-height: 72px; }
   font-weight: 400; text-transform: none;
 }
 
+/* ── Model suggestions ── */
+.model-wrap { position: relative; }
+#model-suggestions {
+  display: none; position: absolute; left: 0; right: 0; top: 100%;
+  background: var(--surface2); border: 1px solid var(--orange-lo);
+  border-radius: 0 0 3px 3px; z-index: 50; max-height: 160px; overflow-y: auto;
+}
+.suggestion-item {
+  padding: 9px 12px; font-family: var(--mono); font-size: .82rem;
+  color: var(--text-dim); cursor: pointer; transition: background .08s;
+}
+.suggestion-item:active { background: var(--orange-dim); color: var(--orange-hi); }
+
 .empty { color: var(--text-mute); font-family: var(--mono); font-size: .76rem; text-align: center; padding: 28px 0; }
 
 /* ── INLINE MODULES ── */
@@ -261,44 +271,64 @@ textarea { resize: vertical; min-height: 72px; }
 </head>
 <body>
 
-<!-- ══ GATE ══ -->
-<div id="gate">
-  <div class="g-wordmark">Field Entry</div>
-  <div class="g-sub">Service Logic — Field Data</div>
+<header>
+  <div class="hdr-titles">
+    <div class="hdr-title">Field Entry</div>
+    <div class="hdr-sub">Field Data</div>
+  </div>
+  <button class="owner-btn" id="ownerBtn" onclick="openOwnerModal()">owner</button>
+  <div class="hdr-badge" id="hdrBadge">0</div>
+</header>
 
-  <div class="g-box">
-    <label class="g-lbl">Job / Session Name</label>
-    <input class="g-input" id="gInput" type="text"
-      placeholder="260216-0037 Merrill Gardens"
-      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-      maxlength="80">
-    <div class="g-hint">Spaces → underscores in filenames. Max 80 characters.</div>
-    <button class="g-btn" onclick="startSession()">Start / Resume Session</button>
-
-    <hr class="g-divider">
-    <div class="g-saved-lbl">Saved Sessions</div>
-    <div class="g-list" id="gList"></div>
+<!-- ══ OWNER MODAL ══ -->
+<div class="owner-overlay" id="ownerOverlay">
+  <div class="owner-modal">
+    <div class="owner-modal-title">Owner Login</div>
+    <div class="owner-modal-text">
+      This feature is for the <strong>owner of the repository</strong> that hosts this application.
+      It allows collected equipment data to be saved back to the GitHub repository for
+      future reference, model number autocomplete, and historical trending.
+      <br><br>
+      <strong>By proceeding, you acknowledge:</strong><br>
+      &bull; Any data entered in this app may be saved to the repository<br>
+      &bull; Features enabled by this login may be unreleased and contain bugs<br>
+      &bull; You give up any rights to data entered while this feature is active<br>
+      &bull; No customer-identifying information should ever be entered
+      <br><br>
+      Paste your GitHub Personal Access Token below. It will be stored only in this
+      browser's local storage and never transmitted anywhere except to the GitHub API.
+    </div>
+    <input type="password" class="owner-pat-input" id="ownerPAT"
+      placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+      autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="owner-btn-row">
+      <button class="btn btn-ghost" onclick="closeOwnerModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="acceptOwnerLogin()">I Accept</button>
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn btn-danger" id="ownerLogoutBtn" onclick="ownerLogout()" style="display:none">Revoke Access</button>
+    </div>
   </div>
 </div>
 
-<!-- ══ APP ══ -->
-<div id="app">
-  <header>
-    <button class="hdr-back" onclick="exitToGate()">&#8592;</button>
-    <div class="hdr-name" id="hdrName"></div>
-    <div class="hdr-badge" id="hdrBadge">0</div>
-  </header>
-
   <div class="tabs">
-    <div class="tab active" data-tab="entry" onclick="switchTab(this)">Entry</div>
-    <div class="tab" data-tab="queue" onclick="switchTab(this)">Queue</div>
+    <div class="tab active" data-tab="entry" onclick="switchTab(this)">Home</div>
+    <div class="tab" data-tab="queue" onclick="switchTab(this)">Units</div>
     <div class="tab" data-tab="parts" onclick="switchTab(this)">Parts</div>
     <div class="tab" data-tab="tools" onclick="switchTab(this)">Tools</div>
     <div class="tab" data-tab="export" onclick="switchTab(this)">Export</div>
   </div>
 
-  <!-- ENTRY TAB -->
+  <!-- HOME TAB -->
   <div class="panel active" id="tab-entry">
+
+    <div class="fg">
+      <label class="fl">Job #</label>
+      <input type="text" id="f-job"
+        placeholder="260216-0037"
+        autocomplete="off" autocorrect="off" spellcheck="false"
+        oninput="forceUpper(this)">
+    </div>
 
     <div class="fg">
       <label class="fl">Unit #</label>
@@ -336,12 +366,14 @@ textarea { resize: vertical; min-height: 72px; }
       </div>
     </div>
 
-    <div class="fg">
+    <div class="fg model-wrap">
       <label class="fl">Model #</label>
       <input type="text" id="f-model"
         placeholder="48TCED12F2A6A6F0G0"
         autocomplete="off" autocorrect="off" spellcheck="false"
-        oninput="forceUpper(this)">
+        oninput="forceUpper(this); suggestModel(this)"
+        onblur="setTimeout(clearSuggestions, 150)">
+      <div id="model-suggestions"></div>
     </div>
 
     <div class="fg">
@@ -524,7 +556,6 @@ textarea { resize: vertical; min-height: 72px; }
     <hr class="sec" style="margin-top:24px;">
     <button class="btn btn-danger" onclick="doNuke()">Clear All Records</button>
   </div>
-</div>
 
 <!-- ══ TOOL FRAME ══ -->
 <div id="tool-frame-wrap">
@@ -540,81 +571,240 @@ textarea { resize: vertical; min-height: 72px; }
 <script>
 'use strict';
 
-// ── Storage helpers ────────────────────────────────────────────────────────
-const SK = n => 'sl_session__' + n;
+// ── Storage ───────────────────────────────────────────────────────────────
+const STORE_KEY = 'sl_field_records';
+const PAT_KEY   = 'sl_owner_pat';
+const REPO      = 'Om3ni/Om3ni.github.io';
+const DATA_PATH = 'hvactooling/data';
 
-function allSessions() {
-  const out = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith('sl_session__')) out.push(k.slice(12));
-  }
-  return out.sort();
-}
-
-function getRecords(name) {
-  try { return JSON.parse(localStorage.getItem(SK(name)) || '[]'); }
+function getRecords() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); }
   catch(e) { return []; }
 }
 
-function saveRecords(name, arr) {
-  localStorage.setItem(SK(name), JSON.stringify(arr));
+function saveRecords(arr) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(arr));
 }
 
-// ── Active session ─────────────────────────────────────────────────────────
-let session = null;
+// ── Owner mode ────────────────────────────────────────────────────────────
+function isOwner() {
+  return !!localStorage.getItem(PAT_KEY);
+}
 
-// ── Gate ───────────────────────────────────────────────────────────────────
-function renderGate() {
-  const list = document.getElementById('gList');
-  const sessions = allSessions();
-  if (!sessions.length) {
-    list.innerHTML = '<div class="g-empty">No saved sessions.</div>';
+function getPAT() {
+  return localStorage.getItem(PAT_KEY);
+}
+
+function updateOwnerUI() {
+  const btn = document.getElementById('ownerBtn');
+  const logout = document.getElementById('ownerLogoutBtn');
+  if (isOwner()) {
+    btn.classList.add('active');
+    btn.textContent = 'synced';
+    logout.style.display = '';
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = 'owner';
+    logout.style.display = 'none';
+  }
+}
+
+function openOwnerModal() {
+  const overlay = document.getElementById('ownerOverlay');
+  const input = document.getElementById('ownerPAT');
+  if (isOwner()) {
+    input.value = '••••••••••••••••';
+  } else {
+    input.value = '';
+  }
+  overlay.classList.add('open');
+}
+
+function closeOwnerModal() {
+  document.getElementById('ownerOverlay').classList.remove('open');
+}
+
+function acceptOwnerLogin() {
+  const pat = document.getElementById('ownerPAT').value.trim();
+  if (!pat || pat === '••••••••••••••••') {
+    if (isOwner()) { closeOwnerModal(); return; }
+    toast('Paste a valid PAT');
     return;
   }
-  list.innerHTML = sessions.map(s => {
-    const n = getRecords(s).length;
-    const esc = s.replace(/'/g, "\\'");
-    return `<div class="g-item" onclick="openSession('${esc}')">
-      <div class="g-item-name">${s}</div>
-      <div class="g-item-count">${n} unit${n!==1?'s':''}</div>
-      <button class="g-item-del" onclick="event.stopPropagation();delSession('${esc}')">&#10005;</button>
-    </div>`;
-  }).join('');
+  localStorage.setItem(PAT_KEY, pat);
+  updateOwnerUI();
+  closeOwnerModal();
+  toast('Owner mode enabled');
+  syncModelIndex();
 }
 
-function startSession() {
-  const raw = document.getElementById('gInput').value.trim();
-  if (!raw) { toast('Enter a job name'); return; }
-  const name = raw.replace(/\s+/g, '_');
-  document.getElementById('gInput').value = '';
-  openSession(name);
+function ownerLogout() {
+  localStorage.removeItem(PAT_KEY);
+  localStorage.removeItem('sl_model_index');
+  updateOwnerUI();
+  closeOwnerModal();
+  toast('Owner access revoked');
 }
 
-function openSession(name) {
-  session = name;
-  document.getElementById('hdrName').textContent = name;
-  document.getElementById('gate').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  updateBadge();
-  // Reset to entry tab
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelector('[data-tab="entry"]').classList.add('active');
-  document.getElementById('tab-entry').classList.add('active');
+// ── GitHub sync ───────────────────────────────────────────────────────────
+async function ghPut(path, content, message) {
+  const pat = getPAT();
+  if (!pat) return;
+
+  const api = `https://api.github.com/repos/${REPO}/contents/${path}`;
+
+  // Get existing file SHA if it exists
+  let sha = null;
+  try {
+    const res = await fetch(api, { headers: { 'Authorization': `Bearer ${pat}` } });
+    if (res.ok) {
+      const data = await res.json();
+      sha = data.sha;
+    }
+  } catch(e) {}
+
+  const body = {
+    message,
+    content: btoa(unescape(encodeURIComponent(content)))
+  };
+  if (sha) body.sha = sha;
+
+  try {
+    const res = await fetch(api, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${pat}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error('GitHub sync failed:', err);
+      return false;
+    }
+    return true;
+  } catch(e) {
+    console.error('GitHub sync error:', e);
+    return false;
+  }
 }
 
-function exitToGate() {
-  session = null;
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('gate').style.display = 'flex';
-  renderGate();
+async function syncUnitToRepo(rec) {
+  if (!isOwner() || !rec.job) return;
+
+  const job = rec.job.replace(/\s+/g, '_');
+  const path = `${DATA_PATH}/jobs/${job}.json`;
+
+  // Fetch existing job data
+  let jobData = { job: rec.job, units: [] };
+  try {
+    const api = `https://api.github.com/repos/${REPO}/contents/${path}`;
+    const res = await fetch(api, { headers: { 'Authorization': `Bearer ${getPAT()}` } });
+    if (res.ok) {
+      const file = await res.json();
+      jobData = JSON.parse(decodeURIComponent(escape(atob(file.content))));
+    }
+  } catch(e) {}
+
+  // Add or update unit (match by make + serial)
+  const idx = jobData.units.findIndex(u =>
+    u.make && u.serial && u.make === rec.make && u.serial === rec.serial
+  );
+  if (idx >= 0) {
+    jobData.units[idx] = rec;
+  } else {
+    jobData.units.push(rec);
+  }
+
+  const ok = await ghPut(path, JSON.stringify(jobData, null, 2), `Update job ${rec.job}`);
+  if (ok) {
+    updateModelIndex(rec);
+    toast('Synced to repo');
+  }
 }
 
-function delSession(name) {
-  if (!confirm('Delete session "' + name + '" and all its records?')) return;
-  localStorage.removeItem(SK(name));
-  renderGate();
+// ── Model index ───────────────────────────────────────────────────────────
+function getModelIndex() {
+  try { return JSON.parse(localStorage.getItem('sl_model_index') || '{}'); }
+  catch(e) { return {}; }
+}
+
+function updateModelIndex(rec) {
+  if (!rec.make || !rec.model) return;
+  const index = getModelIndex();
+  const make = rec.make.toUpperCase();
+  if (!index[make]) index[make] = [];
+  if (!index[make].includes(rec.model.toUpperCase())) {
+    index[make].push(rec.model.toUpperCase());
+  }
+  localStorage.setItem('sl_model_index', JSON.stringify(index));
+}
+
+async function syncModelIndex() {
+  if (!isOwner()) return;
+
+  // Fetch all job files to build model index
+  const api = `https://api.github.com/repos/${REPO}/contents/${DATA_PATH}/jobs`;
+  try {
+    const res = await fetch(api, { headers: { 'Authorization': `Bearer ${getPAT()}` } });
+    if (!res.ok) return;
+    const files = await res.json();
+    if (!Array.isArray(files)) return;
+
+    const index = {};
+    for (const file of files) {
+      if (!file.name.endsWith('.json')) continue;
+      try {
+        const fRes = await fetch(file.download_url);
+        const jobData = await fRes.json();
+        if (jobData.units) {
+          jobData.units.forEach(u => {
+            if (!u.make || !u.model) return;
+            const make = u.make.toUpperCase();
+            if (!index[make]) index[make] = [];
+            if (!index[make].includes(u.model.toUpperCase())) {
+              index[make].push(u.model.toUpperCase());
+            }
+          });
+        }
+      } catch(e) {}
+    }
+    localStorage.setItem('sl_model_index', JSON.stringify(index));
+  } catch(e) {}
+}
+
+function suggestModel(el) {
+  if (!isOwner()) return;
+  const make = document.getElementById('f-make').value.trim().toUpperCase();
+  const val = el.value.trim().toUpperCase();
+  if (!make || val.length < 2) { clearSuggestions(); return; }
+
+  const index = getModelIndex();
+  const models = index[make] || [];
+  const matches = models.filter(m => m.startsWith(val)).slice(0, 5);
+
+  const list = document.getElementById('model-suggestions');
+  if (!matches.length || (matches.length === 1 && matches[0] === val)) {
+    list.innerHTML = '';
+    list.style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = matches.map(m =>
+    `<div class="suggestion-item" onmousedown="applySuggestion('${m}')">${m}</div>`
+  ).join('');
+  list.style.display = 'block';
+}
+
+function applySuggestion(model) {
+  document.getElementById('f-model').value = model;
+  clearSuggestions();
+}
+
+function clearSuggestions() {
+  const list = document.getElementById('model-suggestions');
+  if (list) { list.innerHTML = ''; list.style.display = 'none'; }
 }
 
 // ── Filter / belt builders ─────────────────────────────────────────────────
@@ -676,6 +866,7 @@ function addRecord() {
   if (!unit) { toast('Unit # required'); return; }
 
   const rec = {
+    job:      document.getElementById('f-job').value.trim(),
     unit,
     name:     document.getElementById('f-name').value.trim(),
     loc:      document.getElementById('f-loc').value.trim(),
@@ -698,12 +889,13 @@ function addRecord() {
     modules:  getModuleReports({ embedded: true }),
   };
 
-  const recs = getRecords(session);
+  const recs = getRecords();
   recs.push(rec);
-  saveRecords(session, recs);
+  saveRecords(recs);
   updateBadge();
   clearForm();
   toast('Unit ' + unit + ' queued');
+  syncUnitToRepo(rec);
 }
 
 function clearForm() {
@@ -726,12 +918,12 @@ function clearForm() {
 
 // ── Badge ──────────────────────────────────────────────────────────────────
 function updateBadge() {
-  document.getElementById('hdrBadge').textContent = getRecords(session).length;
+  document.getElementById('hdrBadge').textContent = getRecords().length;
 }
 
 // ── Queue render ───────────────────────────────────────────────────────────
 function renderQueue() {
-  const recs = getRecords(session);
+  const recs = getRecords();
   const el = document.getElementById('queueBody');
   if (!recs.length) { el.innerHTML = '<div class="empty">No units queued.</div>'; return; }
   el.innerHTML = recs.map((r, i) => {
@@ -750,9 +942,9 @@ function renderQueue() {
 }
 
 function delRecord(i) {
-  const recs = getRecords(session);
+  const recs = getRecords();
   recs.splice(i, 1);
-  saveRecords(session, recs);
+  saveRecords(recs);
   updateBadge();
   renderQueue();
 }
@@ -778,7 +970,7 @@ function calcParts(recs) {
 }
 
 function renderParts() {
-  const recs = getRecords(session);
+  const recs = getRecords();
   const el = document.getElementById('partsBody');
   if (!recs.length) { el.innerHTML = '<div class="empty">Add units to see totals.</div>'; return; }
   const { filters, belts } = calcParts(recs);
@@ -801,7 +993,7 @@ function renderParts() {
 
 // ── CSV export ─────────────────────────────────────────────────────────────
 const HEADERS = [
-  'Equipment #','EQUIPMENT NAME','Location','Make','Type',
+  'Job #','Equipment #','EQUIPMENT NAME','Location','Make','Type',
   'Model #','Serial #','Belt','Belt QTY','Filter(s)','Filter QTY',
   '2nd Filter(s)','2nd Filter QTY','Change Filter (Y/N)','Change Belt (Y/N)',
   'Unit Working Properly (Y/N)','Maintenance Complete (Y/N)',
@@ -810,37 +1002,39 @@ const HEADERS = [
 
 function recToRow(r) {
   return [
-    r.unit, r.name, r.loc, r.make, r.type, r.model, r.serial,
+    r.job, r.unit, r.name, r.loc, r.make, r.type, r.model, r.serial,
     r.belt, r.bqty, r.fsize, r.fqty, r.f2size, r.f2qty,
     r.fchg, r.bchg, r.working, r.done, r.date, r.notes
   ].map(v => `"${(v||'').replace(/"/g,'""')}"`).join(',');
 }
 
 function doExportCSV() {
-  const recs = getRecords(session);
+  const recs = getRecords();
   if (!recs.length) { toast('Nothing to export'); return; }
   const csv = [HEADERS.map(h=>`"${h}"`).join(','), ...recs.map(recToRow)].join('\n');
-  download(session + '_data_' + today() + '.csv', csv, 'text/csv');
+  const jobName = document.getElementById('f-job').value.trim().replace(/\s+/g, '_') || 'export';
+  download(jobName + '_data_' + today() + '.csv', csv, 'text/csv');
 }
 
 function doExportParts() {
-  const recs = getRecords(session);
+  const recs = getRecords();
   if (!recs.length) { toast('Nothing to export'); return; }
   const { filters, belts } = calcParts(recs);
-  let t = session + '\nParts List  ' + new Date().toLocaleDateString('en-US') + '\n\n';
+  const jobName2 = document.getElementById('f-job').value.trim().replace(/\s+/g, '_') || 'export';
+  let t = jobName2 + '\nParts List  ' + new Date().toLocaleDateString('en-US') + '\n\n';
   t += 'FILTERS\n' + '-'.repeat(30) + '\n';
   Object.entries(filters).forEach(([k,v]) => t += k.padEnd(22) + v + '\n');
   t += '\nBELTS\n' + '-'.repeat(30) + '\n';
   if (Object.keys(belts).length) Object.entries(belts).forEach(([k,v]) => t += k.padEnd(22) + v + '\n');
   else t += 'none\n';
-  download(session + '_parts_' + today() + '.txt', t, 'text/plain');
+  download(jobName2 + '_parts_' + today() + '.txt', t, 'text/plain');
 }
 
 function doNuke() {
-  const n = getRecords(session).length;
+  const n = getRecords().length;
   if (!n) { toast('No records'); return; }
-  if (!confirm('Delete all ' + n + ' records in this session?')) return;
-  saveRecords(session, []);
+  if (!confirm('Delete all ' + n + ' records?')) return;
+  saveRecords([]);
   updateBadge();
   toast('Records cleared');
 }
@@ -1003,10 +1197,9 @@ function getToolReportBlock(context) {
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────
-renderGate();
-document.getElementById('gInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') startSession();
-});
+updateBadge();
+updateOwnerUI();
+if (isOwner()) syncModelIndex();
 </script>
 </body>
 </html>

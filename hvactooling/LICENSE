@@ -1,0 +1,47 @@
+HVAC Field Tools — Proprietary License
+
+Copyright (c) 2026 Om3ni. All rights reserved.
+
+GRANT OF USE
+
+This software is made available for use free of charge to:
+
+  - Individual HVAC/R technicians for personal field use
+  - Companies with annual gross revenue under $5,000,000 USD
+
+No registration or attribution is required for qualifying use.
+
+RESTRICTIONS
+
+This software, including all source code, design, user experience,
+and architecture, is the intellectual property of the copyright holder.
+
+You may NOT, without a commercial license:
+
+  - Copy, modify, or distribute the source code
+  - Deploy the source code internally within a commercial organization
+    exceeding the revenue threshold above
+  - Create derivative works based on this software
+  - Reverse-engineer, decompile, or extract design patterns for use
+    in competing products
+  - Remove or alter this license notice
+
+Public availability of source code on GitHub does not constitute
+a grant of rights beyond those explicitly stated above.
+
+COMMERCIAL LICENSING
+
+Organizations exceeding the revenue threshold, or wishing to use
+the source code internally, may obtain a commercial license.
+Contact the copyright holder for terms.
+
+DISCLAIMER
+
+This software is provided "as is" without warranty of any kind,
+express or implied. The copyright holder shall not be liable for
+any damages arising from the use of this software.
+
+Data entered into this application by users who accept the owner
+access terms is provided voluntarily and without expectation of
+privacy. By accepting owner access, users acknowledge that entered
+data may be stored, aggregated, and used without restriction.
