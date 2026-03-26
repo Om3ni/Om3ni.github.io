@@ -1036,6 +1036,7 @@ function addRecord() {
     notes:    document.getElementById('f-notes').value.trim(),
     modules:  getModuleReports({ embedded: true }),
     moduleStates: getModuleStates(),
+    moduleNames: moduleSlots.map(m => ({ name: m.name, title: m.title })),
   };
 
   const recs = getRecords();
@@ -1161,9 +1162,27 @@ function loadRecord(i) {
   if (r.f2size) document.getElementById('prev-f2').textContent = r.f2size;
   if (r.belt) document.getElementById('prev-b1').textContent = r.belt;
 
-  // Clear modules (can't restore iframe state)
+  // Restore modules
   moduleSlots = [];
   document.getElementById('module-list').innerHTML = '';
+  if (r.moduleNames && r.moduleNames.length) {
+    const savedStates = r.moduleStates || {};
+    r.moduleNames.forEach(mn => {
+      moduleId++;
+      const mid = moduleId;
+      moduleSlots.push({ id: mid, name: mn.name, title: mn.title });
+      appendModuleSlot(mid, mn.name, mn.title);
+      // After iframe loads, inject saved values
+      const frame = document.getElementById('mod-frame-' + mid);
+      if (frame) {
+        const origOnload = frame.onload;
+        frame.onload = function() {
+          if (origOnload) origOnload.call(this);
+          setTimeout(() => restoreModuleState(mid, mn.name, savedStates[mn.name]), 200);
+        };
+      }
+    });
+  }
 
   // Switch to Home tab
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1491,6 +1510,135 @@ function syncSharedFields() {
       resizeModuleFrame(frame);
     } catch(e) {}
   }
+}
+
+function restoreModuleState(mid, moduleName, state) {
+  if (!state) return;
+  const frame = document.getElementById('mod-frame-' + mid);
+  if (!frame || !frame.contentDocument) return;
+  const doc = frame.contentDocument;
+
+  const set = (id, val) => {
+    if (val === null || val === undefined) return;
+    const el = doc.getElementById(id);
+    if (el) el.value = val;
+  };
+
+  if (moduleName === 'electrical') {
+    set('np-voltage', state.npV);
+    if (state.phase === 1) {
+      if (state.ll_vals) set('s-l1l2', state.ll_vals[0]);
+      if (state.lg_vals) { set('s-l1g', state.lg_vals[0]); set('s-l2g', state.lg_vals[1]); }
+    } else {
+      if (state.ll_vals) { set('t-l1l2', state.ll_vals[0]); set('t-l2l3', state.ll_vals[1]); set('t-l1l3', state.ll_vals[2]); }
+      if (state.lg_vals) { set('t-l1g', state.lg_vals[0]); set('t-l2g', state.lg_vals[1]); set('t-l3g', state.lg_vals[2]); }
+      // Switch to 3-phase
+      try { const btn = doc.querySelector('[data-phase="3"]'); if (btn) frame.contentWindow.selPhase?.(btn) || btn.click(); } catch(e) {}
+    }
+  } else if (moduleName === 'heat') {
+    if (state.type === 'gas') {
+      set('g-btu-input', state.btuIn);
+      set('g-eff', state.eff);
+      set('g-return', state.returnAir);
+      set('g-supply', state.supplyAir);
+    } else {
+      // Switch to electric tab
+      try { const btn = doc.querySelector('[data-tab="electric"]'); if (btn) btn.click(); } catch(e) {}
+      setTimeout(() => {
+        if (state.inputMethod === 'nameplate') {
+          set('e-kw', state.kw);
+        } else {
+          set('e-volts', state.volts);
+          set('e-amps', state.amps);
+        }
+        set('e-return', state.returnAir);
+        set('e-supply', state.supplyAir);
+      }, 100);
+    }
+  } else if (moduleName === 'airflow') {
+    set('returnAir', state.returnAir);
+    set('supplyAir', state.supplyAir);
+    set('cfmInput', state.cfm);
+    set('ambient', state.ambient);
+    set('fpm', state.fpm);
+    set('ductW', state.ductW);
+    set('ductH', state.ductH);
+  } else if (moduleName === 'refrigeration') {
+    set('returnAir', state.returnAir);
+    set('supplyAir', state.supplyAir);
+    set('ambient', state.ambient);
+    set('cfm', state.cfm);
+    set('suctPSIG', state.suctionPressure);
+    set('suctLine', state.suctionLineTemp);
+    set('liqPSIG', state.liquidPressure);
+    set('liqLine', state.liquidLineTemp);
+  } else if (moduleName === 'motors') {
+    const np = state.nameplate || {};
+    const run = state.running || {};
+    const wind = state.windings || {};
+    const ins = state.insulation || {};
+    if (state.type === 'psc') {
+      set('psc-np-volts', np.voltage);
+      set('psc-np-fla', np.fla);
+      set('psc-np-sf', np.sf);
+      set('psc-np-hp', np.hp);
+      set('psc-run-volts', run.voltage);
+      set('psc-run-amps', run.amps);
+      if (state.capacitor) {
+        set('psc-cap-rated', state.capacitor.rated);
+        set('psc-cap-meas', state.capacitor.measured);
+      }
+      set('psc-w-cr', wind.cr);
+      set('psc-w-cs', wind.cs);
+      set('psc-w-rs', wind.rs);
+      set('psc-meg-v', ins.testVoltage);
+      set('psc-meg-now', ins.reading);
+      set('psc-meg-prev', ins.previous);
+    } else if (state.type === 'three-phase') {
+      // Switch to 3-phase tab
+      try { const btn = doc.querySelector('[data-tab="three"]'); if (btn) btn.click(); } catch(e) {}
+      setTimeout(() => {
+        set('tph-np-volts', np.voltage);
+        set('tph-np-fla', np.fla);
+        set('tph-np-sf', np.sf);
+        set('tph-np-hp', np.hp);
+        if (run.amps) { set('tph-a-l1', run.amps[0]); set('tph-a-l2', run.amps[1]); set('tph-a-l3', run.amps[2]); }
+        if (run.volts) { set('tph-v-l1l2', run.volts[0]); set('tph-v-l2l3', run.volts[1]); set('tph-v-l1l3', run.volts[2]); }
+        if (wind.values) { set('tph-w-t1t2', wind.values[0]); set('tph-w-t2t3', wind.values[1]); set('tph-w-t1t3', wind.values[2]); }
+        set('tph-meg-v', ins.testVoltage);
+        set('tph-meg-now', ins.reading);
+        set('tph-meg-prev', ins.previous);
+      }, 100);
+    } else if (state.type === 'ecm') {
+      try { const btn = doc.querySelector('[data-tab="ecm"]'); if (btn) btn.click(); } catch(e) {}
+      setTimeout(() => {
+        set('ecm-np-volts', np.voltage);
+        set('ecm-np-hp', np.hp);
+        if (np.moduleModel) set('ecm-np-model', np.moduleModel);
+        set('ecm-run-volts', run.voltage);
+        set('ecm-run-amps', run.amps);
+        if (wind.values) { set('ecm-w-t1t2', wind.values[0]); set('ecm-w-t2t3', wind.values[1]); set('ecm-w-t1t3', wind.values[2]); }
+        set('ecm-meg-v', ins.testVoltage);
+        set('ecm-meg-now', ins.reading);
+        set('ecm-meg-prev', ins.previous);
+      }, 100);
+    }
+  }
+
+  // Trigger recalc after restoring values
+  setTimeout(() => {
+    try {
+      const win = frame.contentWindow;
+      if (win.recalc) win.recalc();
+      if (win.calcGas) win.calcGas();
+      if (win.calcElec) win.calcElec();
+      if (win.calcPSC) win.calcPSC();
+      if (win.calcThreePhase) win.calcThreePhase();
+      if (win.calcECM) win.calcECM();
+    } catch(e) {}
+    resizeModuleFrame(frame);
+    syncSharedFields();
+  }, 300);
 }
 
 function resizeModuleFrame(frame) {
