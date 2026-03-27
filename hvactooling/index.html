@@ -81,6 +81,54 @@ header { border-bottom: none; }
 .menu-sep { border-top: 1px solid var(--border); margin: 2px 0; }
 .menu-item.danger { color: var(--red-hi); }
 
+/* ── Tutorial overlay ── */
+.tut-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,.7); display: none;
+}
+.tut-overlay.active { display: block; }
+.tut-highlight {
+  position: absolute; z-index: 501;
+  box-shadow: 0 0 0 4000px rgba(0,0,0,.7);
+  border-radius: 4px; pointer-events: none;
+  transition: all .3s ease;
+}
+.tut-bubble {
+  position: absolute; z-index: 502;
+  background: var(--surface); border: 1px solid var(--orange);
+  border-radius: 6px; padding: 14px 16px;
+  max-width: 280px; width: calc(100vw - 40px);
+  box-shadow: 0 4px 20px rgba(0,0,0,.5);
+  transition: all .3s ease;
+}
+.tut-bubble::before {
+  content: ''; position: absolute;
+  width: 10px; height: 10px; background: var(--surface);
+  border-left: 1px solid var(--orange); border-top: 1px solid var(--orange);
+  transform: rotate(45deg);
+}
+.tut-bubble.below::before { top: -6px; left: 20px; }
+.tut-bubble.above::before { bottom: -6px; left: 20px; transform: rotate(225deg); }
+.tut-text {
+  font-family: var(--mono); font-size: .74rem; color: var(--text);
+  line-height: 1.6; letter-spacing: .02em; margin-bottom: 12px;
+}
+.tut-step {
+  font-family: var(--mono); font-size: .58rem; color: var(--text-mute);
+  letter-spacing: .04em; margin-bottom: 8px;
+}
+.tut-btns { display: flex; gap: 8px; }
+.tut-btn {
+  flex: 1; padding: 8px; border-radius: 3px; border: none;
+  font-family: var(--ui); font-weight: 700; font-size: .78rem;
+  letter-spacing: .08em; text-transform: uppercase; cursor: pointer;
+  transition: all .1s;
+}
+.tut-btn-next { background: var(--orange); color: #fff; }
+.tut-btn-next:active { background: var(--orange-hi); }
+.tut-btn-skip { background: var(--surface2); color: var(--text-mute); border: 1px solid var(--border); }
+.tut-btn-skip:active { color: var(--text-dim); }
+
 /* ── Light mode ── */
 [data-theme="light"] {
   --bg:         #d8d8d8;
@@ -804,6 +852,19 @@ This software is provided "as is" without warranty of any kind, express or impli
     </div>
   </div>
 
+
+<!-- ══ TUTORIAL ══ -->
+<div class="tut-overlay" id="tutOverlay">
+  <div class="tut-highlight" id="tutHighlight"></div>
+  <div class="tut-bubble below" id="tutBubble">
+    <div class="tut-step" id="tutStep"></div>
+    <div class="tut-text" id="tutText"></div>
+    <div class="tut-btns">
+      <button class="tut-btn tut-btn-skip" onclick="endTutorial()">Skip</button>
+      <button class="tut-btn tut-btn-next" onclick="nextTutStep()">Next</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ TOOL FRAME ══ -->
 <div id="tool-frame-wrap">
@@ -2578,9 +2639,110 @@ function parseCSVRow(line) {
   return cols;
 }
 
+// ── Tutorial ─────────────────────────────────────────────────────────────
+const TUT_KEY = 'sl_tutorial_done';
+
+const TUT_STEPS = [
+  { el: '#f-job',         text: 'Start with your work order or job number. This stays the same across all units on the job.', tab: 'entry' },
+  { el: '#f-unit',        text: 'Enter the unit number from the equipment tag or your own numbering system.', tab: 'entry' },
+  { el: '#f-make',        text: 'Fill in the nameplate info — make, model, serial. Model numbers auto-suggest from your history if synced.', tab: 'entry' },
+  { el: '#module-list,.btn-add', text: 'Attach diagnostic modules to this unit — Electrical, Heat, Refrigeration, Airflow, Motors. Each module captures and calculates data that feeds the unified report.', tab: 'entry' },
+  { el: '.btn-primary',   text: 'Saves this unit and all its module data to the queue. The form clears for the next unit — Job # stays.', tab: 'entry' },
+  { el: '[data-tab="queue"]', text: 'View all units on this job. Tap a unit to reload it for editing. Data persists until you clear it.', tab: null },
+  { el: '[data-tab="parts"]', text: 'Auto-tallied filter sizes and belt numbers across all units. No manual counting.', tab: null },
+  { el: '[data-tab="tools"]', text: 'Open modules and calculators standalone — outside of a unit record. Modules (orange) capture data. Calculators (blue) are quick-reference utilities.', tab: null },
+  { el: '#menuFileBtn',   text: 'File menu: New Job, Import CSV from the office, Load/Sync jobs to the cloud (owner mode), and all exports — Report, CSV, Parts List.', tab: null },
+  { el: '#ownerBtn',      text: 'Owner login enables cloud sync — save equipment data to your repository for model autocomplete and historical reference. Completely optional.', tab: null },
+  { el: '#themeBtn',      text: 'Toggle between dark and light mode. Light mode uses a grey background for outdoor readability.', tab: null },
+];
+
+let tutCurrent = -1;
+
 function showTutorial() {
   closeMenus();
-  toast('Tutorial coming soon');
+  tutCurrent = -1;
+  // Make sure we're on the Home tab
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab="entry"]').classList.add('active');
+  document.getElementById('tab-entry').classList.add('active');
+  document.getElementById('tutOverlay').classList.add('active');
+  nextTutStep();
+}
+
+function nextTutStep() {
+  tutCurrent++;
+  if (tutCurrent >= TUT_STEPS.length) {
+    endTutorial();
+    return;
+  }
+
+  const step = TUT_STEPS[tutCurrent];
+
+  // Switch tab if needed
+  if (step.tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`[data-tab="${step.tab}"]`).classList.add('active');
+    document.getElementById('tab-' + step.tab).classList.add('active');
+  }
+
+  // Find element
+  const target = document.querySelector(step.el);
+  if (!target) { nextTutStep(); return; }
+
+  // Scroll target into view
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  // Position after scroll settles
+  setTimeout(() => positionTutorial(target, step), 200);
+}
+
+function positionTutorial(target, step) {
+  const rect = target.getBoundingClientRect();
+  const highlight = document.getElementById('tutHighlight');
+  const bubble = document.getElementById('tutBubble');
+  const stepEl = document.getElementById('tutStep');
+  const textEl = document.getElementById('tutText');
+  const nextBtn = bubble.querySelector('.tut-btn-next');
+
+  // Pad the highlight
+  const pad = 6;
+  highlight.style.left   = (rect.left - pad) + 'px';
+  highlight.style.top    = (rect.top - pad) + 'px';
+  highlight.style.width  = (rect.width + pad * 2) + 'px';
+  highlight.style.height = (rect.height + pad * 2) + 'px';
+
+  // Step counter
+  stepEl.textContent = `Step ${tutCurrent + 1} of ${TUT_STEPS.length}`;
+  textEl.textContent = step.text;
+
+  // Last step button text
+  nextBtn.textContent = tutCurrent === TUT_STEPS.length - 1 ? 'Done' : 'Next';
+
+  // Position bubble above or below
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const spaceAbove = rect.top;
+
+  if (spaceBelow > 160 || spaceBelow > spaceAbove) {
+    // Below
+    bubble.className = 'tut-bubble below';
+    bubble.style.top  = (rect.bottom + pad + 12) + 'px';
+    bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 290)) + 'px';
+    bubble.style.bottom = '';
+  } else {
+    // Above
+    bubble.className = 'tut-bubble above';
+    bubble.style.bottom = (window.innerHeight - rect.top + pad + 12) + 'px';
+    bubble.style.left   = Math.max(10, Math.min(rect.left, window.innerWidth - 290)) + 'px';
+    bubble.style.top = '';
+  }
+}
+
+function endTutorial() {
+  document.getElementById('tutOverlay').classList.remove('active');
+  localStorage.setItem(TUT_KEY, Date.now());
+  tutCurrent = -1;
 }
 
 // ── Theme toggle ─────────────────────────────────────────────────────────
@@ -2639,6 +2801,10 @@ checkLicense();
 updateBadge();
 updateOwnerUI();
 if (isOwner()) syncModelIndex();
+// First visit tutorial — delayed to let license gate clear first
+if (!localStorage.getItem(TUT_KEY) && localStorage.getItem(LICENSE_KEY)) {
+  setTimeout(showTutorial, 500);
+}
 </script>
 </body>
 </html>
