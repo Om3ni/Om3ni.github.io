@@ -542,7 +542,15 @@ This software is provided "as is" without warranty of any kind, express or impli
   <div style="position:relative">
     <button class="menu-trigger" id="menuHelpBtn" onclick="toggleMenu('help')">Help</button>
     <div class="menu-drop" id="menuHelp">
-      <button class="menu-item" onclick="showTutorial()">Tutorial</button>
+      <button class="menu-item" onclick="startTutSection('quickstart')">Quick Start (Full Walkthrough)</button>
+      <div class="menu-sep"></div>
+      <button class="menu-item" onclick="startTutSection('jobsetup')">1 — Job Setup</button>
+      <button class="menu-item" onclick="startTutSection('unitentry')">2 — Unit Entry</button>
+      <button class="menu-item" onclick="startTutSection('modules')">3 — Diagnostic Modules</button>
+      <button class="menu-item" onclick="startTutSection('filters')">4 — Filters &amp; Belts</button>
+      <button class="menu-item" onclick="startTutSection('tools')">5 — Tools &amp; Calculators</button>
+      <button class="menu-item" onclick="startTutSection('exporting')">6 — Exporting</button>
+      <div class="menu-sep"></div>
       <button class="menu-item" onclick="showLicense()">License</button>
       <button class="menu-item" onclick="window.location.href='mailto:michaaar1981@gmail.com?subject=IP%20discussion%2FHVACtooling'">Contact</button>
       <div class="menu-sep"></div>
@@ -2642,48 +2650,260 @@ function parseCSVRow(line) {
 // ── Tutorial ─────────────────────────────────────────────────────────────
 const TUT_KEY = 'sl_tutorial_done';
 
-const TUT_STEPS = [
-  { el: '#f-job',         text: 'Start with your work order or job number. This stays the same across all units on the job.', tab: 'entry' },
-  { el: '#f-unit',        text: 'Enter the unit number from the equipment tag or your own numbering system.', tab: 'entry' },
-  { el: '#f-make',        text: 'Fill in the nameplate info — make, model, serial. Model numbers auto-suggest from your history if synced.', tab: 'entry' },
-  { el: '#module-list,.btn-add', text: 'Attach diagnostic modules to this unit — Electrical, Heat, Refrigeration, Airflow, Motors. Each module captures and calculates data that feeds the unified report.', tab: 'entry' },
-  { el: '.btn-primary',   text: 'Saves this unit and all its module data to the queue. The form clears for the next unit — Job # stays.', tab: 'entry' },
-  { el: '[data-tab="queue"]', text: 'View all units on this job. Tap a unit to reload it for editing. Data persists until you clear it.', tab: null },
-  { el: '[data-tab="parts"]', text: 'Auto-tallied filter sizes and belt numbers across all units. No manual counting.', tab: null },
-  { el: '[data-tab="tools"]', text: 'Open modules and calculators standalone — outside of a unit record. Modules (orange) capture data. Calculators (blue) are quick-reference utilities.', tab: null },
-  { el: '#menuFileBtn',   text: 'File menu: New Job, Import CSV from the office, and all exports — Report, CSV, Parts List.', tab: null },
-  { el: '#themeBtn',      text: 'Toggle between dark and light mode. Light mode uses a grey background for outdoor readability.', tab: null },
-];
+// Each section is an array of steps.
+// el: CSS selector to highlight (first match used)
+// text: explanation text shown in bubble
+// tab: switch to this tab before showing step (null = stay on current)
+// noHighlight: show bubble centered, no element highlight (for intro/transition steps)
+const TUT_SECTIONS = {
+  jobsetup: {
+    title: 'Job Setup',
+    steps: [
+      {
+        el: '#f-job',
+        tab: 'entry',
+        text: 'Enter your work order or job number first. This ties every unit you enter today to the same job — it stays filled in as you move from unit to unit.'
+      },
+      {
+        el: '#f-customer',
+        tab: 'entry',
+        text: 'Customer name is optional but useful for reports. It appears on every page of the exported report alongside your job number.'
+      },
+    ]
+  },
+  unitentry: {
+    title: 'Unit Entry',
+    steps: [
+      {
+        el: '#f-unit',
+        tab: 'entry',
+        text: 'Unit identifier — the tag number on the equipment, or your own numbering system. Has to be unique within the job.'
+      },
+      {
+        el: '#f-loc',
+        tab: 'entry',
+        text: 'Location helps you find it on the report later. Roof, mechanical room, unit number — anything that places you at the equipment.'
+      },
+      {
+        el: '#f-make',
+        tab: 'entry',
+        text: 'Nameplate data: make, model, serial. Fill in what\'s on the tag. Model numbers will auto-suggest from your history once synced.'
+      },
+      {
+        el: '#f-fw',
+        tab: 'entry',
+        text: 'Filter dimensions go here — width, height, depth, quantity. These get collected across all units and tallied automatically on the Parts tab.'
+      },
+      {
+        el: '#f-bp',
+        tab: 'entry',
+        text: 'Belt data — prefix, length, cross-section, quantity. Enter what\'s on the existing belt or the nameplate. Tallied the same way as filters.'
+      },
+      {
+        el: '#f-notes',
+        tab: 'entry',
+        text: 'Free-form notes for this unit. Observations, deficiencies, parts needed. Shows on the report exactly as typed.'
+      },
+      {
+        el: '.yn',
+        tab: 'entry',
+        text: 'Y/N toggles for filter changed, belt changed, unit working, maintenance complete. Informational — shows on the report but doesn\'t affect any calculations.'
+      },
+      {
+        el: '#module-list',
+        tab: 'entry',
+        text: 'This is where you attach diagnostic modules — Electrical, Heat, Refrigeration, Airflow, Motors. Add the ones that apply to this piece of equipment. Each module collects real measurements and does live calculations.'
+      },
+      {
+        el: '.btn-add',
+        tab: 'entry',
+        text: 'Tap Add Module to attach a module. You can add multiple modules to one unit — a split system might have Electrical, Refrigeration, and Airflow all on the same unit record.'
+      },
+      {
+        el: '.btn-primary',
+        tab: 'entry',
+        text: 'Save Unit commits everything — nameplate data, PM toggles, notes, and all module readings — to the queue. The form clears for the next unit. Job number stays.'
+      },
+    ]
+  },
+  modules: {
+    title: 'Diagnostic Modules',
+    steps: [
+      {
+        el: '[data-tab="entry"]',
+        tab: 'entry',
+        text: 'Modules are the diagnostic heart of this app. Each one is a live calculator that captures real field measurements and cross-checks them.'
+      },
+      {
+        el: '#module-list',
+        tab: 'entry',
+        text: 'ELECTRICAL: Measures supply voltage, identifies phase configuration, calculates NEMA voltage unbalance, load percentage, and deviation from nameplate. Handles transformer primary/secondary inline — add as many transformer blocks as the system has.'
+      },
+      {
+        el: '#module-list',
+        tab: 'entry',
+        text: 'HEAT: Gas or electric heat path. Gas path captures supply/return temps, gas pressure, manifold pressure, and outputs BTU, rise, efficiency estimate. Electric path measures element voltages and amperages.'
+      },
+      {
+        el: '#module-list',
+        tab: 'entry',
+        text: 'REFRIGERATION: Standard cooling, heat pump (air source), or water source heat pump. Captures suction and liquid sat temps, supply/return, calculates approach temps, superheat, subcooling. Flags conditions outside normal range.'
+      },
+      {
+        el: '#module-list',
+        tab: 'entry',
+        text: 'AIRFLOW: Captures supply and return temps, duct dimensions, FPM reading, and OA damper position. Calculates sensible heat, CFM by velocity or by BTU, mixed air temp, and OA percentage.'
+      },
+      {
+        el: '#module-list',
+        tab: 'entry',
+        text: 'MOTORS: Nameplate data, measured amps and voltages per phase, megger (insulation resistance) test. Calculates amp imbalance, load percentage, flags overloaded or degraded motors.'
+      },
+      {
+        el: '#module-list',
+        tab: 'entry',
+        text: 'When modules share data — return air, CFM, ambient — the owning module feeds the downstream ones automatically. You enter the number once; the app handles the rest.'
+      },
+    ]
+  },
+  filters: {
+    title: 'Filters & Belts',
+    steps: [
+      {
+        el: '[data-tab="parts"]',
+        tab: null,
+        text: 'The Parts tab auto-tallies every filter size and belt number you\'ve entered across all units on the job. Nothing to count manually.'
+      },
+      {
+        el: '#tab-parts',
+        tab: 'parts',
+        text: 'Filters are grouped by size with quantities. If three units all take 16x25x1, you\'ll see "16x25x1 — qty 3". Belts are listed separately with their unit references.'
+      },
+      {
+        el: '[data-tab="parts"]',
+        tab: 'parts',
+        text: 'The Parts List export (File > Export Parts List) sends this as a plain text file — ready to hand off or paste into an order. No copy-pasting from a report.'
+      },
+    ]
+  },
+  tools: {
+    title: 'Tools & Calculators',
+    steps: [
+      {
+        el: '[data-tab="tools"]',
+        tab: null,
+        text: 'The Tools tab is for standalone work — using a module or calculator outside of a unit record. Nothing saves to the queue from here, but you get full calculation capability.'
+      },
+      {
+        el: '#tab-tools',
+        tab: 'tools',
+        text: 'Orange tiles are the same diagnostic modules from Unit Entry — Electrical, Refrigeration, etc. Use them for quick checks in the field when you don\'t need a full unit record.'
+      },
+      {
+        el: '#tab-tools',
+        tab: 'tools',
+        text: 'Blue tiles are utility calculators. 19 of them: Ohm\'s Law, wire sizing, breaker sizing, duct sizing, refrigerant charge check, gas pipe sizing, belt length, temp/pressure conversion, and more.'
+      },
+      {
+        el: '#tab-tools',
+        tab: 'tools',
+        text: 'Tap any tile to open it. Calculators open inline below the tile. Modules open in a panel below. Close them with the X in the header.'
+      },
+      {
+        el: '#tab-tools',
+        tab: 'tools',
+        text: 'These tools are also available offline. The whole app works without a network connection once it\'s been loaded — no cell signal required on the roof.'
+      },
+    ]
+  },
+  exporting: {
+    title: 'Exporting',
+    steps: [
+      {
+        el: '[data-tab="queue"]',
+        tab: null,
+        text: 'The Queue tab shows every unit you\'ve saved on the current job. Tap any unit to reload it for review or editing. Tap the X to remove it.'
+      },
+      {
+        el: '#tab-queue',
+        tab: 'queue',
+        text: 'Units stay in the queue until you start a new job (File > New Job) or clear all records. They survive closing the browser — stored locally on the device.'
+      },
+      {
+        el: '#menuFileBtn',
+        tab: null,
+        text: 'File menu handles all data operations: New Job, Import CSV (load unit data from an office spreadsheet), and three exports — Report, CSV, Parts List.'
+      },
+      {
+        el: '#menuFileBtn',
+        tab: null,
+        text: 'Export Report builds a full plain-text report — all units, all module data, system analysis. Formatted for XOI or email. Copy to clipboard or download as a .txt file.'
+      },
+      {
+        el: '#menuFileBtn',
+        tab: null,
+        text: 'Export CSV outputs all unit data in spreadsheet format. Import CSV is the reverse — paste a CSV from the office and the app populates the unit fields, ready for you to add module readings.'
+      },
+      {
+        el: '#themeBtn',
+        tab: null,
+        text: 'Last thing: Light mode. Dark is easier on the eyes in the truck. Light mode is a grey background that reads better in direct sunlight on a phone screen. Toggle it here.'
+      },
+    ]
+  }
+};
 
+// Build quickstart by chaining all sections in order
+TUT_SECTIONS.quickstart = {
+  title: 'Quick Start',
+  steps: [
+    { noHighlight: true, tab: 'entry', text: 'This walkthrough covers the full workflow from start to finish. You can skip any section from the Help menu later. Hit Next to continue, Skip to exit.' },
+    ...TUT_SECTIONS.jobsetup.steps,
+    ...TUT_SECTIONS.unitentry.steps,
+    ...TUT_SECTIONS.modules.steps,
+    ...TUT_SECTIONS.filters.steps,
+    ...TUT_SECTIONS.tools.steps,
+    ...TUT_SECTIONS.exporting.steps,
+  ]
+};
+
+let tutSteps = [];
 let tutCurrent = -1;
+let tutSectionTitle = '';
 
-function showTutorial() {
+function startTutSection(sectionKey) {
   closeMenus();
+  const section = TUT_SECTIONS[sectionKey];
+  if (!section) return;
+  tutSteps = section.steps;
+  tutSectionTitle = section.title;
   tutCurrent = -1;
-  // Make sure we're on the Home tab
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelector('[data-tab="entry"]').classList.add('active');
-  document.getElementById('tab-entry').classList.add('active');
   document.getElementById('tutOverlay').classList.add('active');
   nextTutStep();
 }
 
 function nextTutStep() {
   tutCurrent++;
-  if (tutCurrent >= TUT_STEPS.length) {
+  if (tutCurrent >= tutSteps.length) {
     endTutorial();
     return;
   }
 
-  const step = TUT_STEPS[tutCurrent];
+  const step = tutSteps[tutCurrent];
 
   // Switch tab if needed
   if (step.tab) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    document.querySelector(`[data-tab="${step.tab}"]`).classList.add('active');
-    document.getElementById('tab-' + step.tab).classList.add('active');
+    const tabEl = document.querySelector(`[data-tab="${step.tab}"]`);
+    const panelEl = document.getElementById('tab-' + step.tab);
+    if (tabEl) tabEl.classList.add('active');
+    if (panelEl) panelEl.classList.add('active');
+  }
+
+  if (step.noHighlight || !step.el) {
+    showTutCentered(step);
+    return;
   }
 
   // Find element
@@ -2694,7 +2914,30 @@ function nextTutStep() {
   target.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   // Position after scroll settles
-  setTimeout(() => positionTutorial(target, step), 200);
+  setTimeout(() => positionTutorial(target, step), 220);
+}
+
+function showTutCentered(step) {
+  const highlight = document.getElementById('tutHighlight');
+  const bubble = document.getElementById('tutBubble');
+  const stepEl = document.getElementById('tutStep');
+  const textEl = document.getElementById('tutText');
+  const nextBtn = bubble.querySelector('.tut-btn-next');
+
+  // Hide highlight
+  highlight.style.width = '0';
+  highlight.style.height = '0';
+  highlight.style.boxShadow = 'none';
+
+  stepEl.textContent = `${tutSectionTitle} — Step ${tutCurrent + 1} of ${tutSteps.length}`;
+  textEl.textContent = step.text;
+  nextBtn.textContent = tutCurrent === tutSteps.length - 1 ? 'Done' : 'Next';
+
+  bubble.className = 'tut-bubble below';
+  bubble.style.top = '50%';
+  bubble.style.left = '50%';
+  bubble.style.transform = 'translate(-50%, -50%)';
+  bubble.style.bottom = '';
 }
 
 function positionTutorial(target, step) {
@@ -2705,32 +2948,32 @@ function positionTutorial(target, step) {
   const textEl = document.getElementById('tutText');
   const nextBtn = bubble.querySelector('.tut-btn-next');
 
-  // Pad the highlight
+  // Restore highlight
+  highlight.style.boxShadow = '0 0 0 4000px rgba(0,0,0,.35)';
+
   const pad = 6;
   highlight.style.left   = (rect.left - pad) + 'px';
   highlight.style.top    = (rect.top - pad) + 'px';
   highlight.style.width  = (rect.width + pad * 2) + 'px';
   highlight.style.height = (rect.height + pad * 2) + 'px';
 
-  // Step counter
-  stepEl.textContent = `Step ${tutCurrent + 1} of ${TUT_STEPS.length}`;
+  stepEl.textContent = `${tutSectionTitle} — Step ${tutCurrent + 1} of ${tutSteps.length}`;
   textEl.textContent = step.text;
+  nextBtn.textContent = tutCurrent === tutSteps.length - 1 ? 'Done' : 'Next';
 
-  // Last step button text
-  nextBtn.textContent = tutCurrent === TUT_STEPS.length - 1 ? 'Done' : 'Next';
+  // Reset transform from centered state
+  bubble.style.transform = '';
 
   // Position bubble above or below
   const spaceBelow = window.innerHeight - rect.bottom;
   const spaceAbove = rect.top;
 
   if (spaceBelow > 160 || spaceBelow > spaceAbove) {
-    // Below
     bubble.className = 'tut-bubble below';
     bubble.style.top  = (rect.bottom + pad + 12) + 'px';
     bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 290)) + 'px';
     bubble.style.bottom = '';
   } else {
-    // Above
     bubble.className = 'tut-bubble above';
     bubble.style.bottom = (window.innerHeight - rect.top + pad + 12) + 'px';
     bubble.style.left   = Math.max(10, Math.min(rect.left, window.innerWidth - 290)) + 'px';
@@ -2739,9 +2982,13 @@ function positionTutorial(target, step) {
 }
 
 function endTutorial() {
-  document.getElementById('tutOverlay').classList.remove('active');
+  const overlay = document.getElementById('tutOverlay');
+  overlay.classList.remove('active');
+  // Reset highlight shadow for next use
+  document.getElementById('tutHighlight').style.boxShadow = '0 0 0 4000px rgba(0,0,0,.35)';
   localStorage.setItem(TUT_KEY, Date.now());
   tutCurrent = -1;
+  tutSteps = [];
 }
 
 // ── Theme toggle ─────────────────────────────────────────────────────────
@@ -2802,7 +3049,7 @@ updateOwnerUI();
 if (isOwner()) syncModelIndex();
 // First visit tutorial — delayed to let license gate clear first
 if (!localStorage.getItem(TUT_KEY) && localStorage.getItem(LICENSE_KEY)) {
-  setTimeout(showTutorial, 500);
+  setTimeout(() => startTutSection('quickstart'), 500);
 }
 </script>
 </body>
