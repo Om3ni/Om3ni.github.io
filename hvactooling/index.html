@@ -226,6 +226,29 @@ textarea { resize: vertical; min-height: 72px; }
 }
 .suggestion-item:active { background: var(--orange-dim); color: var(--orange-hi); }
 
+/* ── Job loader ── */
+.job-load-row { display: flex; gap: 6px; margin-bottom: 10px; }
+.job-load-row .btn { flex: 1; margin: 0; padding: 10px; font-size: .78rem; }
+#job-list {
+  display: none; flex-direction: column; gap: 4px;
+  margin-bottom: 12px; max-height: 200px; overflow-y: auto;
+}
+#job-list.open { display: flex; }
+.job-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--orange-lo); border-radius: 3px;
+  cursor: pointer; transition: border-left-color .12s;
+}
+.job-item:active { border-left-color: var(--orange); }
+.job-item-name {
+  font-family: var(--mono); font-size: .78rem; color: var(--orange-hi);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.job-item-count {
+  font-family: var(--mono); font-size: .65rem; color: var(--text-mute); flex-shrink: 0;
+}
+
 .empty { color: var(--text-mute); font-family: var(--mono); font-size: .76rem; text-align: center; padding: 28px 0; }
 
 /* ── INLINE MODULES ── */
@@ -451,6 +474,16 @@ This software is provided "as is" without warranty of any kind, express or impli
         placeholder="260216-0037"
         autocomplete="off" autocorrect="off" spellcheck="false"
         oninput="forceUpper(this)">
+    </div>
+    <div class="job-load-row" id="jobLoadRow" style="display:none">
+      <button class="btn btn-ghost" onclick="loadJobList()">Load Job</button>
+      <button class="btn btn-ghost" onclick="syncCurrentJob()">Sync Job</button>
+    </div>
+    <div id="job-list">
+      <input type="text" id="job-search" placeholder="Search jobs..."
+        autocomplete="off" autocorrect="off" spellcheck="false"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--mono);font-size:.78rem;padding:9px 12px;outline:none;margin-bottom:6px;display:none">
+      <div id="job-list-items"></div>
     </div>
 
     <div class="fg">
@@ -746,14 +779,17 @@ function getPAT() {
 function updateOwnerUI() {
   const btn = document.getElementById('ownerBtn');
   const logout = document.getElementById('ownerLogoutBtn');
+  const jobRow = document.getElementById('jobLoadRow');
   if (isOwner()) {
     btn.classList.add('active');
     btn.textContent = 'synced';
     logout.style.display = '';
+    if (jobRow) jobRow.style.display = '';
   } else {
     btn.classList.remove('active');
     btn.textContent = 'owner';
     logout.style.display = 'none';
+    if (jobRow) jobRow.style.display = 'none';
   }
 }
 
@@ -920,6 +956,135 @@ async function syncModelIndex() {
     }
     localStorage.setItem('sl_model_index', JSON.stringify(index));
   } catch(e) {}
+}
+
+// ── Job load/sync ─────────────────────────────────────────────────────────
+let cachedJobList = null;
+
+async function loadJobList() {
+  if (!isOwner()) { toast('Owner mode required'); return; }
+
+  const listEl = document.getElementById('job-list');
+  const itemsEl = document.getElementById('job-list-items');
+  const searchEl = document.getElementById('job-search');
+
+  // Toggle — if already open, close
+  if (listEl.classList.contains('open')) {
+    listEl.classList.remove('open');
+    return;
+  }
+
+  itemsEl.innerHTML = '<div class="empty">Loading...</div>';
+  searchEl.style.display = 'none';
+  listEl.classList.add('open');
+
+  const api = `https://api.github.com/repos/${REPO}/contents/${DATA_PATH}/jobs`;
+  try {
+    const res = await fetch(api, { headers: { 'Authorization': `Bearer ${getPAT()}` } });
+    if (!res.ok) {
+      itemsEl.innerHTML = '<div class="empty">No saved jobs found.</div>';
+      return;
+    }
+    const files = await res.json();
+    if (!Array.isArray(files) || !files.length) {
+      itemsEl.innerHTML = '<div class="empty">No saved jobs found.</div>';
+      return;
+    }
+
+    cachedJobList = files.filter(f => f.name.endsWith('.json')).map(f => f.name.replace('.json', ''));
+    if (!cachedJobList.length) {
+      itemsEl.innerHTML = '<div class="empty">No saved jobs found.</div>';
+      return;
+    }
+
+    // Show search if more than 10 jobs
+    if (cachedJobList.length > 10) {
+      searchEl.style.display = '';
+      searchEl.value = '';
+      searchEl.focus();
+      searchEl.oninput = () => filterJobList(searchEl.value);
+    }
+
+    renderJobList(cachedJobList);
+  } catch(e) {
+    itemsEl.innerHTML = '<div class="empty">Failed to load jobs.</div>';
+  }
+}
+
+function filterJobList(query) {
+  if (!cachedJobList) return;
+  const q = query.trim().toUpperCase();
+  const filtered = q ? cachedJobList.filter(j => j.toUpperCase().includes(q)) : cachedJobList;
+  renderJobList(filtered);
+}
+
+function renderJobList(jobs) {
+  const itemsEl = document.getElementById('job-list-items');
+  if (!jobs.length) {
+    itemsEl.innerHTML = '<div class="empty">No matching jobs.</div>';
+    return;
+  }
+  itemsEl.innerHTML = jobs.map(j => {
+    const esc = j.replace(/'/g, "\\'");
+    return `<div class="job-item" onclick="loadJobFromRepo('${esc}')">
+      <span class="job-item-name">${j}</span>
+    </div>`;
+  }).join('');
+}
+
+async function loadJobFromRepo(jobName) {
+  if (!isOwner()) return;
+
+  const path = `${DATA_PATH}/jobs/${jobName}.json`;
+  const api = `https://api.github.com/repos/${REPO}/contents/${path}`;
+
+  try {
+    const res = await fetch(api, { headers: { 'Authorization': `Bearer ${getPAT()}` } });
+    if (!res.ok) { toast('Failed to load job'); return; }
+    const file = await res.json();
+    const jobData = JSON.parse(decodeURIComponent(escape(atob(file.content))));
+
+    // Load units into local storage
+    if (jobData.units && jobData.units.length) {
+      saveRecords(jobData.units);
+      updateBadge();
+
+      // Set job # field
+      document.getElementById('f-job').value = jobData.job || jobName;
+
+      // Close job list
+      document.getElementById('job-list').classList.remove('open');
+
+      toast('Loaded ' + jobData.units.length + ' unit' + (jobData.units.length !== 1 ? 's' : '') + ' from ' + jobName);
+    } else {
+      toast('Job has no units');
+    }
+  } catch(e) {
+    toast('Failed to load job');
+  }
+}
+
+async function syncCurrentJob() {
+  if (!isOwner()) { toast('Owner mode required'); return; }
+
+  const job = document.getElementById('f-job').value.trim();
+  if (!job) { toast('Enter a Job # first'); return; }
+
+  const recs = getRecords();
+  if (!recs.length) { toast('No units to sync'); return; }
+
+  const jobKey = job.replace(/\s+/g, '_');
+  const path = `${DATA_PATH}/jobs/${jobKey}.json`;
+  const jobData = { job, units: recs, synced: new Date().toISOString() };
+
+  const ok = await ghPut(path, JSON.stringify(jobData, null, 2), `Sync job ${job}`);
+  if (ok) {
+    // Update model index from all units
+    recs.forEach(r => updateModelIndex(r));
+    toast('Job synced — ' + recs.length + ' unit' + (recs.length !== 1 ? 's' : ''));
+  } else {
+    toast('Sync failed');
+  }
 }
 
 function suggestModel(el) {
