@@ -851,19 +851,23 @@ function ownerLogout() {
 // ── GitHub sync ───────────────────────────────────────────────────────────
 async function ghPut(path, content, message) {
   const pat = getPAT();
-  if (!pat) return;
+  if (!pat) { toast('No PAT configured'); return false; }
 
   const api = `https://api.github.com/repos/${REPO}/contents/${path}`;
 
   // Get existing file SHA if it exists
   let sha = null;
   try {
-    const res = await fetch(api, { headers: { 'Authorization': `Bearer ${pat}` } });
+    const res = await fetch(api, {
+      headers: { 'Authorization': `token ${pat}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
     if (res.ok) {
       const data = await res.json();
       sha = data.sha;
     }
-  } catch(e) {}
+  } catch(e) {
+    console.error('SHA fetch error:', e);
+  }
 
   const body = {
     message,
@@ -875,7 +879,8 @@ async function ghPut(path, content, message) {
     const res = await fetch(api, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${pat}`,
+        'Authorization': `token ${pat}`,
+        'Accept': 'application/vnd.github.v3+json',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(body)
@@ -883,17 +888,13 @@ async function ghPut(path, content, message) {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       console.error('GitHub sync failed:', res.status, err);
-      if (res.status === 401) toast('PAT expired or invalid');
-      else if (res.status === 403) toast('PAT lacks write permission');
-      else if (res.status === 404) toast('Repo or path not found');
-      else if (res.status === 409) toast('Conflict — try again');
-      else if (res.status === 422) toast('Validation error — check data');
+      toast('Sync failed: ' + (err.message || res.status));
       return false;
     }
     return true;
   } catch(e) {
     console.error('GitHub sync error:', e);
-    toast('Network error — check connection');
+    toast('Network error - check connection');
     return false;
   }
 }
@@ -908,7 +909,7 @@ async function syncUnitToRepo(rec) {
   let jobData = { job: rec.job, units: [] };
   try {
     const api = `https://api.github.com/repos/${REPO}/contents/${path}`;
-    const res = await fetch(api, { headers: { 'Authorization': `Bearer ${getPAT()}` } });
+    const res = await fetch(api, { headers: { 'Authorization': `token ${getPAT()}` } });
     if (res.ok) {
       const file = await res.json();
       jobData = JSON.parse(decodeURIComponent(escape(atob(file.content))));
@@ -929,6 +930,8 @@ async function syncUnitToRepo(rec) {
   if (ok) {
     updateModelIndex(rec);
     toast('Synced to repo');
+  } else {
+    toast('Unit sync failed');
   }
 }
 
@@ -955,7 +958,7 @@ async function syncModelIndex() {
   // Fetch all job files to build model index
   const api = `https://api.github.com/repos/${REPO}/contents/${DATA_PATH}/jobs`;
   try {
-    const res = await fetch(api, { headers: { 'Authorization': `Bearer ${getPAT()}` } });
+    const res = await fetch(api, { headers: { 'Authorization': `token ${getPAT()}` } });
     if (!res.ok) return;
     const files = await res.json();
     if (!Array.isArray(files)) return;
@@ -1034,7 +1037,7 @@ async function loadClientList() {
 async function fetchJobFileList() {
   const api = `https://api.github.com/repos/${REPO}/contents/${DATA_PATH}/jobs`;
   try {
-    const res = await fetch(api, { headers: { 'Authorization': `Bearer ${getPAT()}` } });
+    const res = await fetch(api, { headers: { 'Authorization': `token ${getPAT()}` } });
     if (!res.ok) return [];
     const files = await res.json();
     if (!Array.isArray(files)) return [];
@@ -1114,7 +1117,7 @@ async function loadJobFromRepo(jobName, customerName) {
   const api = `https://api.github.com/repos/${REPO}/contents/${path}`;
 
   try {
-    const res = await fetch(api, { headers: { 'Authorization': `Bearer ${getPAT()}` } });
+    const res = await fetch(api, { headers: { 'Authorization': `token ${getPAT()}` } });
     if (!res.ok) { toast('Failed to load job'); return; }
     const file = await res.json();
     const jobData = JSON.parse(decodeURIComponent(escape(atob(file.content))));
@@ -1168,7 +1171,7 @@ async function syncCurrentJob() {
 async function getClientIndex() {
   const api = `https://api.github.com/repos/${REPO}/contents/${DATA_PATH}/clients.json`;
   try {
-    const res = await fetch(api, { headers: { 'Authorization': `Bearer ${getPAT()}` } });
+    const res = await fetch(api, { headers: { 'Authorization': `token ${getPAT()}` } });
     if (res.ok) {
       const file = await res.json();
       return JSON.parse(decodeURIComponent(escape(atob(file.content))));
