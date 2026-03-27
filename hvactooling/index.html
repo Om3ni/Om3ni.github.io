@@ -248,6 +248,16 @@ textarea { resize: vertical; min-height: 72px; }
 .job-item-count {
   font-family: var(--mono); font-size: .65rem; color: var(--text-mute); flex-shrink: 0;
 }
+.client-group { margin-bottom: 8px; }
+.client-hdr {
+  font-family: var(--ui); font-weight: 700; font-size: .7rem;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--orange-lo);
+  padding: 8px 4px 4px; border-bottom: 1px solid var(--border); margin-bottom: 4px;
+}
+.client-count {
+  font-family: var(--mono); font-weight: 400; font-size: .6rem;
+  color: var(--text-mute); letter-spacing: .02em; text-transform: none;
+}
 
 .empty { color: var(--text-mute); font-family: var(--mono); font-size: .76rem; text-align: center; padding: 28px 0; }
 
@@ -475,12 +485,18 @@ This software is provided "as is" without warranty of any kind, express or impli
         autocomplete="off" autocorrect="off" spellcheck="false"
         oninput="forceUpper(this)">
     </div>
+    <div class="fg" id="customerField" style="display:none">
+      <label class="fl">Customer</label>
+      <input type="text" id="f-customer"
+        placeholder="Merrill Gardens"
+        autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
     <div class="job-load-row" id="jobLoadRow" style="display:none">
-      <button class="btn btn-ghost" onclick="loadJobList()">Load Job</button>
-      <button class="btn btn-ghost" onclick="syncCurrentJob()">Sync Job</button>
+      <button class="btn btn-ghost" onclick="loadClientList()">Load</button>
+      <button class="btn btn-ghost" onclick="syncCurrentJob()">Sync</button>
     </div>
     <div id="job-list">
-      <input type="text" id="job-search" placeholder="Search jobs..."
+      <input type="text" id="job-search" placeholder="Search..."
         autocomplete="off" autocorrect="off" spellcheck="false"
         style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:var(--mono);font-size:.78rem;padding:9px 12px;outline:none;margin-bottom:6px;display:none">
       <div id="job-list-items"></div>
@@ -780,17 +796,19 @@ function updateOwnerUI() {
   const btn = document.getElementById('ownerBtn');
   const logout = document.getElementById('ownerLogoutBtn');
   const jobRow = document.getElementById('jobLoadRow');
-  if (isOwner()) {
+  const custField = document.getElementById('customerField');
+  const owner = isOwner();
+  if (owner) {
     btn.classList.add('active');
     btn.textContent = 'synced';
     logout.style.display = '';
-    if (jobRow) jobRow.style.display = '';
   } else {
     btn.classList.remove('active');
     btn.textContent = 'owner';
     logout.style.display = 'none';
-    if (jobRow) jobRow.style.display = 'none';
   }
+  if (jobRow) jobRow.style.display = owner ? '' : 'none';
+  if (custField) custField.style.display = owner ? '' : 'none';
 }
 
 function openOwnerModal() {
@@ -959,16 +977,16 @@ async function syncModelIndex() {
 }
 
 // ── Job load/sync ─────────────────────────────────────────────────────────
-let cachedJobList = null;
+let cachedClients = null;
+let cachedAllJobs = null;
 
-async function loadJobList() {
+async function loadClientList() {
   if (!isOwner()) { toast('Owner mode required'); return; }
 
   const listEl = document.getElementById('job-list');
   const itemsEl = document.getElementById('job-list-items');
   const searchEl = document.getElementById('job-search');
 
-  // Toggle — if already open, close
   if (listEl.classList.contains('open')) {
     listEl.classList.remove('open');
     return;
@@ -978,61 +996,112 @@ async function loadJobList() {
   searchEl.style.display = 'none';
   listEl.classList.add('open');
 
+  // Fetch clients index and job file list in parallel
+  const [clients, jobFiles] = await Promise.all([
+    getClientIndex(),
+    fetchJobFileList()
+  ]);
+
+  cachedClients = clients;
+  cachedAllJobs = jobFiles;
+
+  // Combine: clients with their jobs + orphan jobs (not in any client)
+  const allClientJobs = new Set();
+  Object.values(clients).forEach(jobs => jobs.forEach(j => allClientJobs.add(j)));
+  const orphanJobs = jobFiles.filter(j => !allClientJobs.has(j));
+
+  const totalEntries = Object.keys(clients).length + orphanJobs.length;
+  if (!totalEntries) {
+    itemsEl.innerHTML = '<div class="empty">No saved data found.</div>';
+    return;
+  }
+
+  // Show search
+  searchEl.style.display = '';
+  searchEl.value = '';
+  searchEl.focus();
+  searchEl.oninput = () => filterClientList(searchEl.value);
+
+  renderClientList(clients, orphanJobs);
+}
+
+async function fetchJobFileList() {
   const api = `https://api.github.com/repos/${REPO}/contents/${DATA_PATH}/jobs`;
   try {
     const res = await fetch(api, { headers: { 'Authorization': `Bearer ${getPAT()}` } });
-    if (!res.ok) {
-      itemsEl.innerHTML = '<div class="empty">No saved jobs found.</div>';
-      return;
-    }
+    if (!res.ok) return [];
     const files = await res.json();
-    if (!Array.isArray(files) || !files.length) {
-      itemsEl.innerHTML = '<div class="empty">No saved jobs found.</div>';
-      return;
-    }
-
-    cachedJobList = files.filter(f => f.name.endsWith('.json')).map(f => f.name.replace('.json', ''));
-    if (!cachedJobList.length) {
-      itemsEl.innerHTML = '<div class="empty">No saved jobs found.</div>';
-      return;
-    }
-
-    // Show search if more than 10 jobs
-    if (cachedJobList.length > 10) {
-      searchEl.style.display = '';
-      searchEl.value = '';
-      searchEl.focus();
-      searchEl.oninput = () => filterJobList(searchEl.value);
-    }
-
-    renderJobList(cachedJobList);
-  } catch(e) {
-    itemsEl.innerHTML = '<div class="empty">Failed to load jobs.</div>';
-  }
+    if (!Array.isArray(files)) return [];
+    return files.filter(f => f.name.endsWith('.json')).map(f => f.name.replace('.json', ''));
+  } catch(e) { return []; }
 }
 
-function filterJobList(query) {
-  if (!cachedJobList) return;
+function filterClientList(query) {
+  if (!cachedClients) return;
   const q = query.trim().toUpperCase();
-  const filtered = q ? cachedJobList.filter(j => j.toUpperCase().includes(q)) : cachedJobList;
-  renderJobList(filtered);
-}
 
-function renderJobList(jobs) {
-  const itemsEl = document.getElementById('job-list-items');
-  if (!jobs.length) {
-    itemsEl.innerHTML = '<div class="empty">No matching jobs.</div>';
+  if (!q) {
+    const allClientJobs = new Set();
+    Object.values(cachedClients).forEach(jobs => jobs.forEach(j => allClientJobs.add(j)));
+    const orphans = (cachedAllJobs || []).filter(j => !allClientJobs.has(j));
+    renderClientList(cachedClients, orphans);
     return;
   }
-  itemsEl.innerHTML = jobs.map(j => {
-    const esc = j.replace(/'/g, "\\'");
-    return `<div class="job-item" onclick="loadJobFromRepo('${esc}')">
-      <span class="job-item-name">${j}</span>
-    </div>`;
-  }).join('');
+
+  // Filter clients by name match, and orphan jobs by job number match
+  const filteredClients = {};
+  for (const [name, jobs] of Object.entries(cachedClients)) {
+    if (name.includes(q) || jobs.some(j => j.toUpperCase().includes(q))) {
+      const filteredJobs = name.includes(q) ? jobs : jobs.filter(j => j.toUpperCase().includes(q));
+      if (filteredJobs.length) filteredClients[name] = filteredJobs;
+    }
+  }
+
+  const allClientJobs = new Set();
+  Object.values(cachedClients).forEach(jobs => jobs.forEach(j => allClientJobs.add(j)));
+  const orphans = (cachedAllJobs || []).filter(j => !allClientJobs.has(j) && j.toUpperCase().includes(q));
+
+  renderClientList(filteredClients, orphans);
 }
 
-async function loadJobFromRepo(jobName) {
+function renderClientList(clients, orphanJobs) {
+  const itemsEl = document.getElementById('job-list-items');
+  let html = '';
+
+  // Clients with their jobs
+  const sortedClients = Object.keys(clients).sort();
+  for (const name of sortedClients) {
+    const jobs = clients[name];
+    html += `<div class="client-group">
+      <div class="client-hdr">${name} <span class="client-count">${jobs.length} job${jobs.length !== 1 ? 's' : ''}</span></div>`;
+    for (const j of jobs) {
+      const esc = j.replace(/'/g, "\\'");
+      const nameEsc = name.replace(/'/g, "\\'");
+      html += `<div class="job-item" onclick="loadJobFromRepo('${esc}','${nameEsc}')">
+        <span class="job-item-name">${j}</span>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  // Orphan jobs (no client assigned)
+  if (orphanJobs.length) {
+    html += `<div class="client-group">
+      <div class="client-hdr">UNASSIGNED</div>`;
+    for (const j of orphanJobs) {
+      const esc = j.replace(/'/g, "\\'");
+      html += `<div class="job-item" onclick="loadJobFromRepo('${esc}','')">
+        <span class="job-item-name">${j}</span>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  if (!html) html = '<div class="empty">No matches.</div>';
+  itemsEl.innerHTML = html;
+}
+
+async function loadJobFromRepo(jobName, customerName) {
   if (!isOwner()) return;
 
   const path = `${DATA_PATH}/jobs/${jobName}.json`;
@@ -1044,15 +1113,12 @@ async function loadJobFromRepo(jobName) {
     const file = await res.json();
     const jobData = JSON.parse(decodeURIComponent(escape(atob(file.content))));
 
-    // Load units into local storage
     if (jobData.units && jobData.units.length) {
       saveRecords(jobData.units);
       updateBadge();
 
-      // Set job # field
       document.getElementById('f-job').value = jobData.job || jobName;
-
-      // Close job list
+      document.getElementById('f-customer').value = customerName || jobData.customer || '';
       document.getElementById('job-list').classList.remove('open');
 
       toast('Loaded ' + jobData.units.length + ' unit' + (jobData.units.length !== 1 ? 's' : '') + ' from ' + jobName);
@@ -1073,18 +1139,44 @@ async function syncCurrentJob() {
   const recs = getRecords();
   if (!recs.length) { toast('No units to sync'); return; }
 
+  const customer = document.getElementById('f-customer').value.trim();
   const jobKey = job.replace(/\s+/g, '_');
   const path = `${DATA_PATH}/jobs/${jobKey}.json`;
-  const jobData = { job, units: recs, synced: new Date().toISOString() };
+  const jobData = { job, customer: customer || null, units: recs, synced: new Date().toISOString() };
 
+  toast('Syncing...');
   const ok = await ghPut(path, JSON.stringify(jobData, null, 2), `Sync job ${job}`);
-  if (ok) {
-    // Update model index from all units
-    recs.forEach(r => updateModelIndex(r));
-    toast('Job synced — ' + recs.length + ' unit' + (recs.length !== 1 ? 's' : ''));
-  } else {
-    toast('Sync failed');
+  if (!ok) { toast('Sync failed'); return; }
+
+  // Update model index
+  recs.forEach(r => updateModelIndex(r));
+
+  // Update clients.json if customer provided
+  if (customer) {
+    await updateClientIndex(customer, jobKey);
   }
+
+  toast('Job synced — ' + recs.length + ' unit' + (recs.length !== 1 ? 's' : ''));
+}
+
+async function getClientIndex() {
+  const api = `https://api.github.com/repos/${REPO}/contents/${DATA_PATH}/clients.json`;
+  try {
+    const res = await fetch(api, { headers: { 'Authorization': `Bearer ${getPAT()}` } });
+    if (res.ok) {
+      const file = await res.json();
+      return JSON.parse(decodeURIComponent(escape(atob(file.content))));
+    }
+  } catch(e) {}
+  return {};
+}
+
+async function updateClientIndex(customer, jobKey) {
+  const clients = await getClientIndex();
+  const key = customer.toUpperCase();
+  if (!clients[key]) clients[key] = [];
+  if (!clients[key].includes(jobKey)) clients[key].push(jobKey);
+  await ghPut(`${DATA_PATH}/clients.json`, JSON.stringify(clients, null, 2), `Update client index`);
 }
 
 function suggestModel(el) {
