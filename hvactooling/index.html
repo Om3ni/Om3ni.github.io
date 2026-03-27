@@ -44,6 +44,40 @@
 }
 .license-contact a { color: var(--orange-lo); text-decoration: none; border-bottom: 1px solid var(--orange-lo); }
 
+/* ── Menu + tabs positioning ── */
+.tabs { top: 82px; } /* header (49) + menu bar (33) */
+
+/* ── Menu bar ── */
+.menu-bar {
+  display: flex; gap: 0; background: var(--surface);
+  border-bottom: 1px solid var(--border); position: relative;
+}
+.menu-trigger {
+  background: none; border: none; color: var(--text-mute);
+  font-family: var(--ui); font-weight: 600; font-size: .72rem;
+  letter-spacing: .06em; text-transform: uppercase;
+  padding: 8px 12px; cursor: pointer; transition: color .1s;
+  position: relative;
+}
+.menu-trigger:active, .menu-trigger.open { color: var(--orange-hi); }
+.menu-drop {
+  display: none; position: absolute; top: 100%; left: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 0 0 3px 3px; min-width: 180px; z-index: 120;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+}
+.menu-drop.open { display: block; }
+.menu-item {
+  display: block; width: 100%; padding: 10px 14px;
+  font-family: var(--mono); font-size: .72rem; color: var(--text-dim);
+  letter-spacing: .03em; cursor: pointer; transition: background .08s;
+  background: none; border: none; text-align: left;
+}
+.menu-item:active { background: var(--orange-dim); color: var(--orange-hi); }
+.menu-item.owner-only { display: none; }
+.menu-sep { border-top: 1px solid var(--border); margin: 2px 0; }
+.menu-item.danger { color: var(--red-hi); }
+
 /* ── Light mode ── */
 [data-theme="light"] {
   --bg:         #d8d8d8;
@@ -429,12 +463,42 @@ This software is provided "as is" without warranty of any kind, express or impli
 <header>
   <div class="hdr-titles">
     <div class="hdr-title">Field Entry</div>
-    <div class="hdr-sub">Field Data · <a href="#" onclick="showLicense();return false" style="color:var(--text-mute);text-decoration:none;border-bottom:1px solid var(--text-mute)">License</a></div>
+    <div class="hdr-sub">HVAC Field Tools</div>
   </div>
   <button class="owner-btn" id="themeBtn" onclick="toggleTheme()">light</button>
   <button class="owner-btn" id="ownerBtn" onclick="openOwnerModal()">owner</button>
   <div class="hdr-badge" id="hdrBadge">0</div>
 </header>
+
+<!-- ══ MENU BAR ══ -->
+<div class="menu-bar">
+  <div style="position:relative">
+    <button class="menu-trigger" id="menuFileBtn" onclick="toggleMenu('file')">File</button>
+    <div class="menu-drop" id="menuFile">
+      <button class="menu-item" onclick="doNewJob()">New Job</button>
+      <button class="menu-item" onclick="doImportCSV()">Import CSV</button>
+      <div class="menu-sep"></div>
+      <button class="menu-item owner-only" id="mi-load" onclick="doMenuLoad()">Load Job</button>
+      <button class="menu-item owner-only" id="mi-sync" onclick="doMenuSync()">Sync Job</button>
+      <div class="menu-sep owner-only" id="mi-sep-sync"></div>
+      <button class="menu-item" onclick="doExportReport()">Export Report</button>
+      <button class="menu-item" onclick="doExportCSV()">Export CSV</button>
+      <button class="menu-item" onclick="doExportParts()">Export Parts List</button>
+      <div class="menu-sep"></div>
+      <button class="menu-item danger" onclick="doNuke()">Clear All Records</button>
+    </div>
+  </div>
+  <div style="position:relative">
+    <button class="menu-trigger" id="menuHelpBtn" onclick="toggleMenu('help')">Help</button>
+    <div class="menu-drop" id="menuHelp">
+      <button class="menu-item" onclick="showTutorial()">Tutorial</button>
+      <button class="menu-item" onclick="showLicense()">License</button>
+      <button class="menu-item" onclick="window.location.href='mailto:michaaar1981@gmail.com?subject=IP%20discussion%2FHVACtooling'">Contact</button>
+      <div class="menu-sep"></div>
+      <button class="menu-item" style="color:var(--text-mute);cursor:default">v0.1.0</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ OWNER MODAL ══ -->
 <div class="owner-overlay" id="ownerOverlay">
@@ -472,7 +536,6 @@ This software is provided "as is" without warranty of any kind, express or impli
     <div class="tab" data-tab="queue" onclick="switchTab(this)">Units</div>
     <div class="tab" data-tab="parts" onclick="switchTab(this)">Parts</div>
     <div class="tab" data-tab="tools" onclick="switchTab(this)">Tools</div>
-    <div class="tab" data-tab="export" onclick="switchTab(this)">Export</div>
   </div>
 
   <!-- HOME TAB -->
@@ -491,10 +554,7 @@ This software is provided "as is" without warranty of any kind, express or impli
         placeholder="Merrill Gardens"
         autocomplete="off" autocorrect="off" spellcheck="false">
     </div>
-    <div class="job-load-row" id="jobLoadRow" style="display:none">
-      <button class="btn btn-ghost" onclick="loadClientList()">Load</button>
-      <button class="btn btn-ghost" onclick="syncCurrentJob()">Sync</button>
-    </div>
+    <!-- Job list overlay for Load Job (triggered from File menu) -->
     <div id="job-list">
       <input type="text" id="job-search" placeholder="Search..."
         autocomplete="off" autocorrect="off" spellcheck="false"
@@ -741,18 +801,6 @@ This software is provided "as is" without warranty of any kind, express or impli
     </div>
   </div>
 
-  <!-- EXPORT TAB -->
-  <div class="panel" id="tab-export">
-    <p style="color:var(--text-dim);font-family:var(--mono);font-size:.75rem;line-height:1.7;margin-bottom:22px;">
-      CSV — columns match master spreadsheet, drop-in merge.<br>
-      Parts — totals by filter size and belt number.
-    </p>
-    <button class="btn btn-primary" onclick="doExportReport()">Generate Report</button>
-    <button class="btn btn-export" onclick="doExportCSV()">Export CSV</button>
-    <button class="btn btn-export" onclick="doExportParts()">Export Parts List</button>
-    <hr class="sec" style="margin-top:24px;">
-    <button class="btn btn-danger" onclick="doNuke()">Clear All Records</button>
-  </div>
 
 <!-- ══ TOOL FRAME ══ -->
 <div id="tool-frame-wrap">
@@ -795,7 +843,6 @@ function getPAT() {
 function updateOwnerUI() {
   const btn = document.getElementById('ownerBtn');
   const logout = document.getElementById('ownerLogoutBtn');
-  const jobRow = document.getElementById('jobLoadRow');
   const custField = document.getElementById('customerField');
   const owner = isOwner();
   if (owner) {
@@ -807,8 +854,11 @@ function updateOwnerUI() {
     btn.textContent = 'owner';
     logout.style.display = 'none';
   }
-  if (jobRow) jobRow.style.display = owner ? '' : 'none';
   if (custField) custField.style.display = owner ? '' : 'none';
+  // Show/hide owner-only menu items
+  document.querySelectorAll('.owner-only').forEach(el => {
+    el.style.display = owner ? '' : 'none';
+  });
 }
 
 function openOwnerModal() {
@@ -2382,6 +2432,152 @@ function getToolReportBlock(context) {
     }
   } catch(e) { /* cross-origin safety */ }
   return null;
+}
+
+// ── Menu bar ─────────────────────────────────────────────────────────────
+function toggleMenu(name) {
+  const drop = document.getElementById('menu' + name.charAt(0).toUpperCase() + name.slice(1));
+  const btn = document.getElementById('menu' + name.charAt(0).toUpperCase() + name.slice(1) + 'Btn');
+  const isOpen = drop.classList.contains('open');
+
+  // Close all menus first
+  document.querySelectorAll('.menu-drop').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.menu-trigger').forEach(b => b.classList.remove('open'));
+
+  if (!isOpen) {
+    drop.classList.add('open');
+    btn.classList.add('open');
+  }
+}
+
+// Close menus on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.menu-bar')) {
+    document.querySelectorAll('.menu-drop').forEach(d => d.classList.remove('open'));
+    document.querySelectorAll('.menu-trigger').forEach(b => b.classList.remove('open'));
+  }
+});
+
+function closeMenus() {
+  document.querySelectorAll('.menu-drop').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.menu-trigger').forEach(b => b.classList.remove('open'));
+}
+
+function doNewJob() {
+  closeMenus();
+  if (getRecords().length && !confirm('Clear current records and start a new job?')) return;
+  saveRecords([]);
+  clearForm();
+  document.getElementById('f-job').value = '';
+  document.getElementById('f-customer').value = '';
+  updateBadge();
+  toast('New job started');
+}
+
+function doMenuLoad() {
+  closeMenus();
+  loadClientList();
+}
+
+function doMenuSync() {
+  closeMenus();
+  syncCurrentJob();
+}
+
+function doImportCSV() {
+  closeMenus();
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.csv';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const recs = parseCSV(ev.target.result);
+        if (!recs.length) { toast('No records found in CSV'); return; }
+        const existing = getRecords();
+        saveRecords(existing.concat(recs));
+        updateBadge();
+        // Set job # from first record if available
+        if (recs[0].job && !document.getElementById('f-job').value) {
+          document.getElementById('f-job').value = recs[0].job;
+        }
+        toast('Imported ' + recs.length + ' unit' + (recs.length !== 1 ? 's' : ''));
+      } catch(err) {
+        toast('CSV parse error');
+        console.error('CSV parse error:', err);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return [];
+
+  // Parse header row
+  const headers = parseCSVRow(lines[0]);
+
+  // Map our export headers to record fields
+  const MAP = {
+    'job #': 'job', 'equipment #': 'unit', 'equipment name': 'name',
+    'location': 'loc', 'make': 'make', 'type': 'type',
+    'model #': 'model', 'serial #': 'serial',
+    'belt': 'belt', 'belt qty': 'bqty',
+    'filter(s)': 'fsize', 'filter qty': 'fqty',
+    '2nd filter(s)': 'f2size', '2nd filter qty': 'f2qty',
+    'change filter (y/n)': 'fchg', 'change belt (y/n)': 'bchg',
+    'unit working properly (y/n)': 'working',
+    'maintenance complete (y/n)': 'done',
+    'date & tech initials': 'date', 'notes': 'notes'
+  };
+
+  // Build column index
+  const colMap = {};
+  headers.forEach((h, i) => {
+    const key = h.toLowerCase().trim();
+    if (MAP[key]) colMap[MAP[key]] = i;
+  });
+
+  const recs = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVRow(lines[i]);
+    if (!cols.length) continue;
+    const rec = {};
+    for (const [field, idx] of Object.entries(colMap)) {
+      rec[field] = (cols[idx] || '').trim();
+    }
+    if (rec.unit) recs.push(rec);
+  }
+  return recs;
+}
+
+function parseCSVRow(line) {
+  const cols = [];
+  let i = 0, inQuote = false, val = '';
+  while (i < line.length) {
+    const ch = line[i];
+    if (inQuote) {
+      if (ch === '"' && line[i + 1] === '"') { val += '"'; i += 2; }
+      else if (ch === '"') { inQuote = false; i++; }
+      else { val += ch; i++; }
+    } else {
+      if (ch === '"') { inQuote = true; i++; }
+      else if (ch === ',') { cols.push(val); val = ''; i++; }
+      else { val += ch; i++; }
+    }
+  }
+  cols.push(val);
+  return cols;
+}
+
+function showTutorial() {
+  closeMenus();
+  toast('Tutorial coming soon');
 }
 
 // ── Theme toggle ─────────────────────────────────────────────────────────
