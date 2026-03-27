@@ -45,13 +45,15 @@
 .license-contact a { color: var(--orange-lo); text-decoration: none; border-bottom: 1px solid var(--orange-lo); }
 
 /* ── Menu + tabs positioning ── */
-.tabs { top: 82px; } /* header (49) + menu bar (33) */
+header { border-bottom: none; }
+.tabs { top: 80px; } /* header (47) + menu bar (33) */
 
 /* ── Menu bar ── */
 .menu-bar {
   display: flex; gap: 0; background: var(--surface);
+  border-top: 2px solid var(--orange);
   border-bottom: 1px solid var(--border);
-  position: sticky; top: 49px; z-index: 100;
+  position: sticky; top: 47px; z-index: 100;
 }
 .menu-trigger {
   background: none; border: none; color: var(--text-mute);
