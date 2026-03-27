@@ -41,31 +41,6 @@
 .check-lbl { font-family: var(--mono); font-size: .75rem; color: var(--text-mute); letter-spacing: .03em; line-height: 1.4; }
 .check-item.checked .check-lbl { color: var(--text-dim); }
 
-/* ── Conclusion box ── */
-.conclusion {
-  margin-top: 14px; padding: 12px 14px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 3px; display: none;
-}
-.conclusion.show { display: block; }
-.conclusion-hdr {
-  font-size: .63rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase;
-  color: var(--orange-lo); margin-bottom: 8px;
-}
-.conclusion-text {
-  font-family: var(--mono); font-size: .78rem; color: var(--text-dim);
-  line-height: 1.6; letter-spacing: .02em;
-}
-.conclusion.ok   { border-color: var(--green-hi); background: var(--green-dim); }
-.conclusion.warn { border-color: var(--yellow-hi); background: var(--yellow-dim); }
-.conclusion.bad  { border-color: var(--red-hi); background: var(--red-dim); }
-.conclusion.ok   .conclusion-hdr { color: var(--green-hi); }
-.conclusion.warn .conclusion-hdr { color: var(--yellow-hi); }
-.conclusion.bad  .conclusion-hdr { color: var(--red-hi); }
-.conclusion.ok   .conclusion-text { color: var(--green-hi); }
-.conclusion.warn .conclusion-text { color: var(--yellow-hi); }
-.conclusion.bad  .conclusion-text { color: var(--red-hi); }
-
 /* ── Motor result status: .bad and .warn ── */
 .result-row.bad  { border-color: var(--red-hi); background: var(--red-dim); }
 .rr-val.bad      { color: var(--red-hi); }
@@ -300,10 +275,6 @@
 
   </div>
 
-  <div class="conclusion" id="psc-conclusion">
-    <div class="conclusion-hdr">Assessment</div>
-    <div class="conclusion-text" id="psc-conclusion-text"></div>
-  </div>
 
 </div>
 
@@ -543,10 +514,6 @@
 
   </div>
 
-  <div class="conclusion" id="tph-conclusion">
-    <div class="conclusion-hdr">Assessment</div>
-    <div class="conclusion-text" id="tph-conclusion-text"></div>
-  </div>
 
 </div>
 
@@ -733,10 +700,6 @@
 
   </div>
 
-  <div class="conclusion" id="ecm-conclusion">
-    <div class="conclusion-hdr">Assessment</div>
-    <div class="conclusion-text" id="ecm-conclusion-text"></div>
-  </div>
 
 </div>
 
@@ -857,15 +820,6 @@ function setSub(id, text) {
   if (el) el.textContent = text;
 }
 
-function setConclusion(prefix, cls, text) {
-  const el = document.getElementById(`${prefix}-conclusion`);
-  const txt = document.getElementById(`${prefix}-conclusion-text`);
-  if (!el || !txt) return;
-  if (!text) { el.className = 'conclusion'; return; }
-  el.className = `conclusion show ${cls}`;
-  txt.textContent = text;
-}
-
 // ── Megger shared logic
 // Returns { cls, subText, deltaCls }
 function meggerAnalysis(npVolts, megNow, megPrev) {
@@ -958,7 +912,7 @@ function calcPSC() {
   }
 
   // Megger
-  const meg = meggerAnalysis(npVolts, megNow, megV);
+  const meg = meggerAnalysis(npVolts, megNow, megPrev);
   if (meg) {
     setSub('psc-rv-meg-sub', meg.subText);
     setRow('psc-r-meg', 'psc-rv-meg', megNow, 'MΩ', 1, meg.cls);
@@ -975,42 +929,6 @@ function calcPSC() {
     show('psc-r-meg-delta', false);
   }
 
-  // Conclusion
-  const issues = [];
-  const flags  = [];
-
-  if (ampResult) {
-    if (ampResult.cls === 'bad')  issues.push('running amps exceed service factor ceiling');
-    else if (ampResult.cls === 'warn') flags.push('running amps above FLA');
-  }
-
-  if (capRated !== null && capMeas !== null) {
-    const capDev = Math.abs(((capMeas - capRated) / capRated) * 100);
-    if (capDev > 6)  issues.push(`capacitor out of tolerance (${capDev.toFixed(1)}% deviation)`);
-    else if (capDev > 4) flags.push('capacitor near tolerance limit');
-  }
-
-  if (wDev !== null) {
-    if (wDev > 10) issues.push(`winding imbalance out of tolerance (${wDev}% deviation)`);
-    else if (wDev > 5) flags.push(`winding balance marginal (${wDev}% deviation)`);
-  }
-
-  if (meg) {
-    if (meg.cls === 'bad')  issues.push('insulation resistance below IEEE 43 floor');
-    else if (meg.cls === 'warn') flags.push('insulation resistance marginal');
-    if (meg.deltaCls === 'bad')  issues.push('significant drop in insulation resistance vs previous reading');
-    else if (meg.deltaCls === 'warn') flags.push('insulation resistance declining from previous reading');
-  }
-
-  if (issues.length > 0) {
-    setConclusion('psc', 'bad', 'FAULT INDICATED: ' + issues.join('; ') + '.');
-  } else if (flags.length > 0) {
-    setConclusion('psc', 'warn', 'MARGINAL: ' + flags.join('; ') + '. Monitor closely.');
-  } else if (megNow !== null || runAmps !== null) {
-    setConclusion('psc', 'ok', 'No faults indicated by available measurements. Document readings for trend baseline.');
-  } else {
-    setConclusion('psc', '', '');
-  }
 }
 
 // ── 3-Phase Calculation
@@ -1083,7 +1001,7 @@ function calcThreePhase() {
   }
 
   // Megger
-  const meg = meggerAnalysis(npVolts, megNow, megV);
+  const meg = meggerAnalysis(npVolts, megNow, megPrev);
   if (meg) {
     setSub('tph-rv-meg-sub', meg.subText);
     setRow('tph-r-meg', 'tph-rv-meg', megNow, 'MΩ', 1, meg.cls);
@@ -1100,41 +1018,6 @@ function calcThreePhase() {
     show('tph-r-meg-delta', false);
   }
 
-  // Conclusion
-  const issues = [], flags = [];
-
-  if (ampResult) {
-    if (ampResult.cls === 'bad')  issues.push('running amps exceed service factor ceiling');
-    else if (ampResult.cls === 'warn') flags.push('running amps above FLA');
-  }
-  if (ampImbal !== null) {
-    if (ampImbal > 10) issues.push(`current imbalance excessive (${ampImbal}%)`);
-    else if (ampImbal > 5) flags.push(`current imbalance elevated (${ampImbal}%)`);
-  }
-  if (vImbal !== null) {
-    if (vImbal > 2) issues.push(`voltage unbalance exceeds 2% — derate motor or correct supply`);
-    else if (vImbal > 1) flags.push(`voltage unbalance above 1% NEMA threshold (${vImbal}%)`);
-  }
-  if (windDev !== null) {
-    if (windDev > 10) issues.push(`winding resistance imbalance out of tolerance (${windDev}%)`);
-    else if (windDev > 5) flags.push(`winding resistance marginal (${windDev}% deviation)`);
-  }
-  if (meg) {
-    if (meg.cls === 'bad')  issues.push('insulation resistance below IEEE 43 floor');
-    else if (meg.cls === 'warn') flags.push('insulation resistance marginal');
-    if (meg.deltaCls === 'bad')  issues.push('significant insulation resistance drop from previous reading');
-    else if (meg.deltaCls === 'warn') flags.push('insulation resistance declining');
-  }
-
-  if (issues.length > 0) {
-    setConclusion('tph', 'bad', 'FAULT INDICATED: ' + issues.join('; ') + '.');
-  } else if (flags.length > 0) {
-    setConclusion('tph', 'warn', 'MARGINAL: ' + flags.join('; ') + '. Monitor closely.');
-  } else if (megNow !== null || avgAmps !== null) {
-    setConclusion('tph', 'ok', 'No faults indicated by available measurements. Document readings for trend baseline.');
-  } else {
-    setConclusion('tph', '', '');
-  }
 }
 
 // ── ECM Calculation
@@ -1181,46 +1064,6 @@ function calcECM() {
     setRow('ecm-r-wind', 'ecm-rv-wind', null, '%');
   }
 
-  // ECM conclusion logic — guided diagnosis
-  const anyChecked = chkHV || chkCtrl || chkWind || chkConn || chkMeg;
-  if (!anyChecked && megNow === null && windDev === null) {
-    setConclusion('ecm', '', '');
-    return;
-  }
-
-  // All checks pass + windings + megger good = module suspect
-  const motorOk = chkWind && chkMeg && (windDev === null || windDev <= 5) &&
-    (megNow === null || (meg && meg.cls !== 'bad'));
-
-  if (chkHV && chkCtrl && motorOk && !chkConn) {
-    setConclusion('ecm', 'warn',
-      'High voltage and control signal present, motor windings and insulation acceptable — ' +
-      'check terminal connections and module connector pins before condemning module.');
-  } else if (chkHV && chkCtrl && chkConn && motorOk) {
-    setConclusion('ecm', 'bad',
-      'High voltage present, control signal present, connections clean, motor windings good, ' +
-      'insulation acceptable — module is the likely fault. Verify with a known-good module swap ' +
-      'if possible before replacing.');
-  } else if (!chkHV) {
-    setConclusion('ecm', 'warn',
-      'High voltage not confirmed at module — verify supply voltage and wiring before ' +
-      'diagnosing further. No high voltage, no diagnosis.');
-  } else if (!chkCtrl) {
-    setConclusion('ecm', 'warn',
-      'Control signal not confirmed — check thermostat output, control board, and ' +
-      'wiring to module control terminals. ECM will not run without a valid control signal.');
-  } else if (!chkWind || (windDev !== null && windDev > 10)) {
-    setConclusion('ecm', 'bad',
-      'Winding fault indicated — motor stator is the likely fault, not the module. ' +
-      'Replace motor.');
-  } else if (meg && meg.cls === 'bad') {
-    setConclusion('ecm', 'bad',
-      'Insulation resistance below floor — motor stator winding insulation failing. ' +
-      'Replace motor, not module.');
-  } else {
-    setConclusion('ecm', 'warn',
-      'Incomplete checklist — continue diagnostics before drawing a conclusion.');
-  }
 }
 
 // ── Tab switching
@@ -1440,15 +1283,6 @@ function getReportBlock(context) {
     }
     const notes = sv('ecm-notes');
     if (notes) { lines.push(''); lines.push('NOTES'); lines.push(notes); }
-  }
-
-  // Append assessment if present
-  const concEl = document.getElementById(`${activeTab}-conclusion`);
-  const concTxt = document.getElementById(`${activeTab}-conclusion-text`);
-  if (concEl?.classList.contains('show') && concTxt?.textContent) {
-    lines.push('');
-    lines.push('ASSESSMENT');
-    lines.push(concTxt.textContent);
   }
 
   return lines.join('\n');
