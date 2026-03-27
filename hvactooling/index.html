@@ -1653,21 +1653,19 @@ function initModuleFrame(mid) {
 
 // ── Shared field mapping: module → { field: [inputIds] }
 // These are the input IDs inside each module's iframe for shared fields
+// Shared: returnAir, cfm, ambient
+// NOT shared: supplyAir, dt (mode-specific — heat vs cool)
 const SHARED_FIELDS = {
   heat: {
     returnAir: ['g-return', 'e-return'],
-    supplyAir: ['g-supply', 'e-supply'],
-    // heat doesn't have ambient or cfm inputs — cfm is derived
   },
   airflow: {
     returnAir: ['returnAir'],
-    supplyAir: ['supplyAir'],
     cfm:       ['cfmInput'],
     ambient:   ['ambient'],
   },
   refrigeration: {
     returnAir: ['returnAir'],
-    supplyAir: ['supplyAir'],
     ambient:   ['ambient'],
     cfm:       ['cfm'],
   }
@@ -1694,7 +1692,7 @@ function syncSharedFields() {
       const state = frame.contentWindow.getCalcState();
       if (!state) continue;
 
-      for (const field of ['returnAir', 'supplyAir', 'dt', 'cfm', 'ambient']) {
+      for (const field of ['returnAir', 'cfm', 'ambient']) {
         if (state[field] !== null && state[field] !== undefined && !owned[field]) {
           owned[field] = { name: m.name, id: m.id };
           values[field] = state[field];
@@ -1748,7 +1746,6 @@ function syncSharedFields() {
       // Hide section headers that become empty
       if (m.name === 'refrigeration') {
         const allAirsideOwned = owned.returnAir && owned.returnAir.name !== 'refrigeration' &&
-                                owned.supplyAir && owned.supplyAir.name !== 'refrigeration' &&
                                 owned.ambient && owned.ambient.name !== 'refrigeration' &&
                                 owned.cfm && owned.cfm.name !== 'refrigeration';
         doc.querySelectorAll('.sec-lbl').forEach(lbl => {
@@ -1966,7 +1963,8 @@ function buildUnifiedReport(rec) {
 
   // ── Resolve shared fields — first module with data owns it
   // Priority: heat → airflow → refrigeration
-  const shared = { returnAir: null, supplyAir: null, dt: null, cfm: null, ambient: null };
+  // NOT shared: supplyAir, dt (mode-specific — each module keeps its own)
+  const shared = { returnAir: null, cfm: null, ambient: null };
   const sharedSource = {};
 
   const resolveOrder = [
@@ -1975,7 +1973,7 @@ function buildUnifiedReport(rec) {
     { key: 'refrigeration', state: states.refrigeration }
   ];
 
-  for (const field of ['returnAir', 'supplyAir', 'dt', 'cfm', 'ambient']) {
+  for (const field of ['returnAir', 'cfm', 'ambient']) {
     for (const { key, state } of resolveOrder) {
       if (state && state[field] !== null && state[field] !== undefined) {
         shared[field] = state[field];
@@ -2072,7 +2070,7 @@ function buildUnifiedReport(rec) {
       if (heat.kw !== null)    lines.push(pad('kW:')    + dv(heat.kw, 'kW', 2));
       if (heat.btuOut !== null) lines.push(pad('BTU/h Output:') + dv(heat.btuOut, 'BTU/h', 0));
     }
-    // Shared fields (return/supply/cfm) printed in SYSTEM ANALYSIS
+    // Return air and CFM shared in SYSTEM ANALYSIS; supply/dt stay in heat
   }
 
   // ── Refrigeration section
@@ -2239,8 +2237,6 @@ function buildUnifiedReport(rec) {
 
   // Shared environmental readings
   if (shared.returnAir !== null) xm.push(pad('Return Air:')      + dv(shared.returnAir, 'F'));
-  if (shared.supplyAir !== null) xm.push(pad('Supply Air:')      + dv(shared.supplyAir, 'F'));
-  if (shared.dt !== null)        xm.push(pad('Delta T:')         + dv(shared.dt, 'F'));
   if (shared.ambient !== null)   xm.push(pad('Outdoor Ambient:') + dv(shared.ambient, 'F'));
   if (shared.cfm !== null)       xm.push(pad('CFM:')             + dv(shared.cfm, '', 0));
 
@@ -2256,14 +2252,29 @@ function buildUnifiedReport(rec) {
     xm.push(pad('Cond Approach:') + dv(condApp, 'F') + '  (liquid sat - ambient)');
   }
 
-  // Actual capacity (heating or cooling)
-  if (shared.cfm !== null && shared.dt !== null && shared.dt !== 0) {
-    const absDt = Math.abs(shared.dt);
-    const capacity = Math.round(1.08 * shared.cfm * absDt);
-    const tons = +(capacity / 12000).toFixed(2);
-    const mode = shared.dt > 0 ? 'Cooling' : 'Heating';
-    xm.push(pad(mode + ' Capacity:') + dv(capacity, 'BTU/h', 0));
-    xm.push(pad(mode + ' Tons:') + dv(tons, 'tons', 2));
+  // Actual capacity — find dt from any module that has it
+  // Cooling dt from airflow/refrigeration, heating dt from heat
+  const coolDt = air?.dt || refrig?.dt || null;
+  const heatDt = heat?.dt || null;
+
+  if (shared.cfm !== null) {
+    if (coolDt !== null && coolDt !== 0) {
+      const capacity = Math.round(1.08 * shared.cfm * Math.abs(coolDt));
+      const tons = +(capacity / 12000).toFixed(2);
+      xm.push(pad('Cooling Capacity:') + dv(capacity, 'BTU/h', 0));
+      xm.push(pad('Cooling Tons:') + dv(tons, 'tons', 2));
+    }
+    if (heatDt !== null && heatDt !== 0) {
+      const capacity = Math.round(1.08 * shared.cfm * Math.abs(heatDt));
+      const tons = +(capacity / 12000).toFixed(2);
+      xm.push(pad('Heating Capacity:') + dv(capacity, 'BTU/h', 0));
+      xm.push(pad('Heating Tons:') + dv(tons, 'tons', 2));
+    }
+  }
+
+  // EER — only meaningful for cooling
+  if (shared.cfm !== null && coolDt !== null && coolDt !== 0) {
+    const capacity = Math.round(1.08 * shared.cfm * Math.abs(coolDt));
 
     // EER — need watts from motor or electrical
     let watts = null;
