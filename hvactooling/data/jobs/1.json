@@ -1,0 +1,173 @@
+{
+  "job": "1",
+  "units": [
+    {
+      "job": "1",
+      "unit": "1",
+      "name": "Test",
+      "loc": "Test",
+      "make": "TESTING",
+      "type": "Rtu",
+      "model": "T111",
+      "serial": "1234",
+      "fsize": "20x20x2\"",
+      "fqty": "4",
+      "f2size": "20x25x4\"",
+      "f2qty": "2",
+      "fchg": "Y",
+      "belt": "3B88",
+      "bqty": "2",
+      "bchg": "",
+      "working": "Y",
+      "done": "Y",
+      "date": "3/27/2026",
+      "notes": "This is a test",
+      "modules": [
+        "ELECTRICAL ANALYSIS\nConfiguration:          Three Phase\n\nNAMEPLATE\nRated Voltage:          480 V\n\nSUPPLY VOLTAGE\nL1-L2:                  478.0 V\nL2-L3:                  482.0 V\nL1-L3:                  480.0 V\nL1-G:                   277.0 V\nL2-G:                   277.0 V\nL3-G:                   277.0 V\nAverage L-L:            480.0 V\nDeviation from Rated:   0.0 V\n% Deviation:            0.0 %\nNEMA Voltage Unbalance: 0.42 %",
+        "MOTOR TYPE: ECM\n\nNAMEPLATE\nRated Voltage:        480 V\nHorsepower:           5.0 HP\n\nCHECKLIST\nHigh Voltage:         YES\nControl Signal:       YES\nWindings OK:          YES\nConnections OK:       YES\nInsulation OK:        YES\n\nWINDINGS\nT1-T2:                3.5 Ohm\nT2-T3:                3.4 Ohm\nT1-T3:                3.7 Ohm\nMax Deviation:        4.7 %\n\nINSULATION\nTest Voltage:         --\nReading:              0.6 MOhm\nPrevious:             12.0 MOhm\n\nRUNNING\nSupply Voltage:       440.0 V\nRunning Amps:         15.0 A",
+        "GAS HEAT\nBTU Input:            90000 BTU/h\nEfficiency:           98.0 %\nBTU Output:           88200 BTU/h\n\nReturn Air:           68.0 F\nSupply Air:           112.0 F\nDelta T:              44.0 F\nCFM:                  1856 CFM",
+        "AIRFLOW\nReturn Air:           68.0 F\nSupply Air:           112.0 F\nDelta T:              -44.0 F\n\nCFM:                  1856 (manual)\nSensible Heat:        88200 BTU/h\n\nMIXED AIR\nReturn Air:           68.0 F\nOutdoor Ambient:      40.0 F",
+        "REFRIGERATION ANALYSIS\n3/27/2026\n\n\nRefrigerant:        R-22\nMetering:           TXV / EEV\nMode:               Cooling\n\nSUCTION\nSuction:            59.0 PSIG\nSat Temp:           33.1 F\nLine Temp:          46.0 F\nSuperheat:          12.9 F\n\nLIQUID\nLiquid:             165.0 PSIG\nSat Temp:           88.7 F\nLine Temp:          81.0 F\nSubcooling:         7.7 F\n\nSYSTEM\nCompression Ratio:  2.44\n\nAIRSIDE\nReturn Air:         68.0 F\nSupply Air:         112.0 F\nDelta T:            -44.0 F\nEvap Approach:      34.9 F\nOutdoor Ambient:    40.0 F\nCond Approach:      48.7 F\nCFM:                1856",
+        "MOTOR TYPE: ECM\n\nNAMEPLATE\nRated Voltage:        480 V\nHorsepower:           5.0 HP\n\nCHECKLIST\nHigh Voltage:         YES\nControl Signal:       YES\nWindings OK:          YES\nConnections OK:       YES\nInsulation OK:        YES\n\nWINDINGS\nT1-T2:                3.5 Ohm\nT2-T3:                3.2 Ohm\nT1-T3:                3.1 Ohm\nMax Deviation:        7.1 %\n\nINSULATION\nTest Voltage:         1000 V\nReading:              1.5 MOhm\nPrevious:             1.8 MOhm\n\nRUNNING\nSupply Voltage:       440.0 V\nRunning Amps:         15.0 A"
+      ],
+      "moduleStates": {
+        "electrical": {
+          "phase": 3,
+          "npV": 480,
+          "ll_vals": [
+            478,
+            482,
+            480
+          ],
+          "lg_vals": [
+            277,
+            277,
+            277
+          ],
+          "avgLL": 480,
+          "vImbal": 0.42,
+          "vDev": 0,
+          "vDevPct": 0,
+          "transformers": []
+        },
+        "motors": {
+          "type": "ecm",
+          "nameplate": {
+            "voltage": 480,
+            "hp": 5,
+            "moduleModel": ""
+          },
+          "running": {
+            "voltage": 440,
+            "amps": 15
+          },
+          "checklist": {
+            "highVoltage": true,
+            "controlSignal": true,
+            "windingsOk": true,
+            "connectionsOk": true,
+            "insulationOk": true
+          },
+          "windings": {
+            "values": [
+              3.5,
+              3.2,
+              3.1
+            ],
+            "maxDeviationPct": 7.1
+          },
+          "insulation": {
+            "testVoltage": 1000,
+            "reading": 1.5,
+            "previous": 1.8
+          },
+          "notes": ""
+        },
+        "heat": {
+          "type": "gas",
+          "btuIn": 90000,
+          "eff": 98,
+          "btuOut": 88200,
+          "returnAir": 68,
+          "supplyAir": 112,
+          "dt": 44,
+          "cfm": 1856.060606060606,
+          "volts": null,
+          "amps": null,
+          "watts": null,
+          "kw": null,
+          "phase": null
+        },
+        "airflow": {
+          "returnAir": 68,
+          "supplyAir": 112,
+          "dt": -44,
+          "sensible": 88200,
+          "cfm": 1856.060606060606,
+          "cfmSource": null,
+          "fpm": null,
+          "ductW": null,
+          "ductH": null,
+          "ductArea": null,
+          "fpmCFM": null,
+          "mixedAir": null,
+          "ambient": 40,
+          "oaPct": null,
+          "oaCFM": null,
+          "raCFM": null
+        },
+        "refrigeration": {
+          "refrigerant": "R-22",
+          "zeotropic": false,
+          "meteringDevice": "txv",
+          "mode": "cool",
+          "source": "air",
+          "suctionPressure": 59,
+          "suctionSatTemp": 33.14,
+          "suctionLineTemp": 46,
+          "superheat": 12.9,
+          "liquidPressure": 165,
+          "liquidSatTemp": 88.69,
+          "liquidLineTemp": 81,
+          "subcooling": 7.7,
+          "compressionRatio": 2.44,
+          "returnAir": 68,
+          "supplyAir": 112,
+          "dt": -44,
+          "ambient": 40,
+          "cfm": 1856.060606060606,
+          "ewt": null,
+          "lwt": null,
+          "evaporatorApproach": 34.9,
+          "condenserApproach": 48.7
+        }
+      },
+      "moduleNames": [
+        {
+          "name": "electrical",
+          "title": "Electrical"
+        },
+        {
+          "name": "motors",
+          "title": "Motors"
+        },
+        {
+          "name": "heat",
+          "title": "Heat"
+        },
+        {
+          "name": "airflow",
+          "title": "Airflow"
+        },
+        {
+          "name": "refrigeration",
+          "title": "Refrigeration"
+        },
+        {
+          "name": "motors",
+          "title": "Motors"
+        }
+      ]
+    }
+  ]
+}
