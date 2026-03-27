@@ -50,7 +50,8 @@
 /* ── Menu bar ── */
 .menu-bar {
   display: flex; gap: 0; background: var(--surface);
-  border-bottom: 1px solid var(--border); position: relative;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 49px; z-index: 100;
 }
 .menu-trigger {
   background: none; border: none; color: var(--text-mute);
