@@ -313,7 +313,7 @@ window.recalc = function() {
 
   // Core
   const dt       = (ret !== null && sup !== null) ? +(ret - sup).toFixed(1) : null;
-  const sensible = (cfm !== null && dt !== null)  ? Math.round(1.08 * cfm * dt) : null;
+  const sensible = (cfm !== null && dt !== null)  ? Math.round(1.08 * cfm * Math.abs(dt)) : null;
 
   // Mixed air
   const oaPct = (mixed !== null && ret !== null && amb !== null && (amb - ret) !== 0)
@@ -365,7 +365,7 @@ window.getCalcState = function() {
   const ductH = fv('ductH');
 
   const dt       = (ret !== null && sup !== null) ? +(ret - sup).toFixed(1) : null;
-  const sensible = (cfm !== null && dt !== null)  ? Math.round(1.08 * cfm * dt) : null;
+  const sensible = (cfm !== null && dt !== null)  ? Math.round(1.08 * cfm * Math.abs(dt)) : null;
   const oaPct    = (mixed !== null && ret !== null && amb !== null && (amb - ret) !== 0)
     ? +((mixed - ret) / (amb - ret) * 100).toFixed(1) : null;
   const oaCFM    = (oaPct !== null && cfm !== null) ? Math.round(oaPct / 100 * cfm) : null;
@@ -394,7 +394,7 @@ window.getReportBlock = function(context) {
   const ductH  = fv('ductH');
 
   const dt       = (ret !== null && sup !== null) ? +(ret - sup).toFixed(1) : null;
-  const sensible = (cfm !== null && dt !== null)  ? Math.round(1.08 * cfm * dt) : null;
+  const sensible = (cfm !== null && dt !== null)  ? Math.round(1.08 * cfm * Math.abs(dt)) : null;
   const oaPct    = (mixed !== null && ret !== null && amb !== null && (amb - ret) !== 0)
     ? +((mixed - ret) / (amb - ret) * 100).toFixed(1) : null;
   const oaCFM    = (oaPct !== null && cfm !== null) ? Math.round(oaPct / 100 * cfm) : null;

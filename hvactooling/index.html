@@ -882,12 +882,18 @@ async function ghPut(path, content, message) {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      console.error('GitHub sync failed:', err);
+      console.error('GitHub sync failed:', res.status, err);
+      if (res.status === 401) toast('PAT expired or invalid');
+      else if (res.status === 403) toast('PAT lacks write permission');
+      else if (res.status === 404) toast('Repo or path not found');
+      else if (res.status === 409) toast('Conflict — try again');
+      else if (res.status === 422) toast('Validation error — check data');
       return false;
     }
     return true;
   } catch(e) {
     console.error('GitHub sync error:', e);
+    toast('Network error — check connection');
     return false;
   }
 }
@@ -2250,12 +2256,14 @@ function buildUnifiedReport(rec) {
     xm.push(pad('Cond Approach:') + dv(condApp, 'F') + '  (liquid sat - ambient)');
   }
 
-  // Actual cooling capacity
-  if (shared.cfm !== null && shared.dt !== null && shared.dt > 0) {
-    const capacity = Math.round(1.08 * shared.cfm * shared.dt);
+  // Actual capacity (heating or cooling)
+  if (shared.cfm !== null && shared.dt !== null && shared.dt !== 0) {
+    const absDt = Math.abs(shared.dt);
+    const capacity = Math.round(1.08 * shared.cfm * absDt);
     const tons = +(capacity / 12000).toFixed(2);
-    xm.push(pad('Cooling Capacity:') + dv(capacity, 'BTU/h', 0));
-    xm.push(pad('Cooling Tons:') + dv(tons, 'tons', 2));
+    const mode = shared.dt > 0 ? 'Cooling' : 'Heating';
+    xm.push(pad(mode + ' Capacity:') + dv(capacity, 'BTU/h', 0));
+    xm.push(pad(mode + ' Tons:') + dv(tons, 'tons', 2));
 
     // EER — need watts from motor or electrical
     let watts = null;
