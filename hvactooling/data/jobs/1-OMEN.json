@@ -1,5 +1,6 @@
 {
   "job": "1-OMEN",
+  "customer": "Omen",
   "units": [
     {
       "job": "1-OMEN",
@@ -26,5 +27,6 @@
       "moduleStates": {},
       "moduleNames": []
     }
-  ]
+  ],
+  "synced": "2026-03-27T01:02:45.054Z"
 }
