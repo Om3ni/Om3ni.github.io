@@ -84,12 +84,12 @@ header { border-bottom: none; }
 /* ── Tutorial overlay ── */
 .tut-overlay {
   position: fixed; inset: 0; z-index: 500;
-  background: rgba(0,0,0,.7); display: none;
+  background: rgba(0,0,0,.35); display: none;
 }
 .tut-overlay.active { display: block; }
 .tut-highlight {
   position: absolute; z-index: 501;
-  box-shadow: 0 0 0 4000px rgba(0,0,0,.7);
+  box-shadow: 0 0 0 4000px rgba(0,0,0,.35);
   border-radius: 4px; pointer-events: none;
   transition: all .3s ease;
 }
@@ -2651,8 +2651,7 @@ const TUT_STEPS = [
   { el: '[data-tab="queue"]', text: 'View all units on this job. Tap a unit to reload it for editing. Data persists until you clear it.', tab: null },
   { el: '[data-tab="parts"]', text: 'Auto-tallied filter sizes and belt numbers across all units. No manual counting.', tab: null },
   { el: '[data-tab="tools"]', text: 'Open modules and calculators standalone — outside of a unit record. Modules (orange) capture data. Calculators (blue) are quick-reference utilities.', tab: null },
-  { el: '#menuFileBtn',   text: 'File menu: New Job, Import CSV from the office, Load/Sync jobs to the cloud (owner mode), and all exports — Report, CSV, Parts List.', tab: null },
-  { el: '#ownerBtn',      text: 'Owner login enables cloud sync — save equipment data to your repository for model autocomplete and historical reference. Completely optional.', tab: null },
+  { el: '#menuFileBtn',   text: 'File menu: New Job, Import CSV from the office, and all exports — Report, CSV, Parts List.', tab: null },
   { el: '#themeBtn',      text: 'Toggle between dark and light mode. Light mode uses a grey background for outdoor readability.', tab: null },
 ];
 
