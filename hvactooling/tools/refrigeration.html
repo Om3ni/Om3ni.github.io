@@ -77,6 +77,22 @@
     <button class="meter-btn" data-sys="fo" onclick="selMeter(this)">Fixed Orifice</button>
   </div>
 
+  <!-- SYSTEM MODE -->
+  <label class="fl">System Mode</label>
+  <div class="meter-grid">
+    <button class="meter-btn active" data-mode="cool" onclick="selMode(this)">Cooling</button>
+    <button class="meter-btn" data-mode="hp" onclick="selMode(this)">Heat Pump</button>
+  </div>
+
+  <!-- HEAT PUMP SOURCE (hidden by default) -->
+  <div id="hp-source-toggle" style="display:none">
+    <label class="fl">Heat Pump Source</label>
+    <div class="meter-grid">
+      <button class="meter-btn active" data-source="air" onclick="selSource(this)">Air Source</button>
+      <button class="meter-btn" data-source="water" onclick="selSource(this)">Water Source</button>
+    </div>
+  </div>
+
   <!-- SUCTION CIRCUIT -->
   <div class="sec">
     <div class="sec-lbl">Suction Circuit</div>
@@ -141,7 +157,7 @@
 
   <!-- AIRSIDE — OPTIONAL -->
   <div class="sec">
-    <div class="sec-lbl">Airside — Optional</div>
+    <div class="sec-lbl" id="airside-label">Airside — Optional</div>
 
     <div class="input-pair">
       <div>
@@ -160,11 +176,30 @@
       </div>
     </div>
 
-    <div class="fg">
+    <div class="fg" id="ambient-field">
       <label class="fl" for="ambient">Outdoor Ambient Temp</label>
       <div class="iw">
         <input type="number" id="ambient" inputmode="decimal" placeholder="--" step="0.1" oninput="recalc()">
         <span class="iw-unit">F</span>
+      </div>
+    </div>
+
+    <div id="wshp-fields" style="display:none">
+      <div class="input-pair">
+        <div>
+          <label class="fl" for="ewt">Entering Water</label>
+          <div class="iw">
+            <input type="number" id="ewt" inputmode="decimal" placeholder="--" step="0.1" oninput="recalc()">
+            <span class="iw-unit">F</span>
+          </div>
+        </div>
+        <div>
+          <label class="fl" for="lwt">Leaving Water</label>
+          <div class="iw">
+            <input type="number" id="lwt" inputmode="decimal" placeholder="--" step="0.1" oninput="recalc()">
+            <span class="iw-unit">F</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -230,6 +265,8 @@
     <div class="result-row dim" id="r-evap-app" style="display:none"><span class="rr-label">Evap Approach</span><span class="rr-val" id="rv-evap-app">--</span></div>
     <div class="result-row dim" id="r-cond-app" style="display:none"><span class="rr-label">Cond Approach</span><span class="rr-val" id="rv-cond-app">--</span></div>
     <div class="result-row dim" id="r-ambient"  style="display:none"><span class="rr-label">Outdoor Ambient</span><span class="rr-val" id="rv-ambient">--</span></div>
+    <div class="result-row dim" id="r-ewt"      style="display:none"><span class="rr-label">Entering Water</span><span class="rr-val" id="rv-ewt">--</span></div>
+    <div class="result-row dim" id="r-lwt"      style="display:none"><span class="rr-label">Leaving Water</span><span class="rr-val" id="rv-lwt">--</span></div>
     <div class="result-row dim" id="r-cfm"      style="display:none"><span class="rr-label">CFM</span><span class="rr-val" id="rv-cfm">--</span></div>
 
   </div>
@@ -276,6 +313,8 @@ const TARGETS = {
 const REFS = {};           // id → { name, zeotropic, safetyClass }
 let selRef = null;
 let selSys = 'txv';
+let curMode = 'cool';
+let curSource = 'air';
 
 // ── Build refrigerant registry from library
 listRefrigerants().forEach(r => {
@@ -335,9 +374,52 @@ window.selectRef = function(btn) {
 };
 
 window.selMeter = function(btn) {
-  document.querySelectorAll('.meter-btn').forEach(b => b.classList.remove('active'));
+  const grid = btn.parentElement;
+  grid.querySelectorAll('.meter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   selSys = btn.dataset.sys;
+  recalc();
+};
+
+window.selMode = function(btn) {
+  const grid = btn.parentElement;
+  grid.querySelectorAll('.meter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  curMode = btn.dataset.mode;
+
+  const srcToggle = document.getElementById('hp-source-toggle');
+  const label = document.getElementById('airside-label');
+
+  if (curMode === 'hp') {
+    srcToggle.style.display = '';
+    label.textContent = 'Airside';
+  } else {
+    srcToggle.style.display = 'none';
+    // Reset source to air when switching back to cooling
+    curSource = 'air';
+    const srcBtns = srcToggle.querySelectorAll('.meter-btn');
+    srcBtns.forEach(b => b.classList.remove('active'));
+    srcBtns[0].classList.add('active');
+    document.getElementById('wshp-fields').style.display = 'none';
+    document.getElementById('ambient-field').style.display = '';
+    label.textContent = 'Airside \u2014 Optional';
+  }
+  recalc();
+};
+
+window.selSource = function(btn) {
+  const grid = btn.parentElement;
+  grid.querySelectorAll('.meter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  curSource = btn.dataset.source;
+
+  if (curSource === 'water') {
+    document.getElementById('ambient-field').style.display = 'none';
+    document.getElementById('wshp-fields').style.display = '';
+  } else {
+    document.getElementById('ambient-field').style.display = '';
+    document.getElementById('wshp-fields').style.display = 'none';
+  }
   recalc();
 };
 
@@ -453,6 +535,8 @@ window.recalc = function() {
   const sup   = fv('supplyAir');
   const amb   = fv('ambient');
   const cfm   = fv('cfm');
+  const ewt   = fv('ewt');
+  const lwt   = fv('lwt');
 
   // Sat temps — suction uses dew, liquid uses bubble for zeotropics
   const suctSat = suctP !== null ? getSuctSat(selRef, suctP) : null;
@@ -464,9 +548,25 @@ window.recalc = function() {
   const cr = (suctP !== null && liqP !== null)
     ? +((liqP + ATM_PSIA) / (suctP + ATM_PSIA)).toFixed(2) : null;
 
-  const dt       = (ret !== null && sup !== null)      ? +(ret - sup).toFixed(1)         : null;
-  const evapApp  = (ret !== null && suctSat !== null)  ? +(ret - suctSat).toFixed(1)     : null;
-  const condApp  = (liqSat !== null && amb !== null)   ? +(liqSat - amb).toFixed(1)      : null;
+  const dt = (ret !== null && sup !== null) ? +(ret - sup).toFixed(1) : null;
+
+  // Approach calculations depend on mode and source
+  let evapApp = null;
+  let condApp = null;
+
+  if (curMode === 'cool') {
+    // Cooling: evap approach = return air - suction sat, cond approach = liquid sat - ambient
+    evapApp = (ret !== null && suctSat !== null)  ? +(ret - suctSat).toFixed(1)     : null;
+    condApp = (liqSat !== null && amb !== null)    ? +(liqSat - amb).toFixed(1)      : null;
+  } else if (curMode === 'hp' && curSource === 'air') {
+    // Heat pump air source: evap approach = ambient - suction sat, cond approach = liquid sat - return air
+    evapApp = (amb !== null && suctSat !== null)   ? +(amb - suctSat).toFixed(1)     : null;
+    condApp = (liqSat !== null && ret !== null)     ? +(liqSat - ret).toFixed(1)      : null;
+  } else if (curMode === 'hp' && curSource === 'water') {
+    // Heat pump water source: evap approach = EWT - suction sat, cond approach = liquid sat - LWT
+    evapApp = (ewt !== null && suctSat !== null)   ? +(ewt - suctSat).toFixed(1)     : null;
+    condApp = (liqSat !== null && lwt !== null)     ? +(liqSat - lwt).toFixed(1)      : null;
+  }
 
   // Superheat color
   const tgt = TARGETS[selSys];
@@ -501,14 +601,16 @@ window.recalc = function() {
   }
 
   // Airside — show section header only if any airside data exists
-  const hasAirside = ret !== null || sup !== null || amb !== null || cfm !== null;
+  const hasAirside = ret !== null || sup !== null || amb !== null || ewt !== null || lwt !== null || cfm !== null;
   showRow('hdr-airside', hasAirside);
   showRow('r-return',    ret !== null);
   showRow('r-supply',    sup !== null);
   showRow('r-dt',        dt !== null);
   showRow('r-evap-app',  evapApp !== null);
   showRow('r-cond-app',  condApp !== null);
-  showRow('r-ambient',   amb !== null);
+  showRow('r-ambient',   amb !== null && !(curMode === 'hp' && curSource === 'water'));
+  showRow('r-ewt',       ewt !== null && curMode === 'hp' && curSource === 'water');
+  showRow('r-lwt',       lwt !== null && curMode === 'hp' && curSource === 'water');
   showRow('r-cfm',       cfm !== null);
 
   if (ret !== null)     setRow('r-return',   'rv-return',   ret,     'F', null);
@@ -517,6 +619,8 @@ window.recalc = function() {
   if (evapApp !== null) setRow('r-evap-app', 'rv-evap-app', evapApp, 'F', null);
   if (condApp !== null) setRow('r-cond-app', 'rv-cond-app', condApp, 'F', null);
   if (amb !== null)     setRow('r-ambient',  'rv-ambient',  amb,     'F', null);
+  if (ewt !== null)     setRow('r-ewt',      'rv-ewt',      ewt,     'F', null);
+  if (lwt !== null)     setRow('r-lwt',      'rv-lwt',      lwt,     'F', null);
   if (cfm !== null) {
     document.getElementById('rv-cfm').textContent = cfm.toFixed(0);
     document.getElementById('rv-cfm').className   = 'rr-val live';
@@ -534,6 +638,8 @@ window.getCalcState = function() {
   const sup     = fv('supplyAir');
   const amb     = fv('ambient');
   const cfm     = fv('cfm');
+  const ewt     = fv('ewt');
+  const lwt     = fv('lwt');
 
   const suctSat = suctP !== null ? getSuctSat(selRef, suctP) : null;
   const liqSat  = liqP  !== null ? getLiqSat(selRef, liqP)   : null;
@@ -543,9 +649,21 @@ window.getCalcState = function() {
   const cr      = (suctP !== null && liqP !== null)
     ? +((liqP + ATM_PSIA) / (suctP + ATM_PSIA)).toFixed(2) : null;
 
-  const dt      = (ret !== null && sup !== null)     ? +(ret - sup).toFixed(1)     : null;
-  const evapApp = (ret !== null && suctSat !== null)  ? +(ret - suctSat).toFixed(1) : null;
-  const condApp = (liqSat !== null && amb !== null)   ? +(liqSat - amb).toFixed(1)  : null;
+  const dt      = (ret !== null && sup !== null) ? +(ret - sup).toFixed(1) : null;
+
+  let evapApp = null;
+  let condApp = null;
+
+  if (curMode === 'cool') {
+    evapApp = (ret !== null && suctSat !== null)  ? +(ret - suctSat).toFixed(1) : null;
+    condApp = (liqSat !== null && amb !== null)    ? +(liqSat - amb).toFixed(1)  : null;
+  } else if (curMode === 'hp' && curSource === 'air') {
+    evapApp = (amb !== null && suctSat !== null)   ? +(amb - suctSat).toFixed(1)  : null;
+    condApp = (liqSat !== null && ret !== null)     ? +(liqSat - ret).toFixed(1)   : null;
+  } else if (curMode === 'hp' && curSource === 'water') {
+    evapApp = (ewt !== null && suctSat !== null)   ? +(ewt - suctSat).toFixed(1)  : null;
+    condApp = (liqSat !== null && lwt !== null)     ? +(liqSat - lwt).toFixed(1)   : null;
+  }
 
   const ref = REFS[selRef] || {};
 
@@ -553,6 +671,8 @@ window.getCalcState = function() {
     refrigerant: ref.name || null,
     zeotropic: ref.zeotropic || false,
     meteringDevice: selSys,
+    mode: curMode,
+    source: curSource,
     suctionPressure: suctP, suctionSatTemp: suctSat, suctionLineTemp: suctL,
     superheat: sh,
     liquidPressure: liqP, liquidSatTemp: liqSat, liquidLineTemp: liqL,
@@ -560,6 +680,8 @@ window.getCalcState = function() {
     compressionRatio: cr,
     returnAir: ret, supplyAir: sup, dt,
     ambient: amb, cfm,
+    ewt: (curMode === 'hp' && curSource === 'water') ? ewt : null,
+    lwt: (curMode === 'hp' && curSource === 'water') ? lwt : null,
     evaporatorApproach: evapApp,
     condenserApproach: condApp
   };
@@ -575,14 +697,27 @@ window.getReportBlock = function(context) {
   const sup     = fv('supplyAir');
   const amb     = fv('ambient');
   const cfm     = fv('cfm');
+  const ewt     = fv('ewt');
+  const lwt     = fv('lwt');
   const suctSat = suctP !== null ? getSuctSat(selRef, suctP) : null;
   const liqSat  = liqP  !== null ? getLiqSat(selRef, liqP)  : null;
   const sh      = (suctSat !== null && suctL !== null) ? +(suctL - suctSat).toFixed(1)  : null;
   const sc      = (liqSat  !== null && liqL  !== null) ? +(liqSat - liqL).toFixed(1)   : null;
   const cr      = (suctP !== null && liqP !== null)    ? +((liqP + ATM_PSIA) / (suctP + ATM_PSIA)).toFixed(2) : null;
   const dt      = (ret !== null && sup !== null)       ? +(ret - sup).toFixed(1)         : null;
-  const evapApp = (ret !== null && suctSat !== null)   ? +(ret - suctSat).toFixed(1)    : null;
-  const condApp = (liqSat !== null && amb !== null)    ? +(liqSat - amb).toFixed(1)     : null;
+
+  let evapApp = null;
+  let condApp = null;
+  if (curMode === 'cool') {
+    evapApp = (ret !== null && suctSat !== null)   ? +(ret - suctSat).toFixed(1)    : null;
+    condApp = (liqSat !== null && amb !== null)     ? +(liqSat - amb).toFixed(1)     : null;
+  } else if (curMode === 'hp' && curSource === 'air') {
+    evapApp = (amb !== null && suctSat !== null)    ? +(amb - suctSat).toFixed(1)    : null;
+    condApp = (liqSat !== null && ret !== null)      ? +(liqSat - ret).toFixed(1)     : null;
+  } else if (curMode === 'hp' && curSource === 'water') {
+    evapApp = (ewt !== null && suctSat !== null)    ? +(ewt - suctSat).toFixed(1)    : null;
+    condApp = (liqSat !== null && lwt !== null)      ? +(liqSat - lwt).toFixed(1)     : null;
+  }
 
   const pad = (s, w = 20) => String(s).padEnd(w);
   const d   = (n, unit = '') => n === null ? '--' : n.toFixed(1) + (unit ? ' ' + unit : '');
@@ -611,6 +746,13 @@ window.getReportBlock = function(context) {
   const ref = REFS[selRef];
   lines.push(pad('Refrigerant:') + ref.name + (ref.zeotropic ? ' (zeotropic)' : ''));
   lines.push(pad('Metering:')    + (selSys === 'txv' ? 'TXV / EEV' : 'Fixed Orifice'));
+
+  // Mode line
+  let modeLabel = 'Cooling';
+  if (curMode === 'hp' && curSource === 'air')   modeLabel = 'Heat Pump (Air Source)';
+  if (curMode === 'hp' && curSource === 'water') modeLabel = 'Heat Pump (Water Source)';
+  lines.push(pad('Mode:') + modeLabel);
+
   lines.push('');
   lines.push('SUCTION');
   lines.push(pad('Suction:')  + d(suctP,   'PSIG'));
@@ -627,7 +769,8 @@ window.getReportBlock = function(context) {
   lines.push('SYSTEM');
   lines.push(pad('Compression Ratio:') + dc(cr));
 
-  const hasAirside = ret !== null || sup !== null || amb !== null || cfm !== null;
+  const isWater = curMode === 'hp' && curSource === 'water';
+  const hasAirside = ret !== null || sup !== null || amb !== null || ewt !== null || lwt !== null || cfm !== null;
   if (hasAirside) {
     lines.push('');
     lines.push('AIRSIDE');
@@ -635,7 +778,9 @@ window.getReportBlock = function(context) {
     if (sup !== null)     lines.push(pad('Supply Air:')      + d(sup,     'F'));
     if (dt !== null)      lines.push(pad('Delta T:')         + d(dt,      'F'));
     if (evapApp !== null) lines.push(pad('Evap Approach:')   + d(evapApp, 'F'));
-    if (amb !== null)     lines.push(pad('Outdoor Ambient:') + d(amb,     'F'));
+    if (!isWater && amb !== null) lines.push(pad('Outdoor Ambient:') + d(amb, 'F'));
+    if (isWater && ewt !== null)  lines.push(pad('Entering Water:')  + d(ewt, 'F'));
+    if (isWater && lwt !== null)  lines.push(pad('Leaving Water:')   + d(lwt, 'F'));
     if (condApp !== null) lines.push(pad('Cond Approach:')   + d(condApp, 'F'));
     if (cfm !== null)     lines.push(pad('CFM:')             + cfm.toFixed(0));
   }
