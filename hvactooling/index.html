@@ -2882,6 +2882,17 @@ function startTutSection(sectionKey) {
   nextTutStep();
 }
 
+function tutSwitchTab(tabName) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const tabEl = document.querySelector(`[data-tab="${tabName}"]`);
+  const panelEl = document.getElementById('tab-' + tabName);
+  if (tabEl) tabEl.classList.add('active');
+  if (panelEl) panelEl.classList.add('active');
+  if (tabName === 'queue') renderQueue();
+  if (tabName === 'parts') renderParts();
+}
+
 function nextTutStep() {
   tutCurrent++;
   if (tutCurrent >= tutSteps.length) {
@@ -2890,16 +2901,10 @@ function nextTutStep() {
   }
 
   const step = tutSteps[tutCurrent];
+  const stepSnapshot = tutCurrent;
 
   // Switch tab if needed
-  if (step.tab) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    const tabEl = document.querySelector(`[data-tab="${step.tab}"]`);
-    const panelEl = document.getElementById('tab-' + step.tab);
-    if (tabEl) tabEl.classList.add('active');
-    if (panelEl) panelEl.classList.add('active');
-  }
+  if (step.tab) tutSwitchTab(step.tab);
 
   if (step.noHighlight || !step.el) {
     showTutCentered(step);
@@ -2913,8 +2918,11 @@ function nextTutStep() {
   // Scroll target into view
   target.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-  // Position after scroll settles
-  setTimeout(() => positionTutorial(target, step), 220);
+  // Position after scroll settles — guard against rapid Next taps
+  setTimeout(() => {
+    if (tutCurrent !== stepSnapshot) return;
+    positionTutorial(target, step);
+  }, 220);
 }
 
 function showTutCentered(step) {
@@ -2984,8 +2992,10 @@ function positionTutorial(target, step) {
 function endTutorial() {
   const overlay = document.getElementById('tutOverlay');
   overlay.classList.remove('active');
-  // Reset highlight shadow for next use
-  document.getElementById('tutHighlight').style.boxShadow = '0 0 0 4000px rgba(0,0,0,.35)';
+  const highlight = document.getElementById('tutHighlight');
+  highlight.style.boxShadow = 'none';
+  highlight.style.width = '0';
+  highlight.style.height = '0';
   localStorage.setItem(TUT_KEY, Date.now());
   tutCurrent = -1;
   tutSteps = [];
