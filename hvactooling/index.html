@@ -857,7 +857,7 @@ function updateOwnerUI() {
   if (custField) custField.style.display = owner ? '' : 'none';
   // Show/hide owner-only menu items
   document.querySelectorAll('.owner-only').forEach(el => {
-    el.style.display = owner ? '' : 'none';
+    el.style.display = owner ? 'block' : 'none';
   });
 }
 
