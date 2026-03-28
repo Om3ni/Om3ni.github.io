@@ -48,6 +48,8 @@
 /* ── Menu + tabs positioning ── */
 header { border-bottom: none; }
 .tabs { top: 80px; } /* header (47) + menu bar (33) */
+.tab-pending { font-size: .52rem; color: var(--text-mute); letter-spacing: .04em; }
+.tab.locked { opacity: .4; pointer-events: none; }
 
 /* ── Menu bar ── */
 .menu-bar {
@@ -664,7 +666,7 @@ This software is provided "as is" without warranty of any kind, express or impli
     <div class="tab" data-tab="queue" onclick="switchTab(this)">Units</div>
     <div class="tab" data-tab="parts" onclick="switchTab(this)">Parts</div>
     <div class="tab" data-tab="tools" onclick="switchTab(this)">Tools</div>
-    <div class="tab" data-tab="resources" onclick="switchTab(this)">Ref</div>
+    <div class="tab" data-tab="resources" id="tabRef" onclick="switchTab(this)">Ref <span id="refPending" class="tab-pending">(pending)</span></div>
   </div>
 
   <!-- HOME TAB -->
@@ -1149,6 +1151,14 @@ function updateOwnerUI() {
   document.querySelectorAll('.owner-only').forEach(el => {
     el.style.display = owner ? 'block' : 'none';
   });
+  // Lock/unlock Ref tab
+  const refTab = document.getElementById('tabRef');
+  const refPending = document.getElementById('refPending');
+  if (refTab) {
+    if (owner) { refTab.classList.remove('locked'); }
+    else       { refTab.classList.add('locked'); }
+  }
+  if (refPending) refPending.style.display = owner ? 'none' : '';
 }
 
 function openOwnerModal() {
@@ -1645,6 +1655,7 @@ function forceTitle(el) {
 
 // ── Tabs ───────────────────────────────────────────────────────────────────
 function switchTab(el) {
+  if (el.dataset.tab === 'resources' && !isOwner()) return;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
