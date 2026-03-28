@@ -303,9 +303,9 @@ textarea { resize: vertical; min-height: 72px; }
   font-weight: 400; text-transform: none;
 }
 
-/* ── Model suggestions ── */
-.model-wrap { position: relative; }
-#model-suggestions {
+/* ── Suggestion dropdowns ── */
+.model-wrap, .make-wrap { position: relative; }
+#model-suggestions, #make-suggestions {
   display: none; position: absolute; left: 0; right: 0; top: 100%;
   background: var(--surface2); border: 1px solid var(--orange-lo);
   border-radius: 0 0 3px 3px; z-index: 50; max-height: 160px; overflow-y: auto;
@@ -648,12 +648,14 @@ This software is provided "as is" without warranty of any kind, express or impli
     </div>
 
     <div class="row2">
-      <div class="fg">
+      <div class="fg make-wrap">
         <label class="fl">Make</label>
         <input type="text" id="f-make"
           placeholder="CARRIER"
           autocomplete="off" autocorrect="off" spellcheck="false"
-          oninput="forceUpper(this)">
+          oninput="forceUpper(this); suggestMake(this)"
+          onblur="setTimeout(clearMakeSuggestions, 150)">
+        <div id="make-suggestions"></div>
       </div>
       <div class="fg">
         <label class="fl">Type</label>
@@ -1348,6 +1350,47 @@ function clearSuggestions() {
   if (list) { list.innerHTML = ''; list.style.display = 'none'; }
 }
 
+// ── Make suggestions ────────────────────────────────────────────────────────
+const MANUFACTURERS = [
+  'AAON','ADDISON','AIRE-FLO','AIREASE','AIRTEMP','AMANA','AMERICAN STANDARD',
+  'APRILAIRE','ARCOAIRE','ARMSTRONG AIR','BARD','BOSCH','BRADFORD WHITE','BRYANT',
+  'BURNHAM','CARRIER','CLIMATE MASTER','COLEMAN','COMFORTMAKER','CROWN BOILER',
+  'DAIKIN','DAIKIN APPLIED','DUCANE','FUJITSU','GIBSON','GOODMAN','GREE',
+  'GREENHECK','HEIL','HEATCRAFT','HITACHI','HTP','KEEPRITE','LENNOX','LG',
+  'LOCHINVAR','LUXAIRE','MCQUAY','MIDEA','MITSUBISHI ELECTRIC','MR. COOL',
+  'MULTISTACK','NAVIEN','NORTEK','PANASONIC','PAYNE','PEERLESS','PIONEER',
+  'QUEST','RHEEM','RINNAI','RUUD','SAMSUNG','SLANT FIN','SMARDT','TEMPSTAR',
+  'TRANE','TRIANGLE TUBE','VALENT','WEIL-MCLAIN','WESTINGHOUSE','YORK'
+];
+
+function suggestMake(el) {
+  const val = el.value.trim().toUpperCase();
+  const list = document.getElementById('make-suggestions');
+  if (val.length < 1) { clearMakeSuggestions(); return; }
+
+  const matches = MANUFACTURERS.filter(m => m.startsWith(val)).slice(0, 6);
+
+  if (!matches.length || (matches.length === 1 && matches[0] === val)) {
+    clearMakeSuggestions();
+    return;
+  }
+
+  list.innerHTML = matches.map(m =>
+    `<div class="suggestion-item" onmousedown="applyMake('${m}')">${m}</div>`
+  ).join('');
+  list.style.display = 'block';
+}
+
+function applyMake(make) {
+  document.getElementById('f-make').value = make;
+  clearMakeSuggestions();
+}
+
+function clearMakeSuggestions() {
+  const list = document.getElementById('make-suggestions');
+  if (list) { list.innerHTML = ''; list.style.display = 'none'; }
+}
+
 // ── Filter / belt builders ─────────────────────────────────────────────────
 function buildFilter() {
   const w = document.getElementById('f-fw').value.trim();
@@ -1460,6 +1503,8 @@ function clearForm() {
   document.getElementById('prev-f1').textContent = '';
   document.getElementById('prev-f2').textContent = '';
   document.getElementById('prev-b1').textContent = '';
+  clearMakeSuggestions();
+  clearSuggestions();
   // Clear inline modules
   moduleSlots = [];
   document.getElementById('module-list').innerHTML = '';
