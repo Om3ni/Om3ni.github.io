@@ -304,9 +304,14 @@ import { getSatTemp, getSatPressure, getRange, listRefrigerants } from '../refri
 const ATM_PSIA = 14.696;
 
 // ── Superheat target ranges by metering type
-const TARGETS = {
+const SH_TARGETS = {
   txv: { low: 8,  high: 16 },
   fo:  { low: 10, high: 18 }
+};
+// ── Subcooling target ranges by metering type
+const SC_TARGETS = {
+  txv: { low: 8,  high: 14 },
+  fo:  { low: 4,  high: 10 }
 };
 
 // ── State
@@ -569,12 +574,21 @@ window.recalc = function() {
   }
 
   // Superheat color
-  const tgt = TARGETS[selSys];
+  const shTgt = SH_TARGETS[selSys];
   let shColor = null;
   if (sh !== null) {
-    if (sh < tgt.low)       shColor = 'low';
-    else if (sh > tgt.high) shColor = 'high';
-    else                     shColor = 'ok';
+    if (sh < shTgt.low)       shColor = 'low';
+    else if (sh > shTgt.high) shColor = 'high';
+    else                       shColor = 'ok';
+  }
+
+  // Subcooling color
+  const scTgt = SC_TARGETS[selSys];
+  let scColor = null;
+  if (sc !== null) {
+    if (sc < scTgt.low)       scColor = 'low';
+    else if (sc > scTgt.high) scColor = 'high';
+    else                       scColor = 'ok';
   }
 
   // Update suction section
@@ -587,7 +601,7 @@ window.recalc = function() {
   setRow('r-liq-pres', 'rv-liq-pres', liqP,   'PSIG', null);
   setRow('r-liq-sat',  'rv-liq-sat',  liqSat,  'F',   null);
   setRow('r-liq-line', 'rv-liq-line', liqL,    'F',   null);
-  setRow('r-sc',       'rv-sc',       sc,       'F',   null);
+  setRow('r-sc',       'rv-sc',       sc,       'F',   scColor);
 
   // Compression ratio
   if (cr !== null) {
