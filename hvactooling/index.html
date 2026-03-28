@@ -317,6 +317,69 @@ textarea { resize: vertical; min-height: 72px; }
 }
 .suggestion-item:active { background: var(--orange-dim); color: var(--orange-hi); }
 
+/* ── Service manual search button ── */
+.svc-search {
+  display: none; margin-top: 6px;
+}
+.svc-search.visible { display: block; }
+.svc-search-btn {
+  width: 100%; padding: 9px 12px; border-radius: 3px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text-dim); font-family: var(--mono);
+  font-size: .72rem; letter-spacing: .04em; cursor: pointer; transition: all .12s;
+  text-align: left;
+}
+.svc-search-btn:active { border-color: var(--orange); color: var(--orange-hi); }
+
+/* ── Resources tab ── */
+.res-category {
+  margin-bottom: 6px; border: 1px solid var(--border); border-radius: 4px;
+  overflow: hidden;
+}
+.res-cat-hdr {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; background: var(--surface); cursor: pointer;
+  border-left: 3px solid var(--orange-lo); transition: border-color .12s;
+}
+.res-cat-hdr:active { border-left-color: var(--orange); }
+.res-cat-hdr .arrow {
+  font-size: .6rem; color: var(--text-mute); transition: transform .2s;
+}
+.res-category.open .res-cat-hdr .arrow { transform: rotate(90deg); }
+.res-cat-title {
+  font-family: var(--ui); font-weight: 700; font-size: .76rem;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim);
+}
+.res-cat-body {
+  display: none; padding: 0 14px 10px; background: var(--surface);
+}
+.res-category.open .res-cat-body { display: block; }
+.res-link {
+  display: block; padding: 9px 0; border-bottom: 1px solid var(--border);
+  text-decoration: none; transition: color .1s;
+}
+.res-link:last-child { border-bottom: none; }
+.res-link-title {
+  font-family: var(--mono); font-size: .78rem; color: var(--orange-lo);
+  letter-spacing: .02em;
+}
+.res-link-desc {
+  font-family: var(--mono); font-size: .64rem; color: var(--text-mute);
+  margin-top: 2px; letter-spacing: .02em;
+}
+.res-link:active .res-link-title { color: var(--orange-hi); }
+.res-placeholder {
+  font-family: var(--mono); font-size: .72rem; color: var(--text-mute);
+  font-style: italic; padding: 8px 0;
+}
+.res-oem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding-top: 6px; }
+.res-oem-btn {
+  padding: 9px 10px; border-radius: 3px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text-dim); font-family: var(--mono);
+  font-size: .7rem; letter-spacing: .03em; cursor: pointer; text-decoration: none;
+  text-align: center; transition: all .1s; display: block;
+}
+.res-oem-btn:active { border-color: var(--orange); color: var(--orange-hi); }
+
 /* ── Job loader ── */
 .job-load-row { display: flex; gap: 6px; margin-bottom: 10px; }
 .job-load-row .btn { flex: 1; margin: 0; padding: 10px; font-size: .78rem; }
@@ -601,6 +664,7 @@ This software is provided "as is" without warranty of any kind, express or impli
     <div class="tab" data-tab="queue" onclick="switchTab(this)">Units</div>
     <div class="tab" data-tab="parts" onclick="switchTab(this)">Parts</div>
     <div class="tab" data-tab="tools" onclick="switchTab(this)">Tools</div>
+    <div class="tab" data-tab="resources" onclick="switchTab(this)">Ref</div>
   </div>
 
   <!-- HOME TAB -->
@@ -655,7 +719,7 @@ This software is provided "as is" without warranty of any kind, express or impli
         <input type="text" id="f-make"
           placeholder="CARRIER"
           autocomplete="off" autocorrect="off" spellcheck="false"
-          oninput="forceUpper(this); suggestMake(this)"
+          oninput="forceUpper(this); suggestMake(this); updateSvcSearch()"
           onblur="setTimeout(clearMakeSuggestions, 150)">
         <div id="make-suggestions"></div>
       </div>
@@ -672,9 +736,12 @@ This software is provided "as is" without warranty of any kind, express or impli
       <input type="text" id="f-model"
         placeholder="48TCED12F2A6A6F0G0"
         autocomplete="off" autocorrect="off" spellcheck="false"
-        oninput="forceUpper(this); suggestModel(this)"
+        oninput="forceUpper(this); suggestModel(this); updateSvcSearch()"
         onblur="setTimeout(clearSuggestions, 150)">
       <div id="model-suggestions"></div>
+      <div class="svc-search" id="svcSearch">
+        <button class="svc-search-btn" onclick="searchServiceManual()">Search service manual &rarr;</button>
+      </div>
     </div>
 
     <div class="fg">
@@ -868,6 +935,143 @@ This software is provided "as is" without warranty of any kind, express or impli
       <div class="calc-btn" onclick="openCalc('pressure-convert', 'Pressure Conversion')"><div class="calc-btn-name">Pressure Convert</div></div>
       <div class="calc-btn" onclick="openCalc('motor-convert', 'Motor Conversions')"><div class="calc-btn-name">Motor Convert</div></div>
     </div>
+  </div>
+
+  <!-- RESOURCES TAB -->
+  <div class="panel" id="tab-resources">
+
+    <div class="res-category">
+      <div class="res-cat-hdr" onclick="toggleResCategory(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="res-cat-title">Electrical</span>
+      </div>
+      <div class="res-cat-body">
+        <a class="res-link" href="https://www.ecmweb.com/content/article/20898372/nec-voltage-drop-recommendations" target="_blank" rel="noopener">
+          <div class="res-link-title">NEC Voltage Drop Recommendations</div>
+          <div class="res-link-desc">EC&M — Branch circuit and feeder voltage drop guidelines</div>
+        </a>
+        <a class="res-link" href="https://www.eaton.com/us/en-us/support/technical-resources.html" target="_blank" rel="noopener">
+          <div class="res-link-title">Eaton Technical Resources</div>
+          <div class="res-link-desc">Breakers, disconnects, motor protection reference</div>
+        </a>
+        <div class="res-placeholder">More articles coming soon</div>
+      </div>
+    </div>
+
+    <div class="res-category">
+      <div class="res-cat-hdr" onclick="toggleResCategory(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="res-cat-title">Refrigeration</span>
+      </div>
+      <div class="res-cat-body">
+        <a class="res-link" href="https://www.achrnews.com/articles/87035-superheat-and-subcooling" target="_blank" rel="noopener">
+          <div class="res-link-title">Superheat and Subcooling Basics</div>
+          <div class="res-link-desc">ACHR NEWS — Fundamentals of system charging</div>
+        </a>
+        <div class="res-placeholder">More articles coming soon</div>
+      </div>
+    </div>
+
+    <div class="res-category">
+      <div class="res-cat-hdr" onclick="toggleResCategory(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="res-cat-title">Airflow</span>
+      </div>
+      <div class="res-cat-body">
+        <a class="res-link" href="https://www.nci.com/articles/understanding-static-pressure" target="_blank" rel="noopener">
+          <div class="res-link-title">Understanding Static Pressure</div>
+          <div class="res-link-desc">NCI — Measuring and interpreting duct static pressure</div>
+        </a>
+        <div class="res-placeholder">More articles coming soon</div>
+      </div>
+    </div>
+
+    <div class="res-category">
+      <div class="res-cat-hdr" onclick="toggleResCategory(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="res-cat-title">Gas Heat</span>
+      </div>
+      <div class="res-cat-body">
+        <a class="res-link" href="https://www.trane.com/content/dam/Trane/Commercial/global/products-systems/equipment/gas-heating/gas-furnaces/literature/application-guide-gas-furnace-clarkdietrich-APP-SLR001-EN.pdf" target="_blank" rel="noopener">
+          <div class="res-link-title">Gas Furnace Application Guide</div>
+          <div class="res-link-desc">Trane — Combustion, venting, gas piping fundamentals</div>
+        </a>
+        <div class="res-placeholder">More articles coming soon</div>
+      </div>
+    </div>
+
+    <div class="res-category">
+      <div class="res-cat-hdr" onclick="toggleResCategory(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="res-cat-title">Heat Pumps</span>
+      </div>
+      <div class="res-cat-body">
+        <a class="res-link" href="https://www.achrnews.com/articles/150266-understanding-heat-pump-operation" target="_blank" rel="noopener">
+          <div class="res-link-title">Understanding Heat Pump Operation</div>
+          <div class="res-link-desc">ACHR NEWS — Reversing valve, defrost, auxiliary heat</div>
+        </a>
+        <div class="res-placeholder">More articles coming soon</div>
+      </div>
+    </div>
+
+    <div class="res-category">
+      <div class="res-cat-hdr" onclick="toggleResCategory(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="res-cat-title">Hydronics &amp; Pumps</span>
+      </div>
+      <div class="res-cat-body">
+        <div class="res-placeholder">Articles coming soon</div>
+      </div>
+    </div>
+
+    <div class="res-category">
+      <div class="res-cat-hdr" onclick="toggleResCategory(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="res-cat-title">Safety</span>
+      </div>
+      <div class="res-cat-body">
+        <a class="res-link" href="https://www.osha.gov/refrigerants" target="_blank" rel="noopener">
+          <div class="res-link-title">OSHA Refrigerant Safety</div>
+          <div class="res-link-desc">Handling, ventilation, exposure limits</div>
+        </a>
+        <a class="res-link" href="https://www.osha.gov/electrical" target="_blank" rel="noopener">
+          <div class="res-link-title">OSHA Electrical Safety</div>
+          <div class="res-link-desc">Lockout/tagout, arc flash, working on energized equipment</div>
+        </a>
+        <div class="res-placeholder">More articles coming soon</div>
+      </div>
+    </div>
+
+    <div class="res-category">
+      <div class="res-cat-hdr" onclick="toggleResCategory(this)">
+        <span class="arrow">&#9654;</span>
+        <span class="res-cat-title">Manufacturer Info</span>
+      </div>
+      <div class="res-cat-body">
+        <div class="res-oem-grid">
+          <a class="res-oem-btn" href="https://www.carrier.com" target="_blank" rel="noopener">Carrier</a>
+          <a class="res-oem-btn" href="https://www.trane.com" target="_blank" rel="noopener">Trane</a>
+          <a class="res-oem-btn" href="https://www.lennox.com" target="_blank" rel="noopener">Lennox</a>
+          <a class="res-oem-btn" href="https://www.york.com" target="_blank" rel="noopener">York</a>
+          <a class="res-oem-btn" href="https://www.rheem.com" target="_blank" rel="noopener">Rheem</a>
+          <a class="res-oem-btn" href="https://www.goodmanmfg.com" target="_blank" rel="noopener">Goodman</a>
+          <a class="res-oem-btn" href="https://www.daikincomfort.com" target="_blank" rel="noopener">Daikin</a>
+          <a class="res-oem-btn" href="https://www.mitsubishicomfort.com" target="_blank" rel="noopener">Mitsubishi</a>
+          <a class="res-oem-btn" href="https://www.fujitsugeneral.com" target="_blank" rel="noopener">Fujitsu</a>
+          <a class="res-oem-btn" href="https://www.bosch-thermotechnology.us" target="_blank" rel="noopener">Bosch</a>
+        </div>
+        <hr class="sec" style="margin:12px 0 8px">
+        <div style="font-family:var(--mono);font-size:.64rem;color:var(--text-mute);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;">Rep Locators</div>
+        <div class="res-oem-grid">
+          <a class="res-oem-btn" href="https://www.carrier.com/residential/en/us/find-a-dealer/" target="_blank" rel="noopener">Carrier Reps</a>
+          <a class="res-oem-btn" href="https://www.trane.com/commercial/north-america/us/en/contact-us/locate-sales-office.html" target="_blank" rel="noopener">Trane Reps</a>
+          <a class="res-oem-btn" href="https://www.lennox.com/dealers" target="_blank" rel="noopener">Lennox Reps</a>
+          <a class="res-oem-btn" href="https://www.york.com/for-your-business/find-a-rep" target="_blank" rel="noopener">York Reps</a>
+        </div>
+        <div class="res-placeholder">More OEMs coming soon</div>
+      </div>
+    </div>
+
   </div>
 
 
@@ -2552,6 +2756,31 @@ function closeTool() {
   document.getElementById('tool-frame-wrap').classList.remove('open');
   frame.src = 'about:blank';
   activeTool = null;
+}
+
+// ── Resources ───────────────────────────────────────────────────────────────
+function toggleResCategory(hdr) {
+  hdr.closest('.res-category').classList.toggle('open');
+}
+
+// ── Service manual search ───────────────────────────────────────────────────
+function updateSvcSearch() {
+  const make = document.getElementById('f-make').value.trim();
+  const model = document.getElementById('f-model').value.trim();
+  const el = document.getElementById('svcSearch');
+  if (make && model) {
+    el.classList.add('visible');
+  } else {
+    el.classList.remove('visible');
+  }
+}
+
+function searchServiceManual() {
+  const make = document.getElementById('f-make').value.trim();
+  const model = document.getElementById('f-model').value.trim();
+  if (!make || !model) return;
+  const q = encodeURIComponent(make + ' ' + model + ' service manual');
+  window.open('https://www.google.com/search?q=' + q, '_blank');
 }
 
 function getToolReportBlock(context) {
