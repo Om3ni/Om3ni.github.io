@@ -25,6 +25,64 @@
       "modules": [],
       "moduleStates": {},
       "moduleNames": []
+    },
+    {
+      "job": "260327-0084",
+      "unit": "1",
+      "name": "Swiftsure Eru",
+      "loc": "Roof",
+      "make": "VALENT",
+      "type": "ERU",
+      "model": "VXE-212-52D-25A-1-D2",
+      "serial": "26698872",
+      "fsize": "20x20x2\"",
+      "fqty": "12",
+      "f2size": "16x25x2\"",
+      "f2qty": "6",
+      "fchg": "N/A",
+      "belt": "DD",
+      "bqty": "",
+      "bchg": "N/A",
+      "working": "Y",
+      "done": "N",
+      "date": "3/28/2026",
+      "notes": "",
+      "modules": [
+        "REFRIGERATION ANALYSIS\n3/28/2026\n\n\nRefrigerant:        R-454B (zeotropic)\nMetering:           TXV / EEV\nMode:               Heat Pump (Air Source)\n\nSUCTION\nSuction:            70.0 PSIG\nSat Temp:           16.9 F (dew)\nLine Temp:          30.0 F\nSuperheat:          13.1 F\n\nLIQUID\nLiquid:             201.0 PSIG\nSat Temp:           75.4 F (bubble)\nLine Temp:          65.0 F\nSubcooling:         10.4 F\n\nSYSTEM\nCompression Ratio:  2.55\n\nAIRSIDE\nReturn Air:         69.0 F\nSupply Air:         98.0 F\nDelta T:            -29.0 F\nEvap Approach:      19.1 F\nOutdoor Ambient:    36.0 F\nCond Approach:      6.4 F"
+      ],
+      "moduleStates": {
+        "refrigeration": {
+          "refrigerant": "R-454B",
+          "zeotropic": true,
+          "meteringDevice": "txv",
+          "mode": "hp",
+          "source": "air",
+          "suctionPressure": 70,
+          "suctionSatTemp": 16.94,
+          "suctionLineTemp": 30,
+          "superheat": 13.1,
+          "liquidPressure": 201,
+          "liquidSatTemp": 75.44,
+          "liquidLineTemp": 65,
+          "subcooling": 10.4,
+          "compressionRatio": 2.55,
+          "returnAir": 69,
+          "supplyAir": 98,
+          "dt": -29,
+          "ambient": 36,
+          "cfm": null,
+          "ewt": null,
+          "lwt": null,
+          "evaporatorApproach": 19.1,
+          "condenserApproach": 6.4
+        }
+      },
+      "moduleNames": [
+        {
+          "name": "refrigeration",
+          "title": "Refrigeration"
+        }
+      ]
     }
   ]
 }
