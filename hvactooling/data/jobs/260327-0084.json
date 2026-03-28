@@ -1,0 +1,30 @@
+{
+  "job": "260327-0084",
+  "units": [
+    {
+      "job": "260327-0084",
+      "unit": "4",
+      "name": "Swiftsure Eru",
+      "loc": "Roof",
+      "make": "VALENT",
+      "type": "ERU",
+      "model": "VXE-112-36D-12.5A-1-D2",
+      "serial": "26898931",
+      "fsize": "",
+      "fqty": "",
+      "f2size": "",
+      "f2qty": "",
+      "fchg": "",
+      "belt": "",
+      "bqty": "",
+      "bchg": "",
+      "working": "",
+      "done": "",
+      "date": "3/28/2026",
+      "notes": "",
+      "modules": [],
+      "moduleStates": {},
+      "moduleNames": []
+    }
+  ]
+}
