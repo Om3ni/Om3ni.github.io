@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Field Entry</title>
+<title>Project Hermes
+</title>
 <link rel="stylesheet" href="base.css">
 <style>
 
@@ -518,7 +519,7 @@ This software is provided "as is" without warranty of any kind, express or impli
 
 <header>
   <div class="hdr-titles">
-    <div class="hdr-title">Field Entry</div>
+    <div class="hdr-title">Project Hermes</div>
     <div class="hdr-sub">HVAC Field Tools</div>
   </div>
   <button class="owner-btn" id="themeBtn" onclick="toggleTheme()">light</button>
@@ -638,7 +639,8 @@ This software is provided "as is" without warranty of any kind, express or impli
       <div class="fg">
         <label class="fl">Equipment Name</label>
         <input type="text" id="f-name" placeholder="Pkg RTU"
-          autocomplete="off" autocorrect="off">
+          autocomplete="off" autocorrect="off"
+          oninput="forceTitle(this)">
       </div>
       <div class="fg">
         <label class="fl">Location</label>
@@ -660,7 +662,8 @@ This software is provided "as is" without warranty of any kind, express or impli
       <div class="fg">
         <label class="fl">Type</label>
         <input type="text" id="f-type" placeholder="RTU"
-          autocomplete="off" autocorrect="off">
+          autocomplete="off" autocorrect="off"
+          oninput="forceUpper(this)">
       </div>
     </div>
 
@@ -1368,7 +1371,7 @@ function suggestMake(el) {
   const list = document.getElementById('make-suggestions');
   if (val.length < 1) { clearMakeSuggestions(); return; }
 
-  const matches = MANUFACTURERS.filter(m => m.startsWith(val)).slice(0, 6);
+  const matches = MANUFACTURERS.filter(m => m.includes(val)).slice(0, 6);
 
   if (!matches.length || (matches.length === 1 && matches[0] === val)) {
     clearMakeSuggestions();
@@ -1423,6 +1426,12 @@ function buildBelt() {
 function forceUpper(el) {
   const s = el.selectionStart, e = el.selectionEnd;
   el.value = el.value.toUpperCase();
+  el.setSelectionRange(s, e);
+}
+
+function forceTitle(el) {
+  const s = el.selectionStart, e = el.selectionEnd;
+  el.value = el.value.replace(/\b\w/g, c => c.toUpperCase());
   el.setSelectionRange(s, e);
 }
 
