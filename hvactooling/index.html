@@ -93,7 +93,7 @@ header { border-bottom: none; }
   border-radius: 4px; pointer-events: none;
   transition: left .3s ease, top .3s ease, width .3s ease, height .3s ease;
 }
-.tut-lifted { position: relative; z-index: 501; }
+.tut-lifted { position: relative !important; z-index: 501 !important; }
 .tut-bubble {
   position: fixed; z-index: 502;
   background: var(--surface); border: 1px solid var(--orange);
@@ -713,7 +713,7 @@ This software is provided "as is" without warranty of any kind, express or impli
 
     <div class="fg">
       <label class="fl">Changed?</label>
-      <div class="yn">
+      <div class="yn" id="yn-fchg">
         <button class="yn-b y" onclick="ynSet(this,'f-fchg','Y')">Y</button>
         <button class="yn-b n" onclick="ynSet(this,'f-fchg','N')">N</button>
         <button class="yn-b na" onclick="ynSet(this,'f-fchg','N/A')">N/A</button>
@@ -744,7 +744,7 @@ This software is provided "as is" without warranty of any kind, express or impli
 
     <div class="fg">
       <label class="fl">Changed?</label>
-      <div class="yn">
+      <div class="yn" id="yn-bchg">
         <button class="yn-b y" onclick="ynSet(this,'f-bchg','Y')">Y</button>
         <button class="yn-b n" onclick="ynSet(this,'f-bchg','N')">N</button>
         <button class="yn-b na" onclick="ynSet(this,'f-bchg','N/A')">N/A</button>
@@ -758,7 +758,7 @@ This software is provided "as is" without warranty of any kind, express or impli
     <div class="row2">
       <div class="fg">
         <label class="fl">Unit Working?</label>
-        <div class="yn">
+        <div class="yn" id="yn-working">
           <button class="yn-b y" onclick="ynSet(this,'f-working','Y')">Y</button>
           <button class="yn-b n" onclick="ynSet(this,'f-working','N')">N</button>
         </div>
@@ -766,7 +766,7 @@ This software is provided "as is" without warranty of any kind, express or impli
       </div>
       <div class="fg">
         <label class="fl">Maint Done?</label>
-        <div class="yn">
+        <div class="yn" id="yn-done">
           <button class="yn-b y" onclick="ynSet(this,'f-done','Y')">Y</button>
           <button class="yn-b n" onclick="ynSet(this,'f-done','N')">N</button>
         </div>
@@ -2717,20 +2717,22 @@ const TUT_SECTIONS = {
         setup: () => { tutHighlightGroup(['#f-bp','#f-bl','#f-bn','#f-bqty']); }
       },
 
-      // ── Y/N toggles ──
-      { type: 'info', tab: 'entry', el: '.yn', _groupHighlight: true,
-        text: 'Tap Y, N, or N/A for filter changed, belt changed, unit working, and maintenance complete. These show on the report. Try tapping a few.',
-        setup: () => {
-          const yns = document.querySelectorAll('.yn');
-          yns.forEach(el => liftElement(el));
-          const rects = [...yns].map(el => el.getBoundingClientRect());
-          const pad = 8;
-          const hl = document.getElementById('tutHighlight');
-          hl.style.left   = (Math.min(...rects.map(r => r.left)) - pad) + 'px';
-          hl.style.top    = (Math.min(...rects.map(r => r.top)) - pad) + 'px';
-          hl.style.width  = (Math.max(...rects.map(r => r.right)) - Math.min(...rects.map(r => r.left)) + pad * 2) + 'px';
-          hl.style.height = (Math.max(...rects.map(r => r.bottom)) - Math.min(...rects.map(r => r.top)) + pad * 2) + 'px';
-        }
+      // ── Y/N toggles — one step per toggle for clean positioning ──
+      { type: 'action', tab: 'entry', el: '#yn-fchg',
+        text: 'Was the filter changed? Tap Y, N, or N/A. These show on the report.',
+        check: () => !!document.getElementById('f-fchg').value
+      },
+      { type: 'action', tab: 'entry', el: '#yn-bchg',
+        text: 'Was the belt changed? Same deal — Y, N, or N/A.',
+        check: () => !!document.getElementById('f-bchg').value
+      },
+      { type: 'action', tab: 'entry', el: '#yn-working',
+        text: 'Is the unit working properly? Tap Y or N.',
+        check: () => !!document.getElementById('f-working').value
+      },
+      { type: 'action', tab: 'entry', el: '#yn-done',
+        text: 'Is maintenance done? Tap Y or N.',
+        check: () => !!document.getElementById('f-done').value
       },
 
       // ── Notes ──
@@ -2767,15 +2769,15 @@ const TUT_SECTIONS = {
         text: 'The File menu handles data: New Job, Import CSV, and three exports — Report, CSV, Parts List. Let\'s export the report you just built.' },
       { type: 'click', tab: null, el: '#menuFileBtn',
         text: 'Tap the File button to open the menu.',
-        setup: () => { liftElement(document.getElementById('menuFileBtn').parentElement); }
+        setup: () => { liftElement(document.querySelector('.menu-bar')); }
       },
       { type: 'action', tab: null, el: '#menuFile',
         text: 'Now tap "Export Report" to download your report as a .txt file.',
         check: () => !!window._tutExportDone,
         setup: () => {
           window._tutExportDone = false;
-          // Lift the whole menu container so dropdown is clickable
-          liftElement(document.getElementById('menuFileBtn').parentElement);
+          // Lift the entire menu bar so dropdown is clickable above overlay
+          liftElement(document.querySelector('.menu-bar'));
           const drop = document.getElementById('menuFile');
           const btn = document.getElementById('menuFileBtn');
           if (!drop.classList.contains('open')) {
