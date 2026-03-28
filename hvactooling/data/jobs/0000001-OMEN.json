@@ -1,0 +1,83 @@
+{
+  "job": "0000001-OMEN",
+  "units": [
+    {
+      "job": "0000001-OMEN",
+      "unit": "1",
+      "name": "Lobby",
+      "loc": "Roof",
+      "make": "VALENT",
+      "type": "RTU",
+      "model": "48LNA48",
+      "serial": "696969",
+      "fsize": "20x20x2\"",
+      "fqty": "6",
+      "f2size": "25x21x4\"",
+      "f2qty": "2",
+      "fchg": "Y",
+      "belt": "2B55",
+      "bqty": "1",
+      "bchg": "Y",
+      "working": "Y",
+      "done": "Y",
+      "date": "3/27/2026",
+      "notes": "This is a tesr",
+      "modules": [
+        "GAS HEAT\nBTU Input:            250000 BTU/h\nEfficiency:           84.0 %\nBTU Output:           210000 BTU/h\n\nReturn Air:           64.0 F\nSupply Air:           109.0 F\nDelta T:              45.0 F\nCFM:                  4321 CFM",
+        "REFRIGERATION ANALYSIS\n3/27/2026\n\n\nRefrigerant:        R-22\nMetering:           TXV / EEV\nMode:               Cooling\n\nSUCTION\nSuction:            59.0 PSIG\nSat Temp:           33.1 F\nLine Temp:          46.0 F\nSuperheat:          12.9 F\n\nLIQUID\nLiquid:             182.0 PSIG\nSat Temp:           95.1 F\nLine Temp:          85.0 F\nSubcooling:         10.1 F\n\nSYSTEM\nCompression Ratio:  2.67\n\nAIRSIDE\nReturn Air:         64.0 F\nSupply Air:         44.0 F\nDelta T:            20.0 F\nEvap Approach:      30.9 F\nOutdoor Ambient:    73.0 F\nCond Approach:      22.1 F\nCFM:                4321"
+      ],
+      "moduleStates": {
+        "heat": {
+          "type": "gas",
+          "btuIn": 250000,
+          "eff": 84,
+          "btuOut": 210000,
+          "returnAir": 64,
+          "supplyAir": 109,
+          "dt": 45,
+          "cfm": 4320.9876543209875,
+          "volts": null,
+          "amps": null,
+          "watts": null,
+          "kw": null,
+          "phase": null
+        },
+        "refrigeration": {
+          "refrigerant": "R-22",
+          "zeotropic": false,
+          "meteringDevice": "txv",
+          "mode": "cool",
+          "source": "air",
+          "suctionPressure": 59,
+          "suctionSatTemp": 33.14,
+          "suctionLineTemp": 46,
+          "superheat": 12.9,
+          "liquidPressure": 182,
+          "liquidSatTemp": 95.07,
+          "liquidLineTemp": 85,
+          "subcooling": 10.1,
+          "compressionRatio": 2.67,
+          "returnAir": 64,
+          "supplyAir": 44,
+          "dt": 20,
+          "ambient": 73,
+          "cfm": 4320.9876543209875,
+          "ewt": null,
+          "lwt": null,
+          "evaporatorApproach": 30.9,
+          "condenserApproach": 22.1
+        }
+      },
+      "moduleNames": [
+        {
+          "name": "heat",
+          "title": "Heat"
+        },
+        {
+          "name": "refrigeration",
+          "title": "Refrigeration"
+        }
+      ]
+    }
+  ]
+}
