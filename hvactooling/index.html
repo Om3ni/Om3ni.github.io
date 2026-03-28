@@ -84,7 +84,7 @@ header { border-bottom: none; }
 /* ── Tutorial overlay ── */
 .tut-overlay {
   position: fixed; inset: 0; z-index: 500;
-  display: none; pointer-events: none;
+  display: none; pointer-events: auto; background: transparent;
 }
 .tut-overlay.active { display: block; }
 .tut-highlight {
@@ -93,9 +93,7 @@ header { border-bottom: none; }
   border-radius: 4px; pointer-events: none;
   transition: left .3s ease, top .3s ease, width .3s ease, height .3s ease;
 }
-.tut-highlight.interactive { pointer-events: auto; }
-.tut-highlight.interactive * { pointer-events: auto; }
-.tut-interact { display: none; }
+.tut-lifted { position: relative; z-index: 501; }
 .tut-bubble {
   position: fixed; z-index: 502;
   background: var(--surface); border: 1px solid var(--orange);
@@ -871,7 +869,6 @@ This software is provided "as is" without warranty of any kind, express or impli
 <!-- ══ TUTORIAL ══ -->
 <div class="tut-overlay" id="tutOverlay">
   <div class="tut-highlight" id="tutHighlight"></div>
-  <div class="tut-interact" id="tutInteract"></div>
   <div class="tut-bubble below" id="tutBubble">
     <div class="tut-step" id="tutStep"></div>
     <div class="tut-text" id="tutText"></div>
@@ -2721,12 +2718,24 @@ const TUT_SECTIONS = {
       },
 
       // ── Y/N toggles ──
-      { type: 'info', tab: 'entry', el: '.yn',
-        text: 'Tap Y, N, or N/A for filter changed, belt changed, unit working, and maintenance complete. These show on the report. Try tapping a few.' },
+      { type: 'info', tab: 'entry', el: '.yn', _groupHighlight: true,
+        text: 'Tap Y, N, or N/A for filter changed, belt changed, unit working, and maintenance complete. These show on the report. Try tapping a few.',
+        setup: () => {
+          const yns = document.querySelectorAll('.yn');
+          yns.forEach(el => liftElement(el));
+          const rects = [...yns].map(el => el.getBoundingClientRect());
+          const pad = 8;
+          const hl = document.getElementById('tutHighlight');
+          hl.style.left   = (Math.min(...rects.map(r => r.left)) - pad) + 'px';
+          hl.style.top    = (Math.min(...rects.map(r => r.top)) - pad) + 'px';
+          hl.style.width  = (Math.max(...rects.map(r => r.right)) - Math.min(...rects.map(r => r.left)) + pad * 2) + 'px';
+          hl.style.height = (Math.max(...rects.map(r => r.bottom)) - Math.min(...rects.map(r => r.top)) + pad * 2) + 'px';
+        }
+      },
 
       // ── Notes ──
-      { type: 'info', tab: 'entry', el: '#f-notes',
-        text: 'Free-form notes — observations, deficiencies, parts needed. Shows on the report exactly as typed. Optional, but useful.' },
+      { type: 'input', tab: 'entry', el: '#f-notes',
+        text: 'Free-form notes — observations, deficiencies, parts needed. Shows on the report exactly as typed. Try typing something like "Compressor noisy".' },
 
       // ── Modules intro ──
       { type: 'info', tab: 'entry', el: '#module-list',
@@ -2757,12 +2766,16 @@ const TUT_SECTIONS = {
       { type: 'info', tab: 'queue', el: '#menuFileBtn',
         text: 'The File menu handles data: New Job, Import CSV, and three exports — Report, CSV, Parts List. Let\'s export the report you just built.' },
       { type: 'click', tab: null, el: '#menuFileBtn',
-        text: 'Tap the File button to open the menu.' },
+        text: 'Tap the File button to open the menu.',
+        setup: () => { liftElement(document.getElementById('menuFileBtn').parentElement); }
+      },
       { type: 'action', tab: null, el: '#menuFile',
         text: 'Now tap "Export Report" to download your report as a .txt file.',
         check: () => !!window._tutExportDone,
         setup: () => {
           window._tutExportDone = false;
+          // Lift the whole menu container so dropdown is clickable
+          liftElement(document.getElementById('menuFileBtn').parentElement);
           const drop = document.getElementById('menuFile');
           const btn = document.getElementById('menuFileBtn');
           if (!drop.classList.contains('open')) {
@@ -2880,6 +2893,7 @@ let tutCurrent = -1;
 let tutSectionTitle = '';
 let tutWatcher = null;       // interval for action/input checks
 let tutWaiting = false;      // true when waiting for user action
+let tutLifted = [];          // elements with .tut-lifted class
 
 function startTutSection(sectionKey) {
   closeMenus();
@@ -2909,11 +2923,29 @@ function clearTutWatcher() {
   if (tutWatcher) { clearInterval(tutWatcher); tutWatcher = null; }
 }
 
+function clearTutLifted() {
+  tutLifted.forEach(el => el.classList.remove('tut-lifted'));
+  tutLifted = [];
+}
+
+function liftElement(el) {
+  el.classList.add('tut-lifted');
+  tutLifted.push(el);
+}
+
+function liftElements(selectors) {
+  selectors.forEach(s => {
+    const el = document.querySelector(s);
+    if (el) liftElement(el);
+  });
+}
+
 function nextTutStep() {
   // If waiting for user action and they hit Next, ignore unless done
   if (tutWaiting) return;
 
   clearTutWatcher();
+  clearTutLifted();
   tutCurrent++;
   if (tutCurrent >= tutSteps.length) { endTutorial(); return; }
 
@@ -2954,7 +2986,6 @@ function advanceStep() {
 
 function showTutCentered(step) {
   const hl = document.getElementById('tutHighlight');
-  const interact = document.getElementById('tutInteract');
   const bubble = document.getElementById('tutBubble');
   const stepEl = document.getElementById('tutStep');
   const textEl = document.getElementById('tutText');
@@ -2963,7 +2994,6 @@ function showTutCentered(step) {
   hl.style.boxShadow = '0 0 0 4000px rgba(0,0,0,.45)';
   hl.style.width = '0'; hl.style.height = '0';
   hl.style.left = '50%'; hl.style.top = '50%';
-  interact.style.width = '0'; interact.style.height = '0';
 
   stepEl.textContent = `${tutSectionTitle} — ${tutCurrent + 1} / ${tutSteps.length}`;
   textEl.textContent = step.text;
@@ -2981,7 +3011,6 @@ function showTutCentered(step) {
 function showTutOnElement(target, step) {
   const rect = target.getBoundingClientRect();
   const hl = document.getElementById('tutHighlight');
-  const interact = document.getElementById('tutInteract');
   const bubble = document.getElementById('tutBubble');
   const stepEl = document.getElementById('tutStep');
   const textEl = document.getElementById('tutText');
@@ -2989,7 +3018,7 @@ function showTutOnElement(target, step) {
 
   const pad = 8;
   // If setup already placed a custom highlight group, don't overwrite
-  if (!step.setup || !step._groupHighlight) {
+  if (!step._groupHighlight) {
     hl.style.left   = (rect.left - pad) + 'px';
     hl.style.top    = (rect.top - pad) + 'px';
     hl.style.width  = (rect.width + pad * 2) + 'px';
@@ -2997,15 +3026,9 @@ function showTutOnElement(target, step) {
   }
   hl.style.boxShadow = '0 0 0 4000px rgba(0,0,0,.45)';
 
-  // Interactive poke-through — let user interact with highlighted area
+  // Lift target above overlay so user can interact with it
   if (step.type === 'input' || step.type === 'click' || step.type === 'action') {
-    const hlRect = hl.getBoundingClientRect();
-    interact.style.left   = hlRect.left + 'px';
-    interact.style.top    = hlRect.top + 'px';
-    interact.style.width  = hlRect.width + 'px';
-    interact.style.height = hlRect.height + 'px';
-  } else {
-    interact.style.width = '0'; interact.style.height = '0';
+    if (!step._groupHighlight) liftElement(target);
   }
 
   stepEl.textContent = `${tutSectionTitle} — ${tutCurrent + 1} / ${tutSteps.length}`;
@@ -3086,7 +3109,8 @@ function showTutOnElement(target, step) {
 
 // Highlight a group of elements (e.g. all filter fields)
 function tutHighlightGroup(selectors) {
-  const rects = selectors.map(s => document.querySelector(s)).filter(Boolean).map(e => e.getBoundingClientRect());
+  const els = selectors.map(s => document.querySelector(s)).filter(Boolean);
+  const rects = els.map(e => e.getBoundingClientRect());
   if (!rects.length) return;
   const left   = Math.min(...rects.map(r => r.left));
   const top    = Math.min(...rects.map(r => r.top));
@@ -3098,24 +3122,19 @@ function tutHighlightGroup(selectors) {
   hl.style.top    = (top - pad) + 'px';
   hl.style.width  = (right - left + pad * 2) + 'px';
   hl.style.height = (bottom - top + pad * 2) + 'px';
-  // Also size the interact layer
-  const interact = document.getElementById('tutInteract');
-  interact.style.left   = (left - pad) + 'px';
-  interact.style.top    = (top - pad) + 'px';
-  interact.style.width  = (right - left + pad * 2) + 'px';
-  interact.style.height = (bottom - top + pad * 2) + 'px';
+  // Lift all group elements above the overlay
+  els.forEach(el => liftElement(el));
 }
 
 function endTutorial() {
   clearTutWatcher();
+  clearTutLifted();
   tutWaiting = false;
   const overlay = document.getElementById('tutOverlay');
   overlay.classList.remove('active');
   const hl = document.getElementById('tutHighlight');
   hl.style.boxShadow = 'none';
   hl.style.width = '0'; hl.style.height = '0';
-  const interact = document.getElementById('tutInteract');
-  interact.style.width = '0'; interact.style.height = '0';
   localStorage.setItem(TUT_KEY, Date.now());
   tutCurrent = -1;
   tutSteps = [];
