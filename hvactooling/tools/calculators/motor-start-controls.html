@@ -1010,7 +1010,7 @@ document.getElementById('btnPrint').addEventListener('click', function() {
   var w = window.open('','_blank');
   w.document.write('<html><head><title>Field Report</title><style>');
   w.document.write('body{font-family:monospace;font-size:13px;padding:24px;white-space:pre;color:#000;background:#fff}');
-  w.document.write('</style></head><body>' + text.replace(/</g,'&lt;') + '</body></html>');
+  w.document.write('<\/style><\/head><body>' + text.replace(/</g,'&lt;') + '<\/body><\/html>');
   w.document.close(); w.print();
 });
 
