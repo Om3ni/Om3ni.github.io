@@ -36,9 +36,6 @@
   /* Fonts */
   --mono:       'Share Tech Mono', monospace;
   --ui:         'Rajdhani', sans-serif;
-
-  /* Nav width — consumed by nav.css and page layout */
-  --nav-width:  224px;
 }
 
 /* ── Reset ── */
