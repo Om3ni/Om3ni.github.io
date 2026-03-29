@@ -9,3 +9,22 @@
   --orange-lo:  #1a4a7a;
   --orange-dim: #0a1a2e;
 }
+
+/* ── Tier badge in calculator headers ── */
+.hdr-tier {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: .5rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+/* Hardcoded hex — calc.css remaps --orange to blue, so we can't use vars here */
+.hdr-tier.t1 { color: #909090; border: 1px solid #606060; }
+.hdr-tier.t2 { color: #4a9de8; border: 1px solid #1a4a7a; }
+.hdr-tier.t3 { color: #e86d10; border: 1px solid #9a4a00; }
+[data-theme="light"] .hdr-tier.t1 { color: #707070; border-color: #a0a0a0; }
