@@ -7,6 +7,42 @@
 <link rel="stylesheet" href="../../base.css">
 <link rel="stylesheet" href="calc.css">
 <style>
+/* ── How to measure ── */
+.how-toggle {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 8px 12px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 3px; margin-bottom: 10px; user-select: none;
+  transition: border-color .15s;
+}
+.how-toggle:hover { border-color: var(--orange-lo); }
+.how-toggle-icon { font-size: .7rem; transition: transform .2s; display: inline-block; color: var(--orange); }
+.how-toggle.open .how-toggle-icon { transform: rotate(90deg); }
+.how-toggle-text { font-family: var(--mono); font-size: .65rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-mute); }
+.how-body { display: none; margin-bottom: 14px; }
+.how-body.open { display: block; }
+.how-method {
+  padding: 10px 12px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 3px; margin-bottom: 6px;
+}
+.how-method-title {
+  font-family: var(--mono); font-size: .65rem; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--orange-hi);
+  margin-bottom: 4px;
+}
+.how-method-body {
+  font-family: var(--mono); font-size: .62rem; color: var(--text-dim);
+  line-height: 1.6;
+}
+.how-method-body ol { margin: 4px 0 0; padding-left: 16px; }
+.how-method-body li { margin-bottom: 3px; }
+.how-method-body .how-note {
+  margin-top: 6px; padding: 4px 8px; background: var(--surface2);
+  border-left: 2px solid var(--orange-lo); font-size: .58rem; color: var(--text-mute);
+}
+.how-groove-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: .6rem; }
+.how-groove-table th { background: var(--surface2); color: var(--text-mute); font-size: .52rem; letter-spacing: .1em; text-transform: uppercase; padding: 4px 6px; text-align: left; border: 1px solid var(--border); }
+.how-groove-table td { padding: 4px 6px; border: 1px solid var(--border); color: var(--text); }
+
 .belt-match-grid { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
 .belt-match {
   display: flex; align-items: center; justify-content: space-between;
@@ -42,6 +78,76 @@
   </div>
 </header>
 <main>
+
+  <!-- How to Measure -->
+  <div class="how-toggle" id="howToggle" onclick="document.getElementById('howToggle').classList.toggle('open'); document.getElementById('howBody').classList.toggle('open');">
+    <span class="how-toggle-icon">▶</span>
+    <span class="how-toggle-text">How to Measure Pulleys</span>
+  </div>
+  <div class="how-body" id="howBody">
+
+    <div class="how-method">
+      <div class="how-method-title">Method 1 — String Wrap (No Tools Required)</div>
+      <div class="how-method-body">
+        <ol>
+          <li>Wrap a piece of string or wire around the pulley <strong>in the groove</strong> where the belt sits — not the outer rim</li>
+          <li>Mark or cut the string where it meets itself</li>
+          <li>Lay the string flat and measure the length — this is the <strong>pitch circumference</strong></li>
+          <li>Divide by π (3.14159) to get the <strong>pitch diameter</strong></li>
+        </ol>
+        <div class="how-note">Most accurate field method without calipers. Works on any sheave regardless of number of grooves.</div>
+      </div>
+    </div>
+
+    <div class="how-method">
+      <div class="how-method-title">Method 2 — Calipers (Most Accurate)</div>
+      <div class="how-method-body">
+        <ol>
+          <li>Measure across the <strong>outside diameter (OD)</strong> of the pulley with calipers</li>
+          <li>Measure the <strong>groove depth</strong> from the outer rim down to the bottom of the V-groove</li>
+          <li>Pitch diameter = OD − (2 × groove depth)</li>
+        </ol>
+        <div class="how-note">Standard groove depths by belt section:</div>
+        <table class="how-groove-table">
+          <tr><th>Section</th><th>Top Width</th><th>Groove Depth</th><th>OD → Pitch</th></tr>
+          <tr><td>A</td><td>½"</td><td>5/16" (0.31")</td><td>Subtract 0.63"</td></tr>
+          <tr><td>B</td><td>21/32"</td><td>13/32" (0.41")</td><td>Subtract 0.81"</td></tr>
+          <tr><td>C</td><td>7/8"</td><td>17/32" (0.53")</td><td>Subtract 1.06"</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="how-method">
+      <div class="how-method-title">Method 3 — Tape Measure (Quick Estimate)</div>
+      <div class="how-method-body">
+        <ol>
+          <li>Measure straight across the <strong>outer rim</strong> of the pulley with a tape measure — this is the OD</li>
+          <li>Use the depth gauge on your tape measure housing (or a small ruler) to measure the groove depth</li>
+          <li>Pitch diameter = OD − (2 × groove depth)</li>
+        </ol>
+        <div class="how-note">Less precise than calipers but usually good enough for belt matching. If in doubt, round to the nearest ¼".</div>
+      </div>
+    </div>
+
+    <div class="how-method">
+      <div class="how-method-title">Center Distance</div>
+      <div class="how-method-body">
+        <ol>
+          <li>Measure from the <strong>center of one shaft</strong> to the <strong>center of the other shaft</strong></li>
+          <li>If you can't access the shafts, measure edge-to-edge between pulleys and add half of each pulley's OD</li>
+        </ol>
+        <div class="how-note">If you have the old belt and it's not stretched: lay it flat, measure the inside length, and enter that directly as pitch length instead of using the calculator formula.</div>
+      </div>
+    </div>
+
+    <div class="how-method">
+      <div class="how-method-title">Sheave Stamping Shortcut</div>
+      <div class="how-method-body">
+        Check the sheave for a stamped part number — many manufacturers stamp the pitch diameter or a catalog number on the hub or rim. Common formats: <strong>AK41</strong> (A section, 4.1" PD), <strong>BK52</strong> (B section, 5.2" PD). If you can read the stamping, you don't need to measure.
+      </div>
+    </div>
+  </div>
+
   <div class="sec sec-flush">
     <div class="sec-lbl sec-lbl-flush">Belt Section</div>
     <div class="phase-grid-3" id="sectionGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:14px;">
