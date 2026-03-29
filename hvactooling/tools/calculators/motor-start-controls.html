@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Motor Start Controls · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+.motor-type-row { display: grid; grid-template-columns: 1fr; gap: 5px; margin-bottom: 14px; }
+.motor-select {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 3px; color: var(--text); font-family: var(--mono);
+  font-size: .9rem; padding: 11px 11px; outline: none;
+  transition: border-color .15s; -webkit-appearance: none; appearance: none;
+  cursor: pointer;
+}
+.motor-select:focus { border-color: var(--orange); }
+.select-wrap { position: relative; }
+.select-wrap::after {
+  content: '▾'; position: absolute; right: 10px; top: 50%;
+  transform: translateY(-50%); color: var(--text-mute);
+  pointer-events: none; font-size: .8rem;
+}
+.tol-band {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 3px; margin-top: 3px;
+}
+.tol-label { font-family: var(--mono); font-size: .62rem; color: var(--text-mute); letter-spacing: .05em; text-transform: uppercase; }
+.tol-range { font-family: var(--mono); font-size: .82rem; color: var(--orange-hi); }
+.phase-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 14px; }
+.section-divider {
+  border: none; border-top: 1px solid var(--border);
+  margin: 12px 0 0;
+}
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-home" href="/" title="Site home">⌂</a>
+  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Motor Start Controls</div>
+    <div class="hdr-sub">Back EMF · Relay · Capacitor · VFD Sizing</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="bemf">Start / Cap</div>
+  <div class="tab" data-tab="vfd">VFD Sizing</div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB: BACK EMF / START RELAY / CAPACITOR
+     ═══════════════════════════════════════════ -->
+<div class="panel active" id="panel-bemf">
+
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Motor Type</div>
+    <div class="select-wrap">
+      <select class="motor-select" id="motorType">
+        <option value="">— Select motor type —</option>
+        <option value="psc">PSC — Permanent Split Capacitor</option>
+        <option value="csir">CSIR — Capacitor Start, Induction Run</option>
+        <option value="csr">CSR — Capacitor Start, Capacitor Run</option>
+        <option value="cscr">CSCR — Capacitor Start, Capacitor Run (dual)</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="bemfForm" style="display:none">
+
+    <!-- ── Common inputs ── -->
+    <div class="sec">
+      <div class="sec-lbl">Motor Nameplate</div>
+      <div class="input-pair">
+        <div class="fg">
+          <label class="fl">Voltage</label>
+          <div class="iw">
+            <input type="number" id="voltage" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">V</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Frequency</label>
+          <div class="iw">
+            <input type="number" id="freq" inputmode="decimal" placeholder="60">
+            <span class="iw-unit">Hz</span>
+          </div>
+        </div>
+      </div>
+      <div class="input-pair">
+        <div class="fg">
+          <label class="fl">FLA</label>
+          <div class="iw">
+            <input type="number" id="fla" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">A</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">LRA</label>
+          <div class="iw">
+            <input type="number" id="lra" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">A</span>
+          </div>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Motor HP</label>
+        <div class="iw">
+          <input type="number" id="hp" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">HP</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Run capacitor (PSC, CSR, CSCR) ── -->
+    <div class="sec" id="secRunCap">
+      <div class="sec-lbl">Run Capacitor (Installed)</div>
+      <div class="input-pair">
+        <div class="fg">
+          <label class="fl">Run Cap µF</label>
+          <div class="iw">
+            <input type="number" id="runCapUF" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">µF</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Rated Voltage</label>
+          <div class="iw">
+            <input type="number" id="runCapV" inputmode="decimal" placeholder="370">
+            <span class="iw-unit">VAC</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Start capacitor (CSIR, CSR, CSCR) ── -->
+    <div class="sec" id="secStartCap">
+      <div class="sec-lbl">Start Capacitor (Installed)</div>
+      <div class="input-pair">
+        <div class="fg">
+          <label class="fl">Start Cap µF</label>
+          <div class="iw">
+            <input type="number" id="startCapUF" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">µF</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Rated Voltage</label>
+          <div class="iw">
+            <input type="number" id="startCapV" inputmode="decimal" placeholder="250">
+            <span class="iw-unit">VAC</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Relay type (CSIR, CSR, CSCR) ── -->
+    <div class="sec" id="secRelay">
+      <div class="sec-lbl">Start Relay Type</div>
+      <div class="phase-grid" id="relayGrid">
+        <button class="phase-btn active" data-r="current">Current Sensing</button>
+        <button class="phase-btn" data-r="voltage">Voltage Sensing</button>
+      </div>
+    </div>
+
+    <!-- ── Winding resistance (optional) ── -->
+    <div class="sec">
+      <div class="optional-lbl">Optional — Winding Data</div>
+      <div class="input-pair">
+        <div class="fg">
+          <label class="fl">Start Winding Ω</label>
+          <div class="iw">
+            <input type="number" id="rStart" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">Ω</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Run Winding Ω</label>
+          <div class="iw">
+            <input type="number" id="rRun" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">Ω</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Results ── -->
+    <div class="results" id="bemfResults">
+
+      <div class="result-sec-hdr">Back EMF</div>
+      <div class="result-row dim" id="rowBemf">
+        <div class="rr-left">
+          <div class="rr-label">Estimated Back EMF</div>
+          <div class="rr-sub" id="subBemf">—</div>
+        </div>
+        <div class="rr-val" id="valBemf">— V</div>
+      </div>
+      <div class="result-row dim" id="rowDropout">
+        <div class="rr-left">
+          <div class="rr-label">Relay Dropout Target</div>
+          <div class="rr-sub" id="subDropout">~75% of supply when start winding drops</div>
+        </div>
+        <div class="rr-val" id="valDropout">— V</div>
+      </div>
+
+      <div class="result-sec-hdr" id="hdrRelay" style="display:none">Start Relay</div>
+      <div class="result-row dim" id="rowRelayPick">
+        <div class="rr-left">
+          <div class="rr-label">Relay Pickup</div>
+          <div class="rr-sub" id="subRelayPick">—</div>
+        </div>
+        <div class="rr-val" id="valRelayPick">—</div>
+      </div>
+      <div class="result-row dim" id="rowRelayDrop">
+        <div class="rr-left">
+          <div class="rr-label">Relay Dropout</div>
+          <div class="rr-sub" id="subRelayDrop">—</div>
+        </div>
+        <div class="rr-val" id="valRelayDrop">—</div>
+      </div>
+
+      <div class="result-sec-hdr" id="hdrStartCap2" style="display:none">Start Capacitor Sizing</div>
+      <div class="result-row dim" id="rowStartCapRec">
+        <div class="rr-left">
+          <div class="rr-label">Recommended Start Cap</div>
+          <div class="rr-sub" id="subStartCapRec">—</div>
+        </div>
+        <div class="rr-val" id="valStartCapRec">— µF</div>
+      </div>
+      <div class="result-row dim" id="rowStartCapChk">
+        <div class="rr-left">
+          <div class="rr-label">Installed Cap Check</div>
+          <div class="rr-sub" id="subStartCapChk">±10% tolerance band</div>
+        </div>
+        <div class="rr-val" id="valStartCapChk">—</div>
+      </div>
+      <div id="tolBandStart" style="display:none">
+        <div class="tol-band">
+          <span class="tol-label">Acceptable Range</span>
+          <span class="tol-range" id="tolRangeStart">—</span>
+        </div>
+      </div>
+
+      <div class="result-sec-hdr" id="hdrRunCap2" style="display:none">Run Capacitor Sizing</div>
+      <div class="result-row dim" id="rowRunCapRec">
+        <div class="rr-left">
+          <div class="rr-label">Recommended Run Cap</div>
+          <div class="rr-sub" id="subRunCapRec">—</div>
+        </div>
+        <div class="rr-val" id="valRunCapRec">— µF</div>
+      </div>
+      <div class="result-row dim" id="rowRunCapChk">
+        <div class="rr-left">
+          <div class="rr-label">Installed Cap Check</div>
+          <div class="rr-sub" id="subRunCapChk">±10% tolerance band</div>
+        </div>
+        <div class="rr-val" id="valRunCapChk">—</div>
+      </div>
+      <div id="tolBandRun" style="display:none">
+        <div class="tol-band">
+          <span class="tol-label">Acceptable Range</span>
+          <span class="tol-range" id="tolRangeRun">—</span>
+        </div>
+      </div>
+
+      <div class="result-sec-hdr">Capacitor Voltage Rating</div>
+      <div class="result-row dim" id="rowCapVRun">
+        <div class="rr-left">
+          <div class="rr-label">Run Cap Min Voltage</div>
+          <div class="rr-sub" id="subCapVRun">Should meet or exceed supply voltage</div>
+        </div>
+        <div class="rr-val" id="valCapVRun">—</div>
+      </div>
+      <div class="result-row dim" id="rowCapVStart">
+        <div class="rr-left">
+          <div class="rr-label">Start Cap Min Voltage</div>
+          <div class="rr-sub" id="subCapVStart">Typically 250VAC minimum</div>
+        </div>
+        <div class="rr-val" id="valCapVStart">—</div>
+      </div>
+    </div>
+
+    <div class="hint" id="bemfHint"></div>
+
+    <div id="standaloneBar" style="padding: 14px 0 0;">
+      <button class="btn btn-primary" id="btnReport">Generate Report</button>
+    </div>
+
+  </div><!-- /bemfForm -->
+</div><!-- /panel-bemf -->
+
+<!-- ═══════════════════════════════════════════
+     TAB: VFD SIZING
+     ═══════════════════════════════════════════ -->
+<div class="panel" id="panel-vfd">
+
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Motor Nameplate</div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Motor HP</label>
+        <div class="iw">
+          <input type="number" id="vfdHP" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">HP</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">FLA</label>
+        <div class="iw">
+          <input type="number" id="vfdFLA" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">A</span>
+        </div>
+      </div>
+    </div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Voltage</label>
+        <div class="iw">
+          <input type="number" id="vfdVoltage" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">V</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Power Factor</label>
+        <div class="iw">
+          <input type="number" id="vfdPF" inputmode="decimal" placeholder="0.85">
+          <span class="iw-unit">PF</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Phase</div>
+    <div class="phase-grid-3" id="vfdPhaseGrid">
+      <button class="phase-btn" data-vph="1">1Ø</button>
+      <button class="phase-btn active" data-vph="3">3Ø</button>
+      <button class="phase-btn" data-vph="1to3">1Ø→3Ø</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Derating Conditions</div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Ambient °F</label>
+        <div class="iw">
+          <input type="number" id="vfdAmbient" inputmode="decimal" placeholder="104">
+          <span class="iw-unit">°F</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Altitude</label>
+        <div class="iw">
+          <input type="number" id="vfdAltitude" inputmode="decimal" placeholder="0">
+          <span class="iw-unit">ft</span>
+        </div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Cable Length</label>
+      <div class="iw">
+        <input type="number" id="vfdCable" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">ft</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="results" id="vfdResults">
+    <div class="result-sec-hdr">Drive Sizing</div>
+    <div class="result-row dim" id="rowVfdKva">
+      <div class="rr-left">
+        <div class="rr-label">Required Drive kVA</div>
+        <div class="rr-sub" id="subVfdKva">—</div>
+      </div>
+      <div class="rr-val" id="valVfdKva">— kVA</div>
+    </div>
+    <div class="result-row dim" id="rowVfdCurrent">
+      <div class="rr-left">
+        <div class="rr-label">Drive Output Current</div>
+        <div class="rr-sub" id="subVfdCurrent">Must meet or exceed motor FLA</div>
+      </div>
+      <div class="rr-val" id="valVfdCurrent">— A</div>
+    </div>
+    <div class="result-row dim" id="rowVfdDerate">
+      <div class="rr-left">
+        <div class="rr-label">Derate Factor</div>
+        <div class="rr-sub" id="subVfdDerate">Ambient + altitude combined</div>
+      </div>
+      <div class="rr-val" id="valVfdDerate">—</div>
+    </div>
+    <div class="result-row dim" id="rowVfdDeRatedHP">
+      <div class="rr-left">
+        <div class="rr-label">Derated Drive HP</div>
+        <div class="rr-sub" id="subVfdDeRatedHP">Effective capacity after derating</div>
+      </div>
+      <div class="rr-val" id="valVfdDeRatedHP">— HP</div>
+    </div>
+
+    <div class="result-sec-hdr">Input Side</div>
+    <div class="result-row dim" id="rowVfdInputCurrent">
+      <div class="rr-left">
+        <div class="rr-label">Input Current Draw</div>
+        <div class="rr-sub" id="subVfdInputCurrent">—</div>
+      </div>
+      <div class="rr-val" id="valVfdInputCurrent">— A</div>
+    </div>
+    <div class="result-row dim" id="rowVfdBreaker">
+      <div class="rr-left">
+        <div class="rr-label">Disconnect / Breaker</div>
+        <div class="rr-sub" id="subVfdBreaker">125% of input current, next std size</div>
+      </div>
+      <div class="rr-val" id="valVfdBreaker">— A</div>
+    </div>
+
+    <div class="result-sec-hdr">Cable</div>
+    <div class="result-row dim" id="rowVfdCableFlag">
+      <div class="rr-left">
+        <div class="rr-label">Cable Length Flag</div>
+        <div class="rr-sub" id="subVfdCableFlag">Output reactor recommended &gt;100 ft</div>
+      </div>
+      <div class="rr-val" id="valVfdCableFlag">—</div>
+    </div>
+  </div>
+
+  <div class="hint" id="vfdHint"></div>
+
+  <div style="padding: 14px 0 0;">
+    <button class="btn btn-primary" id="btnVfdReport">Generate Report</button>
+  </div>
+
+</div><!-- /panel-vfd -->
+
+<!-- ═══════════════════════════════════════════
+     REPORT MODAL
+     ═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modalTitle">Field Report</div>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <pre class="report-pre" id="reportText"></pre>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btnCopy">Copy Text</button>
+      <button class="btn btn-primary" id="btnPrint">Print</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copied to clipboard</div>
+
+<script>
+'use strict';
+
+/* ── NEC standard breaker sizes ── */
+var STD_BREAKERS = [15,20,25,30,35,40,45,50,60,70,80,90,100,110,125,150,175,200,225,250,300,350,400,450,500,600];
+function nextStdBreaker(a) {
+  for (var i = 0; i < STD_BREAKERS.length; i++) { if (STD_BREAKERS[i] >= a) return STD_BREAKERS[i]; }
+  return null;
+}
+
+/* ── Tab switching ── */
+var tabs = document.querySelectorAll('.tab');
+var panels = document.querySelectorAll('.panel');
+tabs.forEach(function(t) {
+  t.addEventListener('click', function() {
+    tabs.forEach(function(x) { x.classList.remove('active'); });
+    panels.forEach(function(x) { x.classList.remove('active'); });
+    t.classList.add('active');
+    document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+  });
+});
+
+/* ══════════════════════════════════════════════
+   BACK EMF / CAP / RELAY PANEL
+   ══════════════════════════════════════════════ */
+var motorType = document.getElementById('motorType');
+var bemfForm = document.getElementById('bemfForm');
+var secRunCap = document.getElementById('secRunCap');
+var secStartCap = document.getElementById('secStartCap');
+var secRelay = document.getElementById('secRelay');
+
+/* Motor type definitions */
+var MOTOR_CONFIG = {
+  psc:  { runCap: true,  startCap: false, relay: false },
+  csir: { runCap: false, startCap: true,  relay: true  },
+  csr:  { runCap: true,  startCap: true,  relay: true  },
+  cscr: { runCap: true,  startCap: true,  relay: true  }
+};
+
+motorType.addEventListener('change', function() {
+  var t = motorType.value;
+  if (!t) { bemfForm.style.display = 'none'; return; }
+  bemfForm.style.display = 'block';
+  var cfg = MOTOR_CONFIG[t];
+  secRunCap.style.display   = cfg.runCap   ? 'block' : 'none';
+  secStartCap.style.display = cfg.startCap ? 'block' : 'none';
+  secRelay.style.display    = cfg.relay    ? 'block' : 'none';
+  bemfCalc();
+});
+
+/* Relay type buttons */
+var relayType = 'current';
+document.querySelectorAll('#relayGrid .phase-btn').forEach(function(b) {
+  b.addEventListener('click', function() {
+    relayType = b.dataset.r;
+    document.querySelectorAll('#relayGrid .phase-btn').forEach(function(x) {
+      x.classList.toggle('active', x.dataset.r === relayType);
+    });
+    bemfCalc();
+  });
+});
+
+/* All bemf inputs trigger calc */
+['voltage','freq','fla','lra','hp','runCapUF','runCapV','startCapUF','startCapV','rStart','rRun'].forEach(function(id) {
+  var el = document.getElementById(id);
+  if (el) el.addEventListener('input', bemfCalc);
+});
+
+function setRow(id, state, val, sub) {
+  var row = document.getElementById('row' + id);
+  var valEl = document.getElementById('val' + id);
+  var subEl = document.getElementById('sub' + id);
+  if (!row) return;
+  row.className = 'result-row ' + (state === 'dim' ? 'dim' : 'live');
+  if (state !== 'dim') {
+    valEl.className = 'rr-val ' + (state === 'live' ? 'live' : state);
+    row.classList.add(state === 'ok' || state === 'high' || state === 'warn' ? state : '');
+    if (state === 'ok')   { row.classList.add('ok');   }
+    if (state === 'high') { row.classList.add('high'); }
+    if (state === 'warn') { row.classList.add('warn'); }
+  } else {
+    valEl.className = 'rr-val';
+  }
+  if (val !== undefined) valEl.textContent = val;
+  if (sub !== undefined && subEl) subEl.textContent = sub;
+}
+
+function bemfCalc() {
+  var t = motorType.value;
+  if (!t) return;
+  var cfg = MOTOR_CONFIG[t];
+
+  var V    = parseFloat(document.getElementById('voltage').value);
+  var hz   = parseFloat(document.getElementById('freq').value) || 60;
+  var fla  = parseFloat(document.getElementById('fla').value);
+  var lra  = parseFloat(document.getElementById('lra').value);
+  var hpV  = parseFloat(document.getElementById('hp').value);
+  var rcUF = cfg.runCap   ? parseFloat(document.getElementById('runCapUF').value)  : NaN;
+  var rcV  = cfg.runCap   ? parseFloat(document.getElementById('runCapV').value)   : NaN;
+  var scUF = cfg.startCap ? parseFloat(document.getElementById('startCapUF').value): NaN;
+  var scV  = cfg.startCap ? parseFloat(document.getElementById('startCapV').value) : NaN;
+  var rS   = parseFloat(document.getElementById('rStart').value);
+  var rR   = parseFloat(document.getElementById('rRun').value);
+
+  var hint = document.getElementById('bemfHint');
+  hint.textContent = '';
+  hint.className = 'hint';
+
+  /* Need at minimum: voltage and FLA */
+  if (isNaN(V) || isNaN(fla)) {
+    ['Bemf','Dropout','RelayPick','RelayDrop','StartCapRec','StartCapChk','RunCapRec','RunCapChk','CapVRun','CapVStart'].forEach(function(k) { setRow(k, 'dim'); });
+    document.getElementById('hdrRelay').style.display = 'none';
+    document.getElementById('hdrStartCap2').style.display = 'none';
+    document.getElementById('hdrRunCap2').style.display = 'none';
+    document.getElementById('tolBandStart').style.display = 'none';
+    document.getElementById('tolBandRun').style.display = 'none';
+    return;
+  }
+
+  /* ── Back EMF estimate ──
+     At ~75% synchronous speed the start winding should drop.
+     Back EMF ≈ V_supply × (1 - slip) where slip ≈ 0.25 at dropout.
+     Without winding resistance: use 75% of supply as baseline.
+     With winding data: refine using voltage divider model. */
+  var bemf, dropout;
+  if (!isNaN(rS) && !isNaN(rR) && rS > 0 && rR > 0) {
+    /* Thevenin equivalent: back EMF felt across start winding */
+    var ratio = rS / (rS + rR);
+    bemf    = V * (1 - ratio * 0.25);  /* EMF at ~75% speed */
+    dropout = V * 0.75 * (rS / (rS + rR) + 0.5);
+    dropout = Math.min(dropout, V * 0.8);
+  } else {
+    bemf    = V * 0.75;
+    dropout = V * 0.75;
+  }
+
+  setRow('Bemf', 'live', bemf.toFixed(1) + ' V',
+    isNaN(rS) ? 'Estimated: 75% of supply (no winding data)' : 'Calculated from winding resistance ratio');
+  setRow('Dropout', 'live', dropout.toFixed(1) + ' V', 'Target relay dropout voltage');
+
+  /* ── Relay sizing ── */
+  if (cfg.relay) {
+    document.getElementById('hdrRelay').style.display = 'block';
+    if (relayType === 'current') {
+      /* Current sensing: picks up at LRA, drops when current falls to ~FLA range */
+      if (!isNaN(lra)) {
+        var pickupI  = lra;
+        var dropoutI = fla * 1.1;
+        setRow('RelayPick', 'live', pickupI.toFixed(1) + ' A', 'Current sensing: picks up at LRA');
+        setRow('RelayDrop', 'live', dropoutI.toFixed(1) + ' A', 'Drops when current falls to ~110% FLA');
+      } else {
+        setRow('RelayPick', 'dim', '— A', 'Enter LRA for current-sensing relay sizing');
+        setRow('RelayDrop', 'dim', '— A', '—');
+      }
+    } else {
+      /* Voltage sensing: picks up on back EMF, drops at ~75% supply */
+      setRow('RelayPick', 'live', (V * 0.4).toFixed(1) + ' V', 'Voltage sensing: coil energizes at start (~40% V)');
+      setRow('RelayDrop', 'live', dropout.toFixed(1) + ' V',   'Opens when back EMF reaches dropout threshold');
+    }
+  } else {
+    document.getElementById('hdrRelay').style.display = 'none';
+    setRow('RelayPick', 'dim');
+    setRow('RelayDrop', 'dim');
+  }
+
+  /* ── Start capacitor sizing ── */
+  if (cfg.startCap) {
+    document.getElementById('hdrStartCap2').style.display = 'block';
+    /* Rule of thumb: Start cap µF ≈ (HP × 2650) / V  for 60Hz single phase
+       Tighter: use LRA if available to size for torque boost */
+    var scRec;
+    if (!isNaN(hpV)) {
+      scRec = (hpV * 2650) / V;
+    } else if (!isNaN(lra)) {
+      scRec = (lra * 1000 * 0.9) / (2 * Math.PI * hz * V);
+    } else {
+      scRec = NaN;
+    }
+
+    if (!isNaN(scRec)) {
+      setRow('StartCapRec', 'live', scRec.toFixed(0) + ' µF',
+        !isNaN(hpV) ? 'HP × 2650 ÷ V rule of thumb' : 'Derived from LRA');
+
+      if (!isNaN(scUF)) {
+        var scLo = scRec * 0.90, scHi = scRec * 1.10;
+        document.getElementById('tolBandStart').style.display = 'block';
+        document.getElementById('tolRangeStart').textContent = scLo.toFixed(0) + ' – ' + scHi.toFixed(0) + ' µF';
+        if (scUF >= scLo && scUF <= scHi) {
+          setRow('StartCapChk', 'ok', 'PASS', 'Installed ' + scUF + ' µF within ±10%');
+          document.getElementById('rowStartCapChk').classList.add('ok');
+        } else if (scUF < scLo) {
+          setRow('StartCapChk', 'high', 'LOW', 'Installed ' + scUF + ' µF below range — weak start torque');
+          document.getElementById('rowStartCapChk').classList.add('high');
+        } else {
+          setRow('StartCapChk', 'warn', 'HIGH', 'Installed ' + scUF + ' µF above range — relay may not drop');
+          document.getElementById('rowStartCapChk').classList.add('warn');
+        }
+      } else {
+        setRow('StartCapChk', 'dim', '—', 'Enter installed µF to check');
+        document.getElementById('tolBandStart').style.display = 'none';
+      }
+    } else {
+      setRow('StartCapRec', 'dim', '— µF', 'Enter HP or LRA to calculate');
+      setRow('StartCapChk', 'dim');
+      document.getElementById('tolBandStart').style.display = 'none';
+    }
+  } else {
+    document.getElementById('hdrStartCap2').style.display = 'none';
+    document.getElementById('tolBandStart').style.display = 'none';
+  }
+
+  /* ── Run capacitor sizing ── */
+  if (cfg.runCap) {
+    document.getElementById('hdrRunCap2').style.display = 'block';
+    /* Rule of thumb: Run cap µF ≈ (HP × 2650) / V × 0.13 (roughly 13% of start cap value)
+       Or: µF = (FLA × 1000 × PF_correction) / (2π × Hz × V) where PF_correction ≈ 0.9 */
+    var rcRec;
+    if (!isNaN(hpV)) {
+      rcRec = (hpV * 2650 * 0.13) / V;
+    } else if (!isNaN(fla)) {
+      rcRec = (fla * 1000 * 0.9) / (2 * Math.PI * hz * V);
+    } else {
+      rcRec = NaN;
+    }
+
+    if (!isNaN(rcRec)) {
+      setRow('RunCapRec', 'live', rcRec.toFixed(1) + ' µF',
+        !isNaN(hpV) ? 'HP-based estimate' : 'FLA-based estimate');
+
+      if (!isNaN(rcUF)) {
+        var rcLo = rcRec * 0.90, rcHi = rcRec * 1.10;
+        document.getElementById('tolBandRun').style.display = 'block';
+        document.getElementById('tolRangeRun').textContent = rcLo.toFixed(1) + ' – ' + rcHi.toFixed(1) + ' µF';
+        if (rcUF >= rcLo && rcUF <= rcHi) {
+          setRow('RunCapChk', 'ok', 'PASS', 'Installed ' + rcUF + ' µF within ±10%');
+          document.getElementById('rowRunCapChk').classList.add('ok');
+        } else if (rcUF < rcLo) {
+          setRow('RunCapChk', 'high', 'LOW', 'Installed ' + rcUF + ' µF — reduced efficiency / run torque');
+          document.getElementById('rowRunCapChk').classList.add('high');
+        } else {
+          setRow('RunCapChk', 'warn', 'HIGH', 'Installed ' + rcUF + ' µF — overheating risk');
+          document.getElementById('rowRunCapChk').classList.add('warn');
+        }
+      } else {
+        setRow('RunCapChk', 'dim', '—', 'Enter installed µF to check');
+        document.getElementById('tolBandRun').style.display = 'none';
+      }
+    } else {
+      setRow('RunCapRec', 'dim', '— µF', 'Enter HP or FLA to calculate');
+      setRow('RunCapChk', 'dim');
+      document.getElementById('tolBandRun').style.display = 'none';
+    }
+  } else {
+    document.getElementById('hdrRunCap2').style.display = 'none';
+    document.getElementById('tolBandRun').style.display = 'none';
+  }
+
+  /* ── Capacitor voltage checks ── */
+  if (cfg.runCap) {
+    var minRunV = V >= 208 ? 370 : 250;
+    var rvState = (!isNaN(rcV) && rcV >= minRunV) ? 'ok' : (!isNaN(rcV) ? 'high' : 'dim');
+    setRow('CapVRun', rvState,
+      isNaN(rcV) ? '—' : rcV + ' VAC',
+      'Minimum recommended: ' + minRunV + ' VAC for ' + V + 'V supply');
+  } else {
+    setRow('CapVRun', 'dim');
+  }
+
+  if (cfg.startCap) {
+    var minStartV = 250;
+    var svState = (!isNaN(scV) && scV >= minStartV) ? 'ok' : (!isNaN(scV) ? 'high' : 'dim');
+    setRow('CapVStart', svState,
+      isNaN(scV) ? '—' : scV + ' VAC',
+      'Minimum: 250 VAC (typical start cap rating)');
+  } else {
+    setRow('CapVStart', 'dim');
+  }
+}
+
+/* ── BEMF Report ── */
+document.getElementById('btnReport').addEventListener('click', function() {
+  var t = motorType.value;
+  if (!t) { showHint('bemfHint', 'Select a motor type first.', 'warn'); return; }
+  var cfg = MOTOR_CONFIG[t];
+  var V   = document.getElementById('voltage').value || '—';
+  var hz  = document.getElementById('freq').value    || '60';
+  var fla = document.getElementById('fla').value     || '—';
+  var lra = document.getElementById('lra').value     || '—';
+  var hp  = document.getElementById('hp').value      || '—';
+  var rcUF = cfg.runCap   ? (document.getElementById('runCapUF').value  || '—') : 'N/A';
+  var rcV  = cfg.runCap   ? (document.getElementById('runCapV').value   || '—') : 'N/A';
+  var scUF = cfg.startCap ? (document.getElementById('startCapUF').value|| '—') : 'N/A';
+  var scV  = cfg.startCap ? (document.getElementById('startCapV').value || '—') : 'N/A';
+
+  var motorLabel = motorType.options[motorType.selectedIndex].text;
+  var ts = new Date().toLocaleString();
+
+  var lines = [
+    '══════════════════════════════════════════',
+    ' MOTOR START CONTROLS — FIELD REPORT',
+    ' ' + ts,
+    '══════════════════════════════════════════',
+    '',
+    'MOTOR TYPE : ' + motorLabel,
+    'HP         : ' + hp + ' HP',
+    'VOLTAGE    : ' + V + ' V   FREQUENCY : ' + hz + ' Hz',
+    'FLA        : ' + fla + ' A   LRA       : ' + lra + ' A',
+    '',
+    '── BACK EMF ───────────────────────────',
+    'Estimated Back EMF  : ' + document.getElementById('valBemf').textContent,
+    'Relay Dropout Target: ' + document.getElementById('valDropout').textContent,
+    ''
+  ];
+
+  if (cfg.relay) {
+    lines.push('── START RELAY (' + relayType.toUpperCase() + ' SENSING) ──────');
+    lines.push('Pickup  : ' + document.getElementById('valRelayPick').textContent);
+    lines.push('Dropout : ' + document.getElementById('valRelayDrop').textContent);
+    lines.push('');
+  }
+
+  if (cfg.startCap) {
+    lines.push('── START CAPACITOR ────────────────────');
+    lines.push('Recommended : ' + document.getElementById('valStartCapRec').textContent);
+    lines.push('Installed   : ' + scUF + ' µF @ ' + scV + ' VAC');
+    lines.push('Check       : ' + document.getElementById('valStartCapChk').textContent);
+    var tr = document.getElementById('tolRangeStart').textContent;
+    if (tr && tr !== '—') lines.push('±10% Range  : ' + tr);
+    lines.push('');
+  }
+
+  if (cfg.runCap) {
+    lines.push('── RUN CAPACITOR ──────────────────────');
+    lines.push('Recommended : ' + document.getElementById('valRunCapRec').textContent);
+    lines.push('Installed   : ' + rcUF + ' µF @ ' + rcV + ' VAC');
+    lines.push('Check       : ' + document.getElementById('valRunCapChk').textContent);
+    var trr = document.getElementById('tolRangeRun').textContent;
+    if (trr && trr !== '—') lines.push('±10% Range  : ' + trr);
+    lines.push('');
+  }
+
+  lines.push('── CAPACITOR VOLTAGE RATINGS ──────────');
+  if (cfg.runCap)   lines.push('Run Cap Min V  : ' + document.getElementById('valCapVRun').textContent);
+  if (cfg.startCap) lines.push('Start Cap Min V: ' + document.getElementById('valCapVStart').textContent);
+  lines.push('');
+  lines.push('══════════════════════════════════════════');
+  lines.push(' Generated by om3ni.github.io/hvactooling');
+  lines.push('══════════════════════════════════════════');
+
+  openModal('Motor Start Controls — Field Report', lines.join('\n'));
+});
+
+/* ══════════════════════════════════════════════
+   VFD PANEL
+   ══════════════════════════════════════════════ */
+var vfdPhase = 3;
+document.querySelectorAll('#vfdPhaseGrid .phase-btn').forEach(function(b) {
+  b.addEventListener('click', function() {
+    vfdPhase = b.dataset.vph === '1to3' ? '1to3' : parseInt(b.dataset.vph);
+    document.querySelectorAll('#vfdPhaseGrid .phase-btn').forEach(function(x) {
+      x.classList.toggle('active', x.dataset.vph === b.dataset.vph);
+    });
+    vfdCalc();
+  });
+});
+
+['vfdHP','vfdFLA','vfdVoltage','vfdPF','vfdAmbient','vfdAltitude','vfdCable'].forEach(function(id) {
+  document.getElementById(id).addEventListener('input', vfdCalc);
+});
+
+function setVfdRow(id, state, val, sub) {
+  var row = document.getElementById('row' + id);
+  var valEl = document.getElementById('val' + id);
+  var subEl = document.getElementById('sub' + id);
+  if (!row) return;
+  row.className = 'result-row ' + (state === 'dim' ? 'dim' : 'live');
+  if (state === 'ok')   row.classList.add('ok');
+  if (state === 'high') row.classList.add('high');
+  if (state === 'warn') row.classList.add('warn');
+  valEl.className = 'rr-val ' + (state !== 'dim' ? (state === 'live' ? 'live' : state) : '');
+  if (val !== undefined) valEl.textContent = val;
+  if (sub !== undefined && subEl) subEl.textContent = sub;
+}
+
+function vfdCalc() {
+  var hp      = parseFloat(document.getElementById('vfdHP').value);
+  var fla     = parseFloat(document.getElementById('vfdFLA').value);
+  var V       = parseFloat(document.getElementById('vfdVoltage').value);
+  var pf      = parseFloat(document.getElementById('vfdPF').value)  || 0.85;
+  var ambient = parseFloat(document.getElementById('vfdAmbient').value);
+  var alt     = parseFloat(document.getElementById('vfdAltitude').value) || 0;
+  var cable   = parseFloat(document.getElementById('vfdCable').value);
+
+  var vfdHint = document.getElementById('vfdHint');
+  vfdHint.textContent = '';
+
+  if (isNaN(hp) && isNaN(fla) || isNaN(V)) {
+    ['VfdKva','VfdCurrent','VfdDerate','VfdDeRatedHP','VfdInputCurrent','VfdBreaker','VfdCableFlag'].forEach(function(k){ setVfdRow(k,'dim'); });
+    return;
+  }
+
+  /* ── kVA ── */
+  var kva;
+  if (!isNaN(hp)) {
+    kva = (hp * 0.746) / pf;
+  } else {
+    var phases = (vfdPhase === '1to3' || vfdPhase === 1) ? 1 : 3;
+    kva = (V * fla * (phases === 3 ? 1.732 : 1)) / 1000;
+  }
+
+  /* ── Output current ── */
+  var outputI;
+  if (!isNaN(fla)) {
+    outputI = fla;
+  } else {
+    var ph3 = vfdPhase === 3 || vfdPhase === '1to3';
+    outputI = (kva * 1000) / (V * (ph3 ? 1.732 : 1));
+  }
+
+  setVfdRow('VfdKva', 'live', kva.toFixed(2) + ' kVA', 'Motor power ÷ power factor');
+  setVfdRow('VfdCurrent', 'live', outputI.toFixed(1) + ' A', 'Drive must be rated ≥ this value');
+
+  /* ── Derating ── */
+  var ambientDerate = 1.0;
+  if (!isNaN(ambient)) {
+    if (ambient > 104) ambientDerate = 1.0 - ((ambient - 104) / 18) * 0.02;
+    if (ambientDerate < 0.7) ambientDerate = 0.7;
+  }
+  var altDerate = 1.0;
+  if (alt > 3300) altDerate = 1.0 - ((alt - 3300) / 3300) * 0.03;
+  if (altDerate < 0.7) altDerate = 0.7;
+
+  var combinedDerate = ambientDerate * altDerate;
+  var deratedHP = !isNaN(hp) ? hp * combinedDerate : (kva * pf / 0.746) * combinedDerate;
+  var derateState = combinedDerate < 0.85 ? 'warn' : 'ok';
+
+  setVfdRow('VfdDerate', derateState,
+    (combinedDerate * 100).toFixed(1) + '%',
+    'Ambient: ' + (ambientDerate * 100).toFixed(1) + '% × Altitude: ' + (altDerate * 100).toFixed(1) + '%');
+  setVfdRow('VfdDeRatedHP', combinedDerate < 1 ? 'warn' : 'live',
+    deratedHP.toFixed(2) + ' HP',
+    combinedDerate < 1 ? 'Upsize drive if derated HP < motor HP' : 'No upsize required');
+
+  /* ── Input current ── */
+  var inputPhases = vfdPhase === '1to3' ? 1 : (vfdPhase === 1 ? 1 : 3);
+  var inputI = (kva * 1000) / (V * (inputPhases === 3 ? 1.732 : 1));
+  setVfdRow('VfdInputCurrent', 'live', inputI.toFixed(1) + ' A',
+    vfdPhase === '1to3' ? '1Ø input supplying 3Ø output — input current is higher' : '');
+
+  var breakerA = inputI * 1.25;
+  var stdBreaker = nextStdBreaker(breakerA);
+  setVfdRow('VfdBreaker', 'live',
+    stdBreaker ? stdBreaker + ' A' : '>600A',
+    '125% × ' + inputI.toFixed(1) + 'A = ' + breakerA.toFixed(1) + 'A → next std size');
+
+  /* ── Cable flag ── */
+  if (!isNaN(cable)) {
+    if (cable > 300) {
+      setVfdRow('VfdCableFlag', 'high', 'REACTOR REQ', 'Output reactor required >300 ft — dV/dt protection');
+    } else if (cable > 100) {
+      setVfdRow('VfdCableFlag', 'warn', 'REACTOR REC', 'Output reactor recommended >100 ft');
+    } else {
+      setVfdRow('VfdCableFlag', 'ok', 'OK', cable + ' ft — within limits');
+    }
+  } else {
+    setVfdRow('VfdCableFlag', 'dim', '—', 'Enter cable length to check');
+  }
+
+  if (vfdPhase === '1to3') {
+    vfdHint.textContent = 'NOTE: 1Ø→3Ø conversion — input current will be significantly higher than output. Verify input wiring and breaker for single-phase load.';
+    vfdHint.className = 'hint warn';
+  }
+}
+
+/* ── VFD Report ── */
+document.getElementById('btnVfdReport').addEventListener('click', function() {
+  var hp  = document.getElementById('vfdHP').value      || '—';
+  var fla = document.getElementById('vfdFLA').value     || '—';
+  var V   = document.getElementById('vfdVoltage').value  || '—';
+  var pf  = document.getElementById('vfdPF').value      || '0.85';
+  var amb = document.getElementById('vfdAmbient').value  || '—';
+  var alt = document.getElementById('vfdAltitude').value || '0';
+  var cab = document.getElementById('vfdCable').value    || '—';
+  var ph  = vfdPhase === '1to3' ? '1Ø → 3Ø' : vfdPhase + 'Ø';
+  var ts  = new Date().toLocaleString();
+
+  var lines = [
+    '══════════════════════════════════════════',
+    ' VFD SIZING — FIELD REPORT',
+    ' ' + ts,
+    '══════════════════════════════════════════',
+    '',
+    'MOTOR HP      : ' + hp + ' HP',
+    'MOTOR FLA     : ' + fla + ' A',
+    'SUPPLY VOLTAGE: ' + V + ' V',
+    'POWER FACTOR  : ' + pf,
+    'PHASE CONFIG  : ' + ph,
+    'AMBIENT TEMP  : ' + amb + ' °F',
+    'ALTITUDE      : ' + alt + ' ft',
+    'CABLE LENGTH  : ' + cab + ' ft',
+    '',
+    '── DRIVE SIZING ───────────────────────',
+    'Required kVA      : ' + document.getElementById('valVfdKva').textContent,
+    'Output Current    : ' + document.getElementById('valVfdCurrent').textContent,
+    'Derate Factor     : ' + document.getElementById('valVfdDerate').textContent,
+    'Derated Drive HP  : ' + document.getElementById('valVfdDeRatedHP').textContent,
+    '',
+    '── INPUT SIDE ─────────────────────────',
+    'Input Current     : ' + document.getElementById('valVfdInputCurrent').textContent,
+    'Disconnect/Breaker: ' + document.getElementById('valVfdBreaker').textContent,
+    '',
+    '── CABLE ──────────────────────────────',
+    'Cable Flag        : ' + document.getElementById('valVfdCableFlag').textContent,
+    '',
+    '══════════════════════════════════════════',
+    ' Generated by om3ni.github.io/hvactooling',
+    '══════════════════════════════════════════'
+  ];
+
+  openModal('VFD Sizing — Field Report', lines.join('\n'));
+});
+
+/* ══════════════════════════════════════════════
+   MODAL / TOAST / PRINT
+   ══════════════════════════════════════════════ */
+function openModal(title, text) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('reportText').textContent = text;
+  document.getElementById('reportModal').classList.add('open');
+}
+
+document.getElementById('modalClose').addEventListener('click', function() {
+  document.getElementById('reportModal').classList.remove('open');
+});
+document.getElementById('reportModal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+document.getElementById('btnCopy').addEventListener('click', function() {
+  var text = document.getElementById('reportText').textContent;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(showToast);
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); showToast();
+  }
+});
+
+document.getElementById('btnPrint').addEventListener('click', function() {
+  var text = document.getElementById('reportText').textContent;
+  var w = window.open('','_blank');
+  w.document.write('<html><head><title>Field Report</title><style>');
+  w.document.write('body{font-family:monospace;font-size:13px;padding:24px;white-space:pre;color:#000;background:#fff}');
+  w.document.write('</style></head><body>' + text.replace(/</g,'&lt;') + '</body></html>');
+  w.document.close(); w.print();
+});
+
+function showToast() {
+  var t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 1800);
+}
+
+function showHint(id, msg, cls) {
+  var el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'hint ' + (cls || '');
+}
+
+</script>
+</body>
+</html>
