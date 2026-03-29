@@ -666,7 +666,7 @@ This software is provided "as is" without warranty of any kind, express or impli
     <div class="tab" data-tab="queue" onclick="switchTab(this)">Units</div>
     <div class="tab" data-tab="parts" onclick="switchTab(this)">Parts</div>
     <div class="tab" data-tab="tools" onclick="switchTab(this)">Tools</div>
-    <div class="tab" data-tab="resources" id="tabRef" onclick="switchTab(this)">Ref <span id="refPending" class="tab-pending">(pending)</span></div>
+    <div class="tab" data-tab="resources" id="tabRef" onclick="switchTab(this)">References<span id="refPending" class="tab-pending">(pending)</span></div>
   </div>
 
   <!-- HOME TAB -->
@@ -910,7 +910,7 @@ This software is provided "as is" without warranty of any kind, express or impli
       <div class="tool-btn" onclick="openTool('motors', 'Motor Analysis')">
         <div>
           <div class="tool-btn-name">Motors</div>
-          <div class="tool-btn-desc">PSC · 3-Phase · ECM · Windings · Insulation</div>
+          <div class="tool-btn-desc">PSC · 3-Phase · ECM · Compressor · Insulation</div>
         </div>
       </div>
     </div>
@@ -2255,8 +2255,16 @@ function restoreModuleState(mid, moduleName, state) {
       set('psc-w-cs', wind.cs);
       set('psc-w-rs', wind.rs);
       set('psc-meg-v', ins.testVoltage);
-      set('psc-meg-now', ins.reading);
-      set('psc-meg-prev', ins.previous);
+      if (ins.windingToGround) {
+        set('psc-meg-cg', ins.windingToGround.cg);
+        set('psc-meg-rg', ins.windingToGround.rg);
+        set('psc-meg-sg', ins.windingToGround.sg);
+      }
+      if (ins.windingToWinding) {
+        set('psc-meg-cr', ins.windingToWinding.cr);
+        set('psc-meg-cs', ins.windingToWinding.cs);
+        set('psc-meg-rs', ins.windingToWinding.rs);
+      }
     } else if (state.type === 'three-phase') {
       // Switch to 3-phase tab
       try { const btn = doc.querySelector('[data-tab="three"]'); if (btn) btn.click(); } catch(e) {}
@@ -2269,8 +2277,16 @@ function restoreModuleState(mid, moduleName, state) {
         if (run.volts) { set('tph-v-l1l2', run.volts[0]); set('tph-v-l2l3', run.volts[1]); set('tph-v-l1l3', run.volts[2]); }
         if (wind.values) { set('tph-w-t1t2', wind.values[0]); set('tph-w-t2t3', wind.values[1]); set('tph-w-t1t3', wind.values[2]); }
         set('tph-meg-v', ins.testVoltage);
-        set('tph-meg-now', ins.reading);
-        set('tph-meg-prev', ins.previous);
+        if (ins.windingToGround) {
+          set('tph-meg-t1g', ins.windingToGround.t1);
+          set('tph-meg-t2g', ins.windingToGround.t2);
+          set('tph-meg-t3g', ins.windingToGround.t3);
+        }
+        if (ins.phaseToPhase) {
+          set('tph-meg-t1t2', ins.phaseToPhase.t1t2);
+          set('tph-meg-t2t3', ins.phaseToPhase.t2t3);
+          set('tph-meg-t1t3', ins.phaseToPhase.t1t3);
+        }
       }, 100);
     } else if (state.type === 'ecm') {
       try { const btn = doc.querySelector('[data-tab="ecm"]'); if (btn) btn.click(); } catch(e) {}
@@ -2282,8 +2298,16 @@ function restoreModuleState(mid, moduleName, state) {
         set('ecm-run-amps', run.amps);
         if (wind.values) { set('ecm-w-t1t2', wind.values[0]); set('ecm-w-t2t3', wind.values[1]); set('ecm-w-t1t3', wind.values[2]); }
         set('ecm-meg-v', ins.testVoltage);
-        set('ecm-meg-now', ins.reading);
-        set('ecm-meg-prev', ins.previous);
+        if (ins.windingToGround) {
+          set('ecm-meg-t1g', ins.windingToGround.t1);
+          set('ecm-meg-t2g', ins.windingToGround.t2);
+          set('ecm-meg-t3g', ins.windingToGround.t3);
+        }
+        if (ins.phaseToPhase) {
+          set('ecm-meg-t1t2', ins.phaseToPhase.t1t2);
+          set('ecm-meg-t2t3', ins.phaseToPhase.t2t3);
+          set('ecm-meg-t1t3', ins.phaseToPhase.t1t3);
+        }
       }, 100);
     }
   }
@@ -2608,12 +2632,28 @@ function buildUnifiedReport(rec) {
       }
     }
     const ins = motor.insulation;
-    if (ins && ins.reading !== null) {
-      lines.push('');
-      lines.push('INSULATION');
-      if (ins.testVoltage !== null) lines.push(pad('Test Voltage:') + dv(ins.testVoltage, 'V', 0));
-      lines.push(pad('Reading:') + dv(ins.reading, 'MOhm'));
-      if (ins.previous !== null)   lines.push(pad('Previous:') + dv(ins.previous, 'MOhm'));
+    if (ins) {
+      const gnd = ins.windingToGround;
+      const ph = ins.windingToWinding || ins.phaseToPhase;
+      const hasGnd = gnd && Object.values(gnd).some(v => v !== null);
+      const hasPh = ph && Object.values(ph).some(v => v !== null);
+      if (hasGnd || hasPh) {
+        lines.push('');
+        lines.push('INSULATION');
+        if (ins.testVoltage !== null) lines.push(pad('Test Voltage:') + dv(ins.testVoltage, 'V', 0));
+        if (hasGnd) {
+          lines.push('Winding to Ground');
+          Object.entries(gnd).forEach(([k, v]) => {
+            if (v !== null) lines.push(pad('  ' + k.toUpperCase() + ':') + dv(v, 'MOhm'));
+          });
+        }
+        if (hasPh) {
+          lines.push(ins.windingToWinding ? 'Winding to Winding' : 'Phase to Phase');
+          Object.entries(ph).forEach(([k, v]) => {
+            if (v !== null) lines.push(pad('  ' + k.toUpperCase() + ':') + dv(v, 'MOhm'));
+          });
+        }
+      }
     }
     if (motor.checklist) {
       const cl = motor.checklist;
@@ -2741,6 +2781,9 @@ function openTool(name, title) {
       // Hide module header (we have our own bar)
       const hdr = doc.querySelector('header');
       if (hdr) hdr.style.display = 'none';
+      // Fix sticky tabs offset — header is hidden so top:49px creates a gap
+      const tabs = doc.querySelector('.tabs');
+      if (tabs) { tabs.style.top = '0'; }
     } catch(e) { /* cross-origin safety */ }
   };
 
