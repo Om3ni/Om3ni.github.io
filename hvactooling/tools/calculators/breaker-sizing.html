@@ -40,11 +40,11 @@
   </div>
 
   <div class="sec">
-    <div class="sec-lbl">Phase</div>
+    <div class="sec-lbl">Circuit Type</div>
     <div class="phase-grid-3" id="phaseGrid">
-      <button class="phase-btn active" data-ph="1">1-Pole</button>
-      <button class="phase-btn" data-ph="2">2-Pole</button>
-      <button class="phase-btn" data-ph="3">3-Pole</button>
+      <button class="phase-btn active" data-ph="1">1Φ 120V</button>
+      <button class="phase-btn" data-ph="2">1Φ 240V</button>
+      <button class="phase-btn" data-ph="3">3Φ</button>
     </div>
   </div>
 
@@ -163,9 +163,9 @@ function init() {
     rowBreaker.className = 'result-row live ok';
     valBreaker.className = 'rr-val ok';
 
-    var poleLabel = poles + '-Pole';
-    valPoles.textContent = poleLabel;
-    subPoles.textContent = breakerSize + 'A / ' + poles + 'P breaker';
+    var circuitLabel = poles === 1 ? '1Φ 120V — 1 Pole' : poles === 2 ? '1Φ 240V — 2 Pole' : '3Φ — 3 Pole';
+    valPoles.textContent = circuitLabel;
+    subPoles.textContent = breakerSize + 'A / ' + poles + '-pole breaker';
     rowPoles.className = 'result-row live';
     valPoles.className = 'rr-val live';
   }
