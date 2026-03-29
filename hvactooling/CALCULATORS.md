@@ -39,8 +39,9 @@ Rules for how calculators in this app are classified, what they get, and when to
 ### T3 — Advanced
 - `long-lineset` — Long lineset compensation (oil traps, charge adjustment, line sizing)
 - `mca-mocp` — Minimum circuit ampacity / maximum overcurrent protection
-- `wire-sizing` — NEC ampacity tables, voltage drop, conductor selection
 - `motor-start-controls` — 1ph/3ph start methods, VFD sizing, relay/cap sizing
+- `system-head` — Pump sizing: system head, Darcy-Weisbach pipe loss, pump curve intersection, BHP
+- `wire-sizing` — NEC ampacity tables, voltage drop, conductor selection
 
 ---
 
