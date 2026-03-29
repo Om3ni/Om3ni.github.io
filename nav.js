@@ -24,6 +24,14 @@
   ────────────────────────────────────────────── */
   const NAV = [
     {
+      label: 'Home',
+      id: 'home',
+      open: false,
+      links: [
+        { text: 'Site Hub',              href: '/' },
+      ]
+    },
+    {
       label: 'HVAC Tooling',
       id: 'hvac',
       open: false,
@@ -61,7 +69,7 @@
       id: 'samsung',
       open: false,
       links: [
-        { text: 'DVM S2 — Compressor Ref', href: '/Samsung/dvms2/' },
+        { text: 'DVM S2 — Compressor Ref', href: '/dvms/' },
       ]
     },
     {
