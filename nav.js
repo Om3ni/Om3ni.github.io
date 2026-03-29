@@ -32,11 +32,11 @@
       ]
     },
     {
-      label: 'HVAC Tooling',
+      label: 'Project Hermes',
       id: 'hvac',
       open: false,
       links: [
-        { text: 'Overview',              href: '/hvactooling/' },
+        { text: 'Project Hermes',        href: '/hvactooling/' },
         { text: 'Refrigeration',         href: '/hvactooling/tools/refrigeration.html', sub: true },
         { text: 'Airflow',               href: '/hvactooling/tools/airflow.html',       sub: true },
         { text: 'Heat',                  href: '/hvactooling/tools/heat.html',          sub: true },
