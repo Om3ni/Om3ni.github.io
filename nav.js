@@ -59,6 +59,7 @@
         { text: 'Motor Convert',         href: '/hvactooling/tools/calculators/motor-convert.html',     sub: true },
         { text: "Ohm's Law",             href: '/hvactooling/tools/calculators/ohms-law.html',          sub: true },
         { text: 'Pressure Convert',      href: '/hvactooling/tools/calculators/pressure-convert.html',  sub: true },
+        { text: 'Pump Sizing',          href: '/hvactooling/tools/calculators/system-head.html',       sub: true },
         { text: 'Refrigerant Charge',    href: '/hvactooling/tools/calculators/refrigerant-charge.html',sub: true },
         { text: 'Temp Convert',          href: '/hvactooling/tools/calculators/temp-convert.html',      sub: true },
         { text: 'Motor Start Controls',   href: '/hvactooling/tools/calculators/motor-start-controls.html', sub: true },
