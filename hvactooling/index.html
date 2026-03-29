@@ -2826,6 +2826,8 @@ function openTool(name, title) {
 
   frame.src = 'tools/' + name + '.html';
   document.getElementById('tool-frame-wrap').classList.add('open');
+  // Persist for refresh recovery
+  sessionStorage.setItem('hermes_activeTool', JSON.stringify({ type: 'tool', name: name, title: title }));
 }
 
 function openCalc(name, title) {
@@ -2839,11 +2841,16 @@ function openCalc(name, title) {
       doc.documentElement.setAttribute('data-theme', localStorage.getItem(THEME_KEY) || 'dark');
       const hdr = doc.querySelector('header');
       if (hdr) hdr.style.display = 'none';
+      // Fix sticky tabs offset — header is hidden so top:49px creates a gap
+      const tabs = doc.querySelector('.tabs');
+      if (tabs) { tabs.style.top = '0'; }
     } catch(e) {}
   };
 
   frame.src = 'tools/calculators/' + name + '.html';
   document.getElementById('tool-frame-wrap').classList.add('open');
+  // Persist for refresh recovery
+  sessionStorage.setItem('hermes_activeTool', JSON.stringify({ type: 'calc', name: name, title: title }));
 }
 
 function closeTool() {
@@ -2851,6 +2858,7 @@ function closeTool() {
   document.getElementById('tool-frame-wrap').classList.remove('open');
   frame.src = 'about:blank';
   activeTool = null;
+  sessionStorage.removeItem('hermes_activeTool');
 }
 
 // ── Resources ───────────────────────────────────────────────────────────────
@@ -3577,6 +3585,17 @@ checkLicense();
 updateBadge();
 updateOwnerUI();
 if (isOwner()) syncModelIndex();
+
+// Restore tool/calc on refresh
+(function restoreActiveTool() {
+  try {
+    const saved = sessionStorage.getItem('hermes_activeTool');
+    if (!saved) return;
+    const { type, name, title } = JSON.parse(saved);
+    if (type === 'calc') openCalc(name, title);
+    else if (type === 'tool') openTool(name, title);
+  } catch(e) {}
+})();
 // First visit tutorial — delayed to let license gate clear first
 if (!localStorage.getItem(TUT_KEY) && localStorage.getItem(LICENSE_KEY)) {
   setTimeout(() => startTutSection('quickstart'), 500);
