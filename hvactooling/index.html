@@ -470,6 +470,18 @@ textarea { resize: vertical; min-height: 72px; }
   letter-spacing: .15em; text-transform: uppercase; color: #1a4a7a;
   margin-top: 12px; margin-bottom: 6px; padding-left: 2px; opacity: .7;
 }
+/* ── Calculator tier colors ── */
+.calc-btn.t1 { border-left-color: #606060; }
+.calc-btn.t1:active { border-left-color: #909090; }
+.calc-btn.t1 .calc-btn-name { color: #909090; }
+.calc-btn.t2 { border-left-color: #1a4a7a; }
+.calc-btn.t2:active { border-left-color: #4a9de8; }
+.calc-btn.t2 .calc-btn-name { color: #4a9de8; }
+.calc-btn.t3 { border-left-color: #9a4a00; }
+.calc-btn.t3:active { border-left-color: #e86d10; }
+.calc-btn.t3 .calc-btn-name { color: #e86d10; }
+[data-theme="light"] .calc-btn.t1 { border-left-color: #a0a0a0; }
+[data-theme="light"] .calc-btn.t1 .calc-btn-name { color: #707070; }
 .tool-btn {
   display: flex; align-items: center; gap: 12px;
   background: var(--surface); border: 1px solid var(--border);
@@ -924,42 +936,42 @@ This software is provided "as is" without warranty of any kind, express or impli
 
     <div class="calc-cat">Electrical</div>
     <div class="calc-grid">
-      <div class="calc-btn" onclick="openCalc('ohms-law', 'Ohm\'s Law')"><div class="calc-btn-name">Ohm's Law</div></div>
-      <div class="calc-btn" onclick="openCalc('wire-sizing', 'Wire Sizing')"><div class="calc-btn-name">Wire Sizing</div></div>
-      <div class="calc-btn" onclick="openCalc('breaker-sizing', 'Breaker Sizing')"><div class="calc-btn-name">Breaker Sizing</div></div>
-      <div class="calc-btn" onclick="openCalc('mca-mocp', 'MCA / MOCP')"><div class="calc-btn-name">MCA / MOCP</div></div>
-      <div class="calc-btn" onclick="openCalc('capacitor-sizing', 'Capacitor Sizing')"><div class="calc-btn-name">Capacitor</div></div>
-      <div class="calc-btn" onclick="openCalc('motor-start-controls', 'Motor Start Controls')"><div class="calc-btn-name">Start Controls</div></div>
-      <div class="calc-btn" onclick="openCalc('motor-convert', 'Motor Conversions')"><div class="calc-btn-name">Motor Convert</div></div>
-      <div class="calc-btn" onclick="openCalc('electrical-cost', 'Operating Cost')"><div class="calc-btn-name">Operating Cost</div></div>
+      <div class="calc-btn t1" onclick="openCalc('ohms-law', 'Ohm\'s Law')"><div class="calc-btn-name">Ohm's Law</div></div>
+      <div class="calc-btn t3" onclick="openCalc('wire-sizing', 'Wire Sizing')"><div class="calc-btn-name">Wire Sizing</div></div>
+      <div class="calc-btn t2" onclick="openCalc('breaker-sizing', 'Breaker Sizing')"><div class="calc-btn-name">Breaker Sizing</div></div>
+      <div class="calc-btn t3" onclick="openCalc('mca-mocp', 'MCA / MOCP')"><div class="calc-btn-name">MCA / MOCP</div></div>
+      <div class="calc-btn t2" onclick="openCalc('capacitor-sizing', 'Capacitor Sizing')"><div class="calc-btn-name">Capacitor</div></div>
+      <div class="calc-btn t3" onclick="openCalc('motor-start-controls', 'Motor Start Controls')"><div class="calc-btn-name">Start Controls</div></div>
+      <div class="calc-btn t1" onclick="openCalc('motor-convert', 'Motor Conversions')"><div class="calc-btn-name">Motor Convert</div></div>
+      <div class="calc-btn t2" onclick="openCalc('electrical-cost', 'Operating Cost')"><div class="calc-btn-name">Operating Cost</div></div>
     </div>
 
     <div class="calc-cat">Airflow &amp; Duct</div>
     <div class="calc-grid">
-      <div class="calc-btn" onclick="openCalc('duct-sizing', 'Duct Sizing')"><div class="calc-btn-name">Duct Sizing</div></div>
-      <div class="calc-btn" onclick="openCalc('cfm-per-ton', 'CFM per Ton')"><div class="calc-btn-name">CFM / Ton</div></div>
-      <div class="calc-btn" onclick="openCalc('combustion-air', 'Combustion Air')"><div class="calc-btn-name">Combustion Air</div></div>
-      <div class="calc-btn" onclick="openCalc('condensate-drain', 'Condensate Drain')"><div class="calc-btn-name">Condensate Drain</div></div>
+      <div class="calc-btn t2" onclick="openCalc('duct-sizing', 'Duct Sizing')"><div class="calc-btn-name">Duct Sizing</div></div>
+      <div class="calc-btn t2" onclick="openCalc('cfm-per-ton', 'CFM per Ton')"><div class="calc-btn-name">CFM / Ton</div></div>
+      <div class="calc-btn t2" onclick="openCalc('combustion-air', 'Combustion Air')"><div class="calc-btn-name">Combustion Air</div></div>
+      <div class="calc-btn t2" onclick="openCalc('condensate-drain', 'Condensate Drain')"><div class="calc-btn-name">Condensate Drain</div></div>
     </div>
 
     <div class="calc-cat">Refrigerant &amp; Piping</div>
     <div class="calc-grid">
-      <div class="calc-btn" onclick="openCalc('refrigerant-charge', 'Line Charge')"><div class="calc-btn-name">Line Charge</div></div>
-      <div class="calc-btn" onclick="openCalc('long-lineset', 'Long Lineset')"><div class="calc-btn-name">Long Lineset</div></div>
-      <div class="calc-btn" onclick="openCalc('gas-pipe', 'Gas Pipe Sizing')"><div class="calc-btn-name">Gas Pipe</div></div>
+      <div class="calc-btn t2" onclick="openCalc('refrigerant-charge', 'Line Charge')"><div class="calc-btn-name">Line Charge</div></div>
+      <div class="calc-btn t3" onclick="openCalc('long-lineset', 'Long Lineset')"><div class="calc-btn-name">Long Lineset</div></div>
+      <div class="calc-btn t2" onclick="openCalc('gas-pipe', 'Gas Pipe Sizing')"><div class="calc-btn-name">Gas Pipe</div></div>
     </div>
 
     <div class="calc-cat">Load &amp; Mechanical</div>
     <div class="calc-grid">
-      <div class="calc-btn" onclick="openCalc('load-calc', 'Load Estimate')"><div class="calc-btn-name">Load Estimate</div></div>
-      <div class="calc-btn" onclick="openCalc('belt-length', 'Belt Length')"><div class="calc-btn-name">Belt Length</div></div>
-      <div class="calc-btn" onclick="openCalc('enthalpy', 'Enthalpy')"><div class="calc-btn-name">Enthalpy</div></div>
+      <div class="calc-btn t2" onclick="openCalc('load-calc', 'Load Estimate')"><div class="calc-btn-name">Load Estimate</div></div>
+      <div class="calc-btn t2" onclick="openCalc('belt-length', 'Belt Length')"><div class="calc-btn-name">Belt Length</div></div>
+      <div class="calc-btn t2" onclick="openCalc('enthalpy', 'Enthalpy')"><div class="calc-btn-name">Enthalpy</div></div>
     </div>
 
     <div class="calc-cat">Conversion</div>
     <div class="calc-grid">
-      <div class="calc-btn" onclick="openCalc('temp-convert', 'Temp Conversion')"><div class="calc-btn-name">Temp Convert</div></div>
-      <div class="calc-btn" onclick="openCalc('pressure-convert', 'Pressure Conversion')"><div class="calc-btn-name">Pressure Convert</div></div>
+      <div class="calc-btn t1" onclick="openCalc('temp-convert', 'Temp Conversion')"><div class="calc-btn-name">Temp Convert</div></div>
+      <div class="calc-btn t1" onclick="openCalc('pressure-convert', 'Pressure Conversion')"><div class="calc-btn-name">Pressure Convert</div></div>
     </div>
   </div>
 
