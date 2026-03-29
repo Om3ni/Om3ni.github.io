@@ -7,6 +7,29 @@
 <link rel="stylesheet" href="../../base.css">
 <link rel="stylesheet" href="calc.css">
 <style>
+.belt-match-grid { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.belt-match {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 3px; font-family: var(--mono); font-size: .78rem;
+  transition: border-color .15s, background .15s;
+}
+.belt-match.best {
+  border-color: var(--orange); background: var(--orange-dim);
+}
+.belt-match .bm-num { color: var(--text); font-weight: 600; min-width: 60px; }
+.belt-match .bm-len { color: var(--text-mute); font-size: .68rem; }
+.belt-match .bm-delta { font-size: .68rem; }
+.belt-match .bm-delta.short { color: var(--red-hi); }
+.belt-match .bm-delta.long { color: var(--green-hi); }
+.belt-match .bm-delta.exact { color: var(--orange-hi); }
+.belt-match.best .bm-num { color: var(--orange-hi); }
+.belt-match .bm-tag {
+  font-size: .55rem; letter-spacing: .08em; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 2px; margin-left: 8px;
+}
+.belt-match.best .bm-tag { background: var(--orange); color: #fff; }
+.section-note { font-family: var(--mono); font-size: .6rem; color: var(--text-mute); margin-top: 4px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -15,12 +38,22 @@
   <a class="hdr-back" href="../../index.html">&#8592;</a>
   <div class="hdr-titles">
     <div class="hdr-title">Belt Length</div>
-    <div class="hdr-sub">V-Belt Sizing</div>
+    <div class="hdr-sub">V-Belt Sizing · A · B · C</div>
   </div>
 </header>
 <main>
   <div class="sec sec-flush">
-    <div class="sec-lbl sec-lbl-flush">Pulley &amp; Distance</div>
+    <div class="sec-lbl sec-lbl-flush">Belt Section</div>
+    <div class="phase-grid-3" id="sectionGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:14px;">
+      <button class="phase-btn active" data-s="A">A Section</button>
+      <button class="phase-btn" data-s="B">B Section</button>
+      <button class="phase-btn" data-s="C">C Section</button>
+    </div>
+    <div class="section-note" id="sectionNote">A Section: ½" top width × 5/16" depth — fractional HP to 10 HP. Most common HVAC belt.</div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Pulley &amp; Distance</div>
     <div class="input-pair">
       <div class="fg">
         <label class="fl">Large Pulley Dia.</label>
@@ -47,17 +80,25 @@
   </div>
 
   <div class="results">
+    <div class="result-sec-hdr">Calculated</div>
     <div class="result-row dim" id="rowLen">
       <div class="rr-left">
         <div class="rr-label">Pitch Length</div>
-        <div class="rr-sub">L = 2C + &pi;/2(D+d) + (D-d)&sup2;/(4C)</div>
+        <div class="rr-sub">L = 2C + π/2(D+d) + (D−d)²/(4C)</div>
       </div>
       <div class="rr-val" id="valLen">—</div>
+    </div>
+    <div class="result-row dim" id="rowOC">
+      <div class="rr-left">
+        <div class="rr-label">Outside Circumference</div>
+        <div class="rr-sub" id="subOC">Pitch + section correction</div>
+      </div>
+      <div class="rr-val" id="valOC">—</div>
     </div>
     <div class="result-row dim" id="rowRatio">
       <div class="rr-left">
         <div class="rr-label">Speed Ratio</div>
-        <div class="rr-sub">Large &div; Small pulley diameter</div>
+        <div class="rr-sub">Large ÷ Small pulley diameter</div>
       </div>
       <div class="rr-val" id="valRatio">—</div>
     </div>
@@ -68,83 +109,202 @@
       </div>
       <div class="rr-val" id="valWrap">—</div>
     </div>
+
+    <div class="result-sec-hdr" id="hdrMatch" style="display:none">Belt Match</div>
+    <div class="result-row dim" id="rowBest">
+      <div class="rr-left">
+        <div class="rr-label">Best Match</div>
+        <div class="rr-sub" id="subBest">Nearest standard belt number</div>
+      </div>
+      <div class="rr-val" id="valBest">—</div>
+    </div>
+    <div id="matchGrid" style="display:none">
+      <div class="belt-match-grid" id="matchList"></div>
+      <div class="section-note" id="matchNote"></div>
+    </div>
   </div>
 
   <div class="hint">Measure pitch diameter, not OD. Minimum wrap angle: 120°. Below 120° requires idler pulley.</div>
 </main>
 <script>
 'use strict';
+
+/* ══════════════════════════════════════════════
+   STANDARD BELT CATALOGS
+   Belt number = outside circumference in inches
+   Pitch length = OC - section correction factor
+   ══════════════════════════════════════════════ */
+
+/* Correction: OC = pitch length + addendum
+   A section: +1.3"   B section: +1.8"   C section: +2.9" */
+var BELT_SECTIONS = {
+  A: {
+    correction: 1.3,
+    desc: 'A Section: ½" top width × 5/16" depth — fractional HP to 10 HP. Most common HVAC belt.',
+    sizes: [21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,64,66,68,70,72,74,76,78,80,82,84,85,86,88,90,92,94,96,98,100,102,105,108,112,116,120,124,128]
+  },
+  B: {
+    correction: 1.8,
+    desc: 'B Section: 21/32" top width × 13/32" depth — 1 HP to 25 HP. Commercial AHU and condensers.',
+    sizes: [35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,90,92,94,96,98,100,103,105,108,112,116,120,124,128,132,136,140,144,148,152,158,162,168,173,180,187,195,210,225,240,255,270,300]
+  },
+  C: {
+    correction: 2.9,
+    desc: 'C Section: 7/8" top width × 17/32" depth — 7.5 HP to 100 HP. Large commercial / industrial.',
+    sizes: [51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,90,92,94,96,98,100,103,105,108,112,116,120,124,128,132,136,140,144,148,152,158,162,168,173,180,187,195,210,225,240,255,270,300,330,360,390,420]
+  }
+};
+
+var currentSection = 'A';
+
+function findMatches(section, oc) {
+  var sizes = BELT_SECTIONS[section].sizes;
+  var matches = [];
+
+  /* Find closest index */
+  var bestIdx = 0;
+  var bestDiff = Math.abs(sizes[0] - oc);
+  for (var i = 1; i < sizes.length; i++) {
+    var diff = Math.abs(sizes[i] - oc);
+    if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+  }
+
+  /* Grab up to 2 below and 2 above */
+  var start = Math.max(0, bestIdx - 2);
+  var end = Math.min(sizes.length - 1, bestIdx + 2);
+  for (var j = start; j <= end; j++) {
+    matches.push({
+      num: section + sizes[j],
+      oc: sizes[j],
+      delta: sizes[j] - oc,
+      best: j === bestIdx
+    });
+  }
+  return matches;
+}
+
 function init() {
   var inD = document.getElementById('inD');
   var inDd = document.getElementById('inDd');
   var inC = document.getElementById('inC');
-  var rowLen = document.getElementById('rowLen');
-  var valLen = document.getElementById('valLen');
-  var rowRatio = document.getElementById('rowRatio');
-  var valRatio = document.getElementById('valRatio');
-  var rowWrap = document.getElementById('rowWrap');
-  var valWrap = document.getElementById('valWrap');
-  var subWrap = document.getElementById('subWrap');
 
-  var rows = [rowLen, rowRatio, rowWrap];
-  var vals = [valLen, valRatio, valWrap];
+  /* Section buttons */
+  document.querySelectorAll('#sectionGrid .phase-btn').forEach(function(b) {
+    b.addEventListener('click', function() {
+      currentSection = b.dataset.s;
+      document.querySelectorAll('#sectionGrid .phase-btn').forEach(function(x) {
+        x.classList.toggle('active', x.dataset.s === currentSection);
+      });
+      document.getElementById('sectionNote').textContent = BELT_SECTIONS[currentSection].desc;
+      calc();
+    });
+  });
 
-  function resetAll() {
-    rows.forEach(function(r) { r.className = 'result-row dim'; });
-    vals.forEach(function(v) { v.className = 'rr-val'; });
-    valLen.textContent = '—';
-    valRatio.textContent = '—';
-    valWrap.textContent = '—';
-    subWrap.textContent = 'On small sheave';
+  function setR(rowId, state, val, sub) {
+    var row = document.getElementById(rowId);
+    var valEl = document.getElementById(rowId.replace('row', 'val'));
+    var subEl = document.getElementById(rowId.replace('row', 'sub'));
+    if (!row || !valEl) return;
+    row.className = 'result-row ' + (state === 'dim' ? 'dim' : 'live');
+    if (state === 'ok') row.classList.add('ok');
+    if (state === 'warn') row.classList.add('warn');
+    if (state === 'high') row.classList.add('high');
+    valEl.className = 'rr-val' + (state !== 'dim' ? ' ' + (state === 'live' ? 'live' : state) : '');
+    if (val !== undefined) valEl.textContent = val;
+    if (sub !== undefined && subEl) subEl.textContent = sub;
   }
 
   function calc() {
     var D = parseFloat(inD.value);
     var d = parseFloat(inDd.value);
     var Cc = parseFloat(inC.value);
+    var sec = BELT_SECTIONS[currentSection];
 
-    if (isNaN(D) || isNaN(d) || D <= 0 || d <= 0) { resetAll(); return; }
-
-    // Speed ratio available with just D and d
-    var ratio = D / d;
-    rowRatio.className = 'result-row live';
-    valRatio.className = 'rr-val live';
-    valRatio.textContent = ratio.toFixed(3) + ':1';
-
-    if (isNaN(Cc) || Cc <= 0) {
-      rowLen.className = 'result-row dim';
-      valLen.className = 'rr-val';
-      valLen.textContent = '—';
-      rowWrap.className = 'result-row dim';
-      valWrap.className = 'rr-val';
-      valWrap.textContent = '—';
-      subWrap.textContent = 'On small sheave';
+    if (isNaN(D) || isNaN(d) || D <= 0 || d <= 0) {
+      setR('rowLen', 'dim', '—');
+      setR('rowOC', 'dim', '—');
+      setR('rowRatio', 'dim', '—');
+      setR('rowWrap', 'dim', '—');
+      setR('rowBest', 'dim', '—');
+      document.getElementById('hdrMatch').style.display = 'none';
+      document.getElementById('matchGrid').style.display = 'none';
       return;
     }
 
-    // Belt pitch length
-    var L = 2 * Cc + (Math.PI / 2) * (D + d) + ((D - d) * (D - d)) / (4 * Cc);
+    /* Speed ratio */
+    var ratio = D / d;
+    setR('rowRatio', 'live', ratio.toFixed(3) + ':1');
 
-    rowLen.className = 'result-row live';
-    valLen.className = 'rr-val live';
-    valLen.textContent = L.toFixed(2) + '"';
-
-    // Belt wrap angle on small pulley
-    var wrap = 180 - 60 * (D - d) / Cc;
-
-    var wrapClass, wrapMsg;
-    if (wrap < 120) {
-      wrapClass = 'warn';
-      wrapMsg = 'Below 120° — idler pulley required';
-    } else {
-      wrapClass = 'ok';
-      wrapMsg = 'On small sheave — adequate';
+    if (isNaN(Cc) || Cc <= 0) {
+      setR('rowLen', 'dim', '—');
+      setR('rowOC', 'dim', '—');
+      setR('rowWrap', 'dim', '—');
+      setR('rowBest', 'dim', '—');
+      document.getElementById('hdrMatch').style.display = 'none';
+      document.getElementById('matchGrid').style.display = 'none';
+      return;
     }
 
-    rowWrap.className = 'result-row live ' + wrapClass;
-    valWrap.className = 'rr-val live ' + wrapClass;
-    valWrap.textContent = wrap.toFixed(1) + '°';
-    subWrap.textContent = wrapMsg;
+    /* Pitch length */
+    var L = 2 * Cc + (Math.PI / 2) * (D + d) + ((D - d) * (D - d)) / (4 * Cc);
+    setR('rowLen', 'live', L.toFixed(2) + '"');
+
+    /* Outside circumference */
+    var oc = L + sec.correction;
+    setR('rowOC', 'live', oc.toFixed(2) + '"', 'Pitch + ' + sec.correction + '" (' + currentSection + ' section)');
+
+    /* Belt wrap */
+    var wrap = 180 - 60 * (D - d) / Cc;
+    if (wrap < 120) {
+      setR('rowWrap', 'warn', wrap.toFixed(1) + '°', 'Below 120° — idler pulley required');
+    } else {
+      setR('rowWrap', 'ok', wrap.toFixed(1) + '°', 'On small sheave — adequate');
+    }
+
+    /* Belt matching */
+    var matches = findMatches(currentSection, oc);
+    var best = null;
+    for (var i = 0; i < matches.length; i++) { if (matches[i].best) best = matches[i]; }
+
+    document.getElementById('hdrMatch').style.display = '';
+    if (best) {
+      var deltaStr = best.delta > 0.5 ? ' (long)' : (best.delta < -0.5 ? ' (short)' : '');
+      setR('rowBest', Math.abs(best.delta) <= 1 ? 'ok' : 'warn',
+        best.num,
+        best.oc + '" OC — ' + (best.delta >= 0 ? '+' : '') + best.delta.toFixed(1) + '" from calculated' + deltaStr);
+    }
+
+    /* Match grid */
+    document.getElementById('matchGrid').style.display = '';
+    var grid = document.getElementById('matchList');
+    grid.innerHTML = '';
+
+    matches.forEach(function(m) {
+      var div = document.createElement('div');
+      div.className = 'belt-match' + (m.best ? ' best' : '');
+
+      var deltaClass = m.delta > 0.5 ? 'long' : (m.delta < -0.5 ? 'short' : 'exact');
+      var deltaSign = m.delta >= 0 ? '+' : '';
+
+      div.innerHTML =
+        '<span class="bm-num">' + m.num + (m.best ? '<span class="bm-tag">BEST</span>' : '') + '</span>' +
+        '<span class="bm-len">' + m.oc + '" OC</span>' +
+        '<span class="bm-delta ' + deltaClass + '">' + deltaSign + m.delta.toFixed(1) + '"</span>';
+
+      grid.appendChild(div);
+    });
+
+    /* Note about center distance adjustment */
+    var note = document.getElementById('matchNote');
+    if (best && Math.abs(best.delta) > 0.5) {
+      note.textContent = 'Best match is ' + (best.delta > 0 ? 'longer' : 'shorter') +
+        ' than calculated. Adjust center distance or use tensioner to compensate. ' +
+        'Typical adjustment range: ±1" per 12" of center distance.';
+    } else if (best) {
+      note.textContent = 'Good match — within ±0.5" of calculated OC. Standard center distance should work.';
+    } else {
+      note.textContent = '';
+    }
   }
 
   inD.addEventListener('input', calc);
