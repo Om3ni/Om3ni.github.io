@@ -61,6 +61,7 @@
         { text: 'Pressure Convert',      href: '/hvactooling/tools/calculators/pressure-convert.html',  sub: true },
         { text: 'Refrigerant Charge',    href: '/hvactooling/tools/calculators/refrigerant-charge.html',sub: true },
         { text: 'Temp Convert',          href: '/hvactooling/tools/calculators/temp-convert.html',      sub: true },
+        { text: 'Motor Start Controls',   href: '/hvactooling/tools/calculators/motor-start-controls.html', sub: true },
         { text: 'Wire Sizing',           href: '/hvactooling/tools/calculators/wire-sizing.html',       sub: true },
       ]
     },
