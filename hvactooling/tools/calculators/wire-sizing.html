@@ -8,6 +8,31 @@
 <link rel="stylesheet" href="calc.css">
 <style>
 .volt-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 14px; }
+.select-wrap { position: relative; margin-bottom: 8px; }
+.select-wrap::after {
+  content: '▾'; position: absolute; right: 10px; top: 50%;
+  transform: translateY(-50%); color: var(--text-mute);
+  pointer-events: none; font-size: .8rem;
+}
+.calc-select {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 3px; color: var(--text); font-family: var(--mono);
+  font-size: .9rem; padding: 11px 11px; outline: none;
+  transition: border-color .15s; -webkit-appearance: none; appearance: none; cursor: pointer;
+}
+.calc-select:focus { border-color: var(--orange); }
+.derate-summary {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 3px; padding: 8px 12px; margin-bottom: 8px;
+}
+.derate-row {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;
+}
+.derate-row:last-child { margin-bottom: 0; }
+.dr-label { font-family: var(--mono); font-size: .62rem; color: var(--text-mute); letter-spacing: .05em; text-transform: uppercase; }
+.dr-val { font-family: var(--mono); font-size: .82rem; color: var(--orange-hi); }
+.dr-val.neutral { color: var(--text-mute); }
+.dr-val.warn { color: var(--yellow-hi); }
 </style>
 </head>
 <body>
@@ -16,7 +41,7 @@
   <a class="hdr-back" href="../../index.html">&#8592;</a>
   <div class="hdr-titles">
     <div class="hdr-title">Wire Sizing</div>
-    <div class="hdr-sub"><span class="hdr-tier t3">advanced</span>NEC Ampacity · Voltage Drop</div>
+    <div class="hdr-sub"><span class="hdr-tier t3">advanced</span>NEC Ampacity · Voltage Drop · Derating</div>
   </div>
 </header>
 <main>
@@ -28,6 +53,10 @@
         <input type="number" id="inAmps" inputmode="decimal" placeholder="—">
         <span class="iw-unit">A</span>
       </div>
+    </div>
+    <div class="phase-grid" id="contGrid">
+      <button class="phase-btn" data-cont="yes">Continuous (3+ hr)</button>
+      <button class="phase-btn active" data-cont="no">Non-Continuous</button>
     </div>
   </div>
 
@@ -69,13 +98,68 @@
     </div>
   </div>
 
+  <div class="sec">
+    <div class="sec-lbl">Derating — NEC 310.15</div>
+    <div class="input-pair">
+      <div class="fg">
+        <label class="fl">Ambient Temp</label>
+        <div class="iw">
+          <input type="number" id="inAmbient" inputmode="decimal" placeholder="86">
+          <span class="iw-unit">°F</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Conductors in Raceway</label>
+        <div class="select-wrap">
+          <select class="calc-select" id="conduitFill">
+            <option value="3">1–3 (no derating)</option>
+            <option value="6">4–6 (80%)</option>
+            <option value="9">7–9 (70%)</option>
+            <option value="20">10–20 (50%)</option>
+            <option value="30">21–30 (45%)</option>
+            <option value="40">31–40 (40%)</option>
+            <option value="41">41+ (35%)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="hint" style="margin-top:0">NEC 310.15(B)(1) temp correction + NEC 310.15(C)(1) conduit fill. Count only current-carrying conductors — neutrals carrying unbalanced load count, equipment grounds do not.</div>
+  </div>
+
+  <!-- Derating summary -->
+  <div class="derate-summary" id="derateSummary" style="display:none">
+    <div class="derate-row">
+      <span class="dr-label">Ambient Correction</span>
+      <span class="dr-val" id="drAmbient">1.00</span>
+    </div>
+    <div class="derate-row">
+      <span class="dr-label">Conduit Fill Factor</span>
+      <span class="dr-val" id="drFill">1.00</span>
+    </div>
+    <div class="derate-row">
+      <span class="dr-label">Continuous Load (125%)</span>
+      <span class="dr-val" id="drCont">No</span>
+    </div>
+    <div class="derate-row">
+      <span class="dr-label">Required Ampacity</span>
+      <span class="dr-val" id="drRequired">—</span>
+    </div>
+  </div>
+
   <div class="results" id="results">
     <div class="result-row dim" id="rowGauge">
       <div class="rr-left">
         <div class="rr-label">Minimum Wire Size</div>
-        <div class="rr-sub" id="subGauge">Based on NEC 75°C ampacity</div>
+        <div class="rr-sub" id="subGauge">Based on NEC 75°C derated ampacity</div>
       </div>
       <div class="rr-val" id="valGauge">—</div>
+    </div>
+    <div class="result-row dim" id="rowAmpacity">
+      <div class="rr-left">
+        <div class="rr-label">Derated Ampacity</div>
+        <div class="rr-sub" id="subAmpacity">Table ampacity × ambient × fill factors</div>
+      </div>
+      <div class="rr-val" id="valAmpacity">—</div>
     </div>
     <div class="result-row dim" id="rowDrop">
       <div class="rr-left">
@@ -99,30 +183,59 @@
 function init() {
   var gauges = ['14','12','10','8','6','4','3','2','1','1/0','2/0','3/0','4/0','250','300','350','400','500'];
   var cmils = [4110,6530,10380,16510,26240,41740,52620,66360,83690,105600,133100,167800,211600,250000,300000,350000,400000,500000];
+  /* NEC Table 310.16 — 75°C column (THWN-2, XHHW, etc.) */
   var ampCu = [15,20,30,40,55,70,85,95,110,125,145,165,195,215,240,260,280,320];
   var ampAl = [0,15,25,30,40,55,65,75,85,100,115,130,150,170,190,210,225,260];
   var labels = ['14 AWG','12 AWG','10 AWG','8 AWG','6 AWG','4 AWG','3 AWG','2 AWG','1 AWG','1/0 AWG','2/0 AWG','3/0 AWG','4/0 AWG','250 kcmil','300 kcmil','350 kcmil','400 kcmil','500 kcmil'];
 
+  /* NEC 310.15(B)(1) — Ambient temperature correction factors for 75°C rated conductors
+     Index by ambient temp °F, value = correction factor */
+  var AMBIENT_TABLE = [
+    { maxF: 77,  factor: 1.05 },
+    { maxF: 86,  factor: 1.00 },
+    { maxF: 95,  factor: 0.94 },
+    { maxF: 104, factor: 0.88 },
+    { maxF: 113, factor: 0.82 },
+    { maxF: 122, factor: 0.75 },
+    { maxF: 131, factor: 0.67 },
+    { maxF: 140, factor: 0.58 },
+    { maxF: 149, factor: 0.47 },
+    { maxF: 158, factor: 0.33 }
+  ];
+
+  /* NEC 310.15(C)(1) — Conduit fill adjustment factors */
+  var FILL_TABLE = {
+    '3':  1.00,
+    '6':  0.80,
+    '9':  0.70,
+    '20': 0.50,
+    '30': 0.45,
+    '40': 0.40,
+    '41': 0.35
+  };
+
+  function getAmbientFactor(tempF) {
+    if (isNaN(tempF)) return 1.00;
+    for (var i = 0; i < AMBIENT_TABLE.length; i++) {
+      if (tempF <= AMBIENT_TABLE[i].maxF) return AMBIENT_TABLE[i].factor;
+    }
+    return 0; /* Above 158°F — no ampacity allowed */
+  }
+
   var voltage = 240;
   var phase = 1;
   var mat = 'cu';
+  var continuous = false;
 
   var inAmps = document.getElementById('inAmps');
   var inDist = document.getElementById('inDist');
+  var inAmbient = document.getElementById('inAmbient');
+  var conduitFill = document.getElementById('conduitFill');
+
   var voltBtns = document.querySelectorAll('#voltGrid .phase-btn');
   var phaseBtns = document.querySelectorAll('#phaseGrid .phase-btn');
   var matBtns = document.querySelectorAll('#matGrid .phase-btn');
-
-  var rowGauge = document.getElementById('rowGauge');
-  var rowDrop = document.getElementById('rowDrop');
-  var rowRec = document.getElementById('rowRec');
-  var valGauge = document.getElementById('valGauge');
-  var valDrop = document.getElementById('valDrop');
-  var valRec = document.getElementById('valRec');
-  var subGauge = document.getElementById('subGauge');
-  var subDrop = document.getElementById('subDrop');
-  var subRec = document.getElementById('subRec');
-  var hintText = document.getElementById('hintText');
+  var contBtns = document.querySelectorAll('#contGrid .phase-btn');
 
   function setActive(btns, attr, val) {
     btns.forEach(function(b) { b.classList.toggle('active', b.getAttribute(attr) === String(val)); });
@@ -137,6 +250,9 @@ function init() {
   matBtns.forEach(function(b) {
     b.addEventListener('click', function() { mat = b.dataset.mat; setActive(matBtns, 'data-mat', mat); calc(); });
   });
+  contBtns.forEach(function(b) {
+    b.addEventListener('click', function() { continuous = b.dataset.cont === 'yes'; setActive(contBtns, 'data-cont', continuous ? 'yes' : 'no'); calc(); });
+  });
 
   function calcVdrop(gaugeIdx, amps, dist) {
     var K = mat === 'cu' ? 12.9 : 21.2;
@@ -145,70 +261,109 @@ function init() {
     return vd;
   }
 
+  function setRow(id, state, val, sub) {
+    var row = document.getElementById('row' + id);
+    var valEl = document.getElementById('val' + id);
+    var subEl = document.getElementById('sub' + id);
+    if (!row) return;
+    row.className = 'result-row ' + (state === 'dim' ? 'dim' : 'live');
+    if (state === 'ok') row.classList.add('ok');
+    if (state === 'high') row.classList.add('high');
+    if (state === 'warn') row.classList.add('warn');
+    valEl.className = 'rr-val' + (state !== 'dim' ? ' ' + (state === 'live' ? 'live' : state) : '');
+    if (val !== undefined) valEl.textContent = val;
+    if (sub !== undefined && subEl) subEl.textContent = sub;
+  }
+
   function calc() {
     var amps = parseFloat(inAmps.value);
     var dist = parseFloat(inDist.value);
+    var ambientF = parseFloat(inAmbient.value);
+    var fillKey = conduitFill.value;
     var ampTable = mat === 'cu' ? ampCu : ampAl;
+    var hintText = document.getElementById('hintText');
 
-    // Reset
-    rowGauge.className = 'result-row dim';
-    rowDrop.className = 'result-row dim';
-    rowRec.className = 'result-row dim';
-    valGauge.className = 'rr-val';
-    valDrop.className = 'rr-val';
-    valRec.className = 'rr-val';
-    valGauge.textContent = '—';
-    valDrop.textContent = '— %';
-    valRec.textContent = '—';
-    subGauge.textContent = 'Based on NEC 75°C ampacity';
-    subDrop.textContent = 'At minimum gauge';
-    subRec.textContent = 'For ≤ 3% voltage drop';
+    /* Reset */
+    setRow('Gauge', 'dim', '—', 'Based on NEC 75°C derated ampacity');
+    setRow('Ampacity', 'dim', '—', 'Table ampacity × ambient × fill factors');
+    setRow('Drop', 'dim', '— %', 'At minimum gauge');
+    setRow('Rec', 'dim', '—', 'For ≤ 3% voltage drop');
     hintText.textContent = '';
+    hintText.className = 'hint';
+    document.getElementById('derateSummary').style.display = 'none';
 
     if (isNaN(amps) || amps <= 0) return;
 
-    // Find minimum gauge by ampacity
-    var minIdx = -1;
-    for (var g = 0; g < gauges.length; g++) {
-      if (ampTable[g] >= amps) { minIdx = g; break; }
-    }
-    if (minIdx === -1) {
-      valGauge.textContent = 'Exceeds table';
-      rowGauge.className = 'result-row live high';
-      valGauge.className = 'rr-val high';
-      hintText.textContent = 'Load exceeds maximum ampacity in NEC table.';
+    /* Derating factors */
+    var ambFactor = isNaN(ambientF) ? 1.00 : getAmbientFactor(ambientF);
+    var fillFactor = FILL_TABLE[fillKey] || 1.00;
+    var combinedFactor = ambFactor * fillFactor;
+
+    /* Continuous load: conductor must carry 125% of load */
+    var designAmps = continuous ? amps * 1.25 : amps;
+
+    /* Required table ampacity: designAmps / combinedFactor
+       Because: derated ampacity = table × factor, so table must be ≥ designAmps / factor */
+    var requiredAmpacity = combinedFactor > 0 ? designAmps / combinedFactor : Infinity;
+
+    /* Show derating summary */
+    var summary = document.getElementById('derateSummary');
+    summary.style.display = 'block';
+    var drAmb = document.getElementById('drAmbient');
+    drAmb.textContent = (ambFactor * 100).toFixed(0) + '%';
+    drAmb.className = 'dr-val' + (ambFactor < 1 ? ' warn' : ' neutral');
+    var drFill = document.getElementById('drFill');
+    drFill.textContent = (fillFactor * 100).toFixed(0) + '%';
+    drFill.className = 'dr-val' + (fillFactor < 1 ? ' warn' : ' neutral');
+    var drCont = document.getElementById('drCont');
+    drCont.textContent = continuous ? 'Yes (×1.25)' : 'No';
+    drCont.className = 'dr-val' + (continuous ? ' warn' : ' neutral');
+    document.getElementById('drRequired').textContent = requiredAmpacity.toFixed(1) + ' A';
+
+    if (ambFactor === 0) {
+      setRow('Gauge', 'high', 'NONE', 'Ambient exceeds 158°F — NEC 310.15(B)(1) prohibits use');
+      hintText.textContent = 'Ambient temperature exceeds NEC limits for 75°C conductors.';
       hintText.className = 'hint warn';
       return;
     }
 
-    valGauge.textContent = labels[minIdx];
-    subGauge.textContent = ampTable[minIdx] + 'A rated (' + (mat === 'cu' ? 'Copper' : 'Aluminum') + ' 75°C)';
-    rowGauge.className = 'result-row live';
-    valGauge.className = 'rr-val live';
+    /* Find minimum gauge by required ampacity (table value must be ≥ requiredAmpacity) */
+    var minIdx = -1;
+    for (var g = 0; g < gauges.length; g++) {
+      if (ampTable[g] >= requiredAmpacity) { minIdx = g; break; }
+    }
+    if (minIdx === -1) {
+      setRow('Gauge', 'high', 'Exceeds table', 'Required ' + requiredAmpacity.toFixed(1) + 'A exceeds NEC table');
+      hintText.textContent = 'Load (after derating) exceeds maximum ampacity in NEC table. Parallel conductors may be required.';
+      hintText.className = 'hint warn';
+      return;
+    }
+
+    /* Derated ampacity of the selected conductor */
+    var deratedAmp = ampTable[minIdx] * combinedFactor;
+
+    setRow('Gauge', 'live', labels[minIdx],
+      ampTable[minIdx] + 'A table × ' + (combinedFactor * 100).toFixed(0) + '% = ' + deratedAmp.toFixed(1) + 'A derated');
+    setRow('Ampacity', combinedFactor < 1 ? 'warn' : 'ok',
+      deratedAmp.toFixed(1) + ' A',
+      'NEC 310.16 ' + ampTable[minIdx] + 'A × ' + (ambFactor * 100).toFixed(0) + '% amb × ' + (fillFactor * 100).toFixed(0) + '% fill');
 
     if (isNaN(dist) || dist <= 0) {
       hintText.textContent = 'Enter distance to calculate voltage drop.';
       return;
     }
 
-    // Voltage drop at minimum gauge
+    /* Voltage drop at minimum gauge */
     var vd = calcVdrop(minIdx, amps, dist);
     var pct = (vd / voltage) * 100;
-    valDrop.textContent = pct.toFixed(2) + ' %';
-    subDrop.textContent = vd.toFixed(2) + 'V drop at ' + labels[minIdx];
 
     if (pct <= 3) {
-      rowDrop.className = 'result-row live ok';
-      valDrop.className = 'rr-val ok';
-      valRec.textContent = labels[minIdx];
-      subRec.textContent = 'Minimum gauge meets ≤ 3% drop';
-      rowRec.className = 'result-row live ok';
-      valRec.className = 'rr-val ok';
+      setRow('Drop', 'ok', pct.toFixed(2) + ' %', vd.toFixed(2) + 'V drop at ' + labels[minIdx]);
+      setRow('Rec', 'ok', labels[minIdx], 'Minimum gauge meets ≤ 3% drop');
     } else {
-      rowDrop.className = 'result-row live high';
-      valDrop.className = 'rr-val high';
+      setRow('Drop', 'high', pct.toFixed(2) + ' %', vd.toFixed(2) + 'V drop at ' + labels[minIdx]);
 
-      // Find gauge that gets ≤ 3%
+      /* Find gauge that gets ≤ 3% */
       var recIdx = -1;
       for (var j = minIdx; j < gauges.length; j++) {
         var testVd = calcVdrop(j, amps, dist);
@@ -218,15 +373,9 @@ function init() {
       if (recIdx !== -1) {
         var recVd = calcVdrop(recIdx, amps, dist);
         var recPct = (recVd / voltage) * 100;
-        valRec.textContent = labels[recIdx];
-        subRec.textContent = recPct.toFixed(2) + '% drop (' + recVd.toFixed(2) + 'V)';
-        rowRec.className = 'result-row live ok';
-        valRec.className = 'rr-val ok';
+        setRow('Rec', 'ok', labels[recIdx], recPct.toFixed(2) + '% drop (' + recVd.toFixed(2) + 'V)');
       } else {
-        valRec.textContent = 'Exceeds table';
-        subRec.textContent = 'No standard size achieves ≤ 3%';
-        rowRec.className = 'result-row live high';
-        valRec.className = 'rr-val high';
+        setRow('Rec', 'high', 'Exceeds table', 'No standard size achieves ≤ 3%');
       }
       hintText.textContent = 'Voltage drop exceeds 3% at minimum ampacity gauge — upsizing recommended.';
       hintText.className = 'hint warn';
@@ -235,6 +384,8 @@ function init() {
 
   inAmps.addEventListener('input', calc);
   inDist.addEventListener('input', calc);
+  inAmbient.addEventListener('input', calc);
+  conduitFill.addEventListener('change', calc);
 }
 document.addEventListener('DOMContentLoaded', init);
 </script>
