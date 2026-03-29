@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CU 352 — Field Access &amp; Commissioning | Grundfos | om3ni.io</title>
+<link rel="stylesheet" href="/shared/base.css">
+<link rel="stylesheet" href="/shared/nav.css">
+<script>
+  window.NAV_ACTIVE   = '/Grundfos/cu352/';
+  window.NAV_SECTIONS = true;
+</script>
+<style>
+  /* Page-local: section anchors need offset for sticky header */
+  section[id] { scroll-margin-top: 20px; }
+
+  .section-hdr {
+    border-top: 1px solid var(--border);
+    padding-top: 40px; margin-top: 40px;
+  }
+  .section-hdr.first { border-top: none; padding-top: 24px; margin-top: 0; }
+
+  .sec-eyebrow {
+    font-family: var(--mono); font-size: .6rem; font-weight: 700;
+    letter-spacing: .2em; text-transform: uppercase;
+    color: var(--text-mute); margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sec-eyebrow::before {
+    content: ''; display: inline-block; width: 5px; height: 5px;
+    border-radius: 50%; background: var(--orange); flex-shrink: 0;
+  }
+  .sec-eyebrow.ok::before    { background: var(--green-hi); }
+  .sec-eyebrow.warn::before  { background: var(--yellow-hi); }
+  .sec-eyebrow.danger::before{ background: var(--red-hi); }
+
+  .sec-title {
+    font-family: var(--ui); font-size: 1.6rem; font-weight: 700;
+    color: var(--text); text-transform: uppercase; letter-spacing: .06em;
+    margin-bottom: 10px; line-height: 1.1;
+  }
+  .sec-title span { color: var(--orange-hi); }
+  .sec-title.ok   span { color: var(--green-hi); }
+  .sec-title.warn span { color: var(--yellow-hi); }
+
+  .sec-intro {
+    font-size: .86rem; color: var(--text-dim);
+    line-height: 1.65; margin-bottom: 16px; max-width: 680px;
+  }
+</style>
+</head>
+<body>
+<script src="/nav.js"></script>
+
+<div class="page-wrap">
+<div class="page-content">
+
+  <!-- HEADER -->
+  <div class="section-hdr first">
+    <div style="font-family:var(--mono);font-size:.6rem;color:var(--orange-lo);letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px;">Grundfos · CU 352 / Hydro MPC</div>
+    <h1 style="font-family:var(--ui);font-size:2rem;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.06em;line-height:1.1;margin-bottom:6px;">
+      Field Access &amp; <span style="color:var(--orange-hi);">Commissioning</span>
+    </h1>
+    <div style="font-family:var(--mono);font-size:.62rem;color:var(--text-mute);display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;border-bottom:1px solid var(--border);padding-bottom:20px;margin-bottom:4px;">
+      <span>// Hydro MPC Booster Systems</span>
+      <span>// CRE / CRNE E-Pump Skids</span>
+      <span>// GENIbus / PC Tool E-products</span>
+      <span>// Windows XP–11</span>
+    </div>
+  </div>
+
+
+  <!-- ── LOCKOUT ── -->
+  <section id="lockout">
+    <div class="section-hdr">
+      <div class="sec-eyebrow warn">Situation Assessment</div>
+      <div class="sec-title warn">Contractor <span>Lockout</span></div>
+    </div>
+    <p class="sec-intro">When a prior contractor has password-protected the CU 352 and withheld credentials on contract transition, setpoints, firmware version, sensor configuration, and cascade logic are all hidden. Work through the access paths below before considering a controller replacement.</p>
+
+    <div class="callout callout-warn">
+      <strong>Check Before You Assume</strong>
+      <p>Both operator and service passwords ship disabled from the factory. If the prior contractor never enabled them, the panel may be open. Try navigating directly to Settings — if it prompts for a password, proceed to the service code below.</p>
+    </div>
+    <div class="callout callout-info">
+      <strong>What Remains Readable Without Authentication</strong>
+      <p>Status display (Menu 1) and Alarm Log (Menu 3.2) are accessible without a password. Use these to gather visible system information — active alarms, current operating mode, process values — before proceeding.</p>
+    </div>
+  </section>
+
+
+  <!-- ── SERVICE CODE ── -->
+  <section id="service-code">
+    <div class="section-hdr">
+      <div class="sec-eyebrow ok">Override Access</div>
+      <div class="sec-title ok">Service Code <span>Override</span></div>
+    </div>
+    <p class="sec-intro">The CU 352 includes a universal service-level override for exactly this situation — bypasses a contractor-set operator password without wiping any configuration.</p>
+
+    <div class="callout callout-ok">
+      <strong>CU 352 Universal Service Code</strong>
+      <p>When prompted for a password at the panel keypad, enter:</p>
+    </div>
+
+    <div class="code-big">6814</div>
+
+    <div class="callout callout-warn">
+      <strong>After You're In</strong>
+      <p>Photograph every accessible screen before making any changes. Document setpoints, sensor configuration, operating mode, and cascade settings. Even a locked panel may contain tuned parameters worth preserving. Set a new password under credentials your organization controls before leaving the site.</p>
+    </div>
+  </section>
+
+
+  <!-- ── CONNECTION ── -->
+  <section id="connection">
+    <div class="section-hdr">
+      <div class="sec-eyebrow">Connection Methods</div>
+      <div class="sec-title">PC <span>Connection</span></div>
+    </div>
+    <p class="sec-intro">The CU 352 exposes two service connection points for PC Tool. USB is preferred. The TTL port is legacy but functional.</p>
+
+    <table class="data-table">
+      <thead><tr><th>Port</th><th>Connector</th><th>Notes</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr class="row-hi">
+          <td>USB</td><td>USB 2.0 Type-B</td>
+          <td>Standard printer cable. No adapter required.</td>
+          <td><span class="badge badge-ok">Preferred</span></td>
+        </tr>
+        <tr>
+          <td>TTL</td><td>3.5mm TTL</td>
+          <td>Requires PC Tool Link adapter p/n 96705378.</td>
+          <td><span class="badge badge-warn">Adapter Req.</span></td>
+        </tr>
+        <tr>
+          <td>Ethernet</td><td>RJ-45</td>
+          <td>CIM / BAS integration only. Not used for PC Tool commissioning.</td>
+          <td><span class="badge badge-info">BAS Only</span></td>
+        </tr>
+        <tr>
+          <td>RS-485</td><td>Terminal block</td>
+          <td>GENIbus internal bus. Not a PC connection point.</td>
+          <td><span class="badge badge-danger">Internal Only</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-info">
+      <strong>PC Tool Link Adapter — p/n 96705378</strong>
+      <p>Provides RS-485 and TTL cables in one unit, USB-powered. Required on hardware without an accessible USB-B port. See the adapter guide in Resources for LED indicators and COM port assignment.</p>
+    </div>
+  </section>
+
+
+  <!-- ── PC TOOL SETUP ── -->
+  <section id="pctool">
+    <div class="section-hdr">
+      <div class="sec-eyebrow">Software</div>
+      <div class="sec-title">PC Tool <span>Setup</span></div>
+    </div>
+    <p class="sec-intro">Grundfos PC Tool E-products is the commissioning and service software for all CU 352 / Hydro MPC systems. Freeware, Windows XP–11. Install and update before leaving for the site.</p>
+
+    <div class="steps">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <div class="step-title">Download the Installer</div>
+          <div class="step-detail">Get PC Tool E-products from the <a href="/Grundfos/" style="color:var(--orange-hi);">Grundfos Resources</a> page. Run <code>MSIApp.exe</code> — handles the Visual C++ runtime dependency automatically.</div>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <div class="step-title">Install &amp; Launch</div>
+          <div class="step-detail">Accept defaults. Launch via <code>Start → Programs → Grundfos PC Tools → PC Tool E-products</code>. Skip COM port selection until the CU 352 is physically connected.</div>
+        </div>
+      </div>
+      <div class="step-card is-warn">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <div class="step-title">Update GSC Library <span class="badge badge-warn">Do This Before You Leave</span></div>
+          <div class="step-detail">Go to <code>Tools → Update configuration files</code>. Pulls current GSC file library from Grundfos servers. Required before standard configuration files can be pushed. Needs internet access.</div>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">04</div>
+        <div class="step-body">
+          <div class="step-title">Connect to CU 352</div>
+          <div class="step-detail">Power up the Control MPC panel. Connect via USB-B cable. The Network List populates with icons for CU 352 and any IO 351 modules detected on the GENIbus network.</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="data-table">
+      <thead><tr><th>Function</th><th>Access</th><th>Field Use</th></tr></thead>
+      <tbody>
+        <tr><td>Network List</td><td>Toolbar / F5</td><td>All GENIbus devices — CU 352, IO 351 modules, E-pumps.</td></tr>
+        <tr><td>Monitor</td><td>Select device → Monitor</td><td>Live status — pressure, speed, alarms, I/O. Verify sensor signal after wiring.</td></tr>
+        <tr class="row-hi"><td>Standard Config</td><td>Select CU 352 → F6</td><td>Loads GSC files. Primary commissioning path — follow numbered sequence exactly.</td></tr>
+        <tr><td>Custom Config</td><td>Select device → Custom</td><td>Setpoint, sensor range, dry-run, motor data.</td></tr>
+        <tr><td>Alarm Log</td><td>Select device → Alarm</td><td>Read and clear fault history. Review before commissioning a replacement controller.</td></tr>
+        <tr><td>Data Logging</td><td>Toolbar → Data Log</td><td>Continuous logging. Save on exit as GSF for documentation or handoff.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-warn">
+      <strong>Read Before You Write</strong>
+      <p>When connecting to an existing unlocked controller, record all current parameters before pushing any GSC files. Sending a standard configuration overwrites existing custom settings.</p>
+    </div>
+  </section>
+
+
+  <!-- ── PREREQS ── -->
+  <section id="prereqs">
+    <div class="section-hdr">
+      <div class="sec-eyebrow">Commissioning</div>
+      <div class="sec-title">What You Need <span>First</span></div>
+    </div>
+    <p class="sec-intro">Gather the following before beginning. Green border = required, cannot be guessed. Yellow border = estimated, adjust during startup observation.</p>
+
+    <div class="param-grid">
+      <div class="param-card required">
+        <div class="param-label">Required — System</div>
+        <div class="param-value">System Type</div>
+        <div class="param-note">E, ES, ED, EDF, EF, F, or S. Determines GSC file and IO module wiring. Read from panel type key.</div>
+      </div>
+      <div class="param-card required">
+        <div class="param-label">Required — System</div>
+        <div class="param-value">Pump Count</div>
+        <div class="param-note">Number of main pumps on the skid. Determines GSC file variant and IO 351 module count.</div>
+      </div>
+      <div class="param-card required">
+        <div class="param-label">Required — Control</div>
+        <div class="param-value">Discharge Setpoint</div>
+        <div class="param-note">Target outlet pressure. Verify against static head calculation — do not carry over without confirming the math.</div>
+      </div>
+      <div class="param-card required">
+        <div class="param-label">Required — Sensor</div>
+        <div class="param-value">Sensor Range &amp; Type</div>
+        <div class="param-note">4–20 mA or 0–10V, pressure range (e.g. 0–232 PSI). Read from transducer nameplate on discharge manifold.</div>
+      </div>
+      <div class="param-card required">
+        <div class="param-label">Required — Motor</div>
+        <div class="param-value">Motor Nameplate Data</div>
+        <div class="param-note">kW, voltage, current, frequency, speed. Required for CUE custom configuration if external VFD is used.</div>
+      </div>
+      <div class="param-card required">
+        <div class="param-label">Required — Pump</div>
+        <div class="param-value">Pump Model String</div>
+        <div class="param-note">Full CRE/CRNE model from pump nameplate. Determines the correct Pump Data GSC file number.</div>
+      </div>
+      <div class="param-card estimated">
+        <div class="param-label">Estimated — Protection</div>
+        <div class="param-value">Dry-Run Threshold</div>
+        <div class="param-note">Inlet pressure or level switch setpoint for water shortage protection. Start conservative, tune after startup.</div>
+      </div>
+      <div class="param-card estimated">
+        <div class="param-label">Estimated — Timing</div>
+        <div class="param-value">Ramp Rates</div>
+        <div class="param-note">Default to Grundfos standard values. Adjust if suction side is sensitive to flow surges.</div>
+      </div>
+    </div>
+
+    <div class="callout callout-danger">
+      <strong>NPSHa-Sensitive Installations</strong>
+      <p>On systems with marginal suction conditions — long suction runs, shallow tanks, or known cavitation history — establish speed limits and conservative ramp rates before bringing pumps online. Aggressive cascade startup on a compromised suction side causes immediate mechanical seal damage.</p>
+    </div>
+  </section>
+
+
+  <!-- ── GSC FILE ORDER ── -->
+  <section id="gsc">
+    <div class="section-hdr">
+      <div class="sec-eyebrow">Commissioning</div>
+      <div class="sec-title">GSC File <span>Load Order</span></div>
+    </div>
+    <p class="sec-intro">Configuration is delivered as a numbered sequence of GSC files via PC Tool Standard Configuration. Sequence is fixed. Do not restart the CU 352 between files.</p>
+
+    <div class="callout callout-warn">
+      <strong>One Restart — After All Files Are Sent</strong>
+      <p>Restart button is in the lower-right corner of PC Tool. Clicking mid-sequence initializes on incomplete configuration. Send all required files first, then restart once.</p>
+    </div>
+
+    <div class="steps">
+      <div class="step-card is-ok">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Control MPC <span class="badge badge-ok">Always Required</span></div>
+          <div class="step-detail">Standard Configuration → Application → <strong>1. Control MPC</strong>. Select system type and pump count. Search, select file, click Send. Verify GSC number appears in label position 1.</div>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Control MPC Options <span class="badge badge-info">If Applicable</span></div>
+          <div class="step-detail">Required only if IO 351B interface modules (A01/A03) are installed. Skip if none present.</div>
+        </div>
+      </div>
+      <div class="step-card is-ok">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Hydro MPC <span class="badge badge-ok">Always Required</span></div>
+          <div class="step-detail">Select <strong>3. Hydro MPC</strong>. Encodes outlet pressure range, sensor range, and dry-running protection type. Match sensor range to transducer on discharge manifold.</div>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Hydro MPC Options <span class="badge badge-info">If Applicable</span></div>
+          <div class="step-detail">Required only if redundant primary sensor is installed. Skip if single-sensor configuration.</div>
+        </div>
+      </div>
+      <div class="step-card is-ok">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Pump Data <span class="badge badge-ok">Always Required</span></div>
+          <div class="step-detail">
+            Select <strong>5. Pump data</strong>. Search by pump model string or GSC file number from nameplate label. Loads hydraulic performance curve for installed pump.
+            <ul>
+              <li>If pilot pump installed, load its GSC file after this step</li>
+              <li>Pump data must also be sent to each E-pump individually via step-by-step E-pump configuration</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <div class="step-title">Restart CU 352</div>
+          <div class="step-detail">After all files are sent, click <strong>Restart</strong> in lower-right corner of PC Tool. Initialization takes approximately 25 seconds.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── SETPOINT ── -->
+  <section id="setpoint">
+    <div class="section-hdr">
+      <div class="sec-eyebrow">Commissioning</div>
+      <div class="sec-title">Pressure <span>Setpoint</span></div>
+    </div>
+    <p class="sec-intro">Verify against a static head calculation from actual installation geometry. Do not carry over a setpoint without confirming the math.</p>
+
+    <div class="callout callout-info">
+      <strong>Static Head Calculation</strong>
+      <p>Height above pump (ft) × 0.433 = static head PSI. Add minimum fixture pressure (15–20 PSI at highest fixture) plus estimated friction losses. Start 2–4 PSI above calculated minimum. Verify top-floor pressure before locking in.</p>
+    </div>
+
+    <table class="data-table">
+      <thead><tr><th>Component</th><th>Formula</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Static Head</td><td>Height (ft) × 0.433</td><td>Measure above pump discharge — not above grade.</td></tr>
+        <tr><td>Fixture Pressure</td><td>+15 to +20 PSI</td><td>Use 20 PSI for care facility applications.</td></tr>
+        <tr><td>Friction Losses</td><td>+3 to +8 PSI typical</td><td>Higher on aged cast iron distribution.</td></tr>
+        <tr class="row-hi"><td>Minimum Setpoint</td><td>Sum of above</td><td>Program 2–4 PSI above minimum during startup. Walk down after top-floor verification.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-warn">
+      <strong>Sensor Tap Location Changes the Number</strong>
+      <p>Sensor at pump manifold — setpoint must account for all head and friction to highest fixture. Sensor downstream — setpoint is lower. Confirm sensor location before programming.</p>
+    </div>
+  </section>
+
+
+  <!-- ── CASCADE ── -->
+  <section id="cascade">
+    <div class="section-hdr">
+      <div class="sec-eyebrow">Commissioning</div>
+      <div class="sec-title">Cascade &amp; <span>Dry-Run</span></div>
+    </div>
+    <p class="sec-intro">Default cascade logic is appropriate for most installations — adjust only if startup observation warrants it.</p>
+
+    <div class="steps">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <div class="step-title">Lead/Lag &amp; Alternation</div>
+          <div class="step-detail">Default uses automatic alternation to equalize run hours. Leave at default unless a specific lead pump is required for diagnostic purposes.</div>
+        </div>
+      </div>
+      <div class="step-card is-warn">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <div class="step-title">Cascade Staging <span class="badge badge-warn">Tune on Suction-Sensitive Systems</span></div>
+          <div class="step-detail">
+            On suction-sensitive installations, aggressive staging creates transient low-pressure events before the system stabilizes.
+            <ul>
+              <li>If NPSHa margin is tight, limit max simultaneous pump starts to 1</li>
+              <li>Increase minimum sequence time if cavitation noise is observed on startup</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="step-card is-danger">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <div class="step-title">Dry-Run Protection <span class="badge badge-danger">Configure Before First Run</span></div>
+          <div class="step-detail">
+            Configure inlet pressure or level switch input before bringing pumps online. Without this, a suction-side failure runs pumps dry.
+            <ul>
+              <li><strong>Alarm 206</strong> — Warning threshold (pump continues, alert issued)</li>
+              <li><strong>Alarm 214</strong> — Alarm threshold (all pumps stopped, manual reset)</li>
+              <li>A nuisance stop is recoverable — a dry-run failure is not</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">04</div>
+        <div class="step-body">
+          <div class="step-title">Speed Limiting</div>
+          <div class="step-detail">If NPSHa analysis has identified a safe max speed, set per-pump limits via Custom Configuration. The E-pump VFD will not exceed this regardless of what cascade logic requests.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ── E-PUMP GENIBUS ── -->
+  <section id="epump">
+    <div class="section-hdr">
+      <div class="sec-eyebrow">Commissioning</div>
+      <div class="sec-title">E-Pump <span>GENIbus Address</span></div>
+    </div>
+    <p class="sec-intro">Each E-pump must be assigned a unique GENIbus address before the CU 352 can communicate with it. Use Grundfos GO app (Bluetooth) or GO Remote (IR). Pumps are numbered left to right as installed.</p>
+
+    <div class="callout callout-info">
+      <strong>Address Assignment</strong>
+      <p>Point the Grundfos GO at the IR window on the pump terminal box. Navigate to Settings → NUMBER, set the address, press OK. Work one pump at a time — shield others if within IR range to prevent address conflicts.</p>
+    </div>
+
+    <table class="data-table">
+      <thead><tr><th>Device</th><th>GENIbus Address</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr class="row-hi"><td>Pump 1 (leftmost)</td><td>1</td><td>Lead pump in default config</td></tr>
+        <tr><td>Pump 2</td><td>2</td><td></td></tr>
+        <tr><td>Pump 3</td><td>3</td><td></td></tr>
+        <tr><td>Pump 4</td><td>4</td><td></td></tr>
+        <tr><td>Pump 5</td><td>5</td><td></td></tr>
+        <tr><td>Pump 6</td><td>6</td><td>Maximum per CU 352</td></tr>
+        <tr class="row-warn"><td>Pilot Pump</td><td>10</td><td>Fixed — do not use for main pumps</td></tr>
+        <tr><td>IO 351 Module (primary)</td><td>31</td><td>Set via Grundfos GO at IO 351 IR window</td></tr>
+        <tr><td>IO 351 Module (secondary)</td><td>32</td><td>4–6 pump systems with two IO 351B modules</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+
+  <!-- ── ALARMS ── -->
+  <section id="alarms">
+    <div class="section-hdr">
+      <div class="sec-eyebrow">Reference</div>
+      <div class="sec-title">Common <span>Alarm Codes</span></div>
+    </div>
+    <p class="sec-intro">Alarm log stores up to 24 entries with timestamps. Review the full log before beginning any fault correction — prior history frequently identifies root cause.</p>
+
+    <table class="data-table">
+      <thead><tr><th>Code</th><th>Description</th><th>Common Cause</th><th>Reset</th></tr></thead>
+      <tbody>
+        <tr><td>003</td><td>External Fault</td><td>Digital input configured for external fault is closed</td><td>Man / Auto</td></tr>
+        <tr><td>007</td><td>Too Many Restarts</td><td>Repeated fault cycling — mains supply or terminal box</td><td>Auto</td></tr>
+        <tr><td>010</td><td>Communication Fault</td><td>GENIbus lost — check wiring, addresses, power</td><td>Auto</td></tr>
+        <tr class="row-warn"><td>088</td><td>General Sensor Fault</td><td>Analog input outside configured range — check wiring and 24V supply</td><td>Auto</td></tr>
+        <tr class="row-warn"><td>089</td><td>Primary Sensor Fault</td><td>4–20 mA signal out of range — check sensor wiring and supply</td><td>Auto</td></tr>
+        <tr><td>203</td><td>All Pumps Alarm</td><td>All auto pumps stopped — check individual pump alarms and GENIbus wiring</td><td>Auto</td></tr>
+        <tr class="row-hi"><td>206</td><td>Water Shortage Warning</td><td>Inlet below warning threshold — pump continues, alert issued</td><td>Auto</td></tr>
+        <tr class="row-hi"><td>214</td><td>Water Shortage Alarm</td><td>Inlet below alarm threshold — all pumps stopped</td><td>Manual</td></tr>
+        <tr><td>210</td><td>Pressure High</td><td>Discharge above programmed high limit</td><td>Manual</td></tr>
+        <tr><td>211</td><td>Pressure Low</td><td>Discharge below programmed low limit</td><td>Man / Auto</td></tr>
+        <tr><td>213</td><td>VFD Not Ready</td><td>External VFD relay not releasing — check VFD alarm and wiring</td><td>Auto</td></tr>
+        <tr><td>215</td><td>Pressure Build-Up Fault</td><td>Setpoint not reached within configured time — check supply and piping</td><td>Man / Auto</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+
+  <!-- ── RESOURCES ── -->
+  <section id="resources">
+    <div class="section-hdr">
+      <div class="sec-eyebrow">Downloads</div>
+      <div class="sec-title">Reference <span>Documents</span></div>
+    </div>
+
+    <div class="ref-grid">
+      <a class="ref-card primary" href="/Grundfos/resources/PC-Tool-E-Products.exe">
+        <div class="ref-icon">💾</div>
+        <div class="ref-info">
+          <div class="ref-title">PC Tool E-Products — Installer</div>
+          <div class="ref-sub">Grundfos A/S · Freeware · v20.16.0 · Windows XP–11</div>
+        </div>
+        <div class="ref-arrow">↓</div>
+      </a>
+      <a class="ref-card" href="https://www.grundfos.com/content/dam/local/da-dk/page-assets/support/software/documents/PC-Tool-E-Products-gdk-da.pdf" target="_blank" rel="noopener">
+        <div class="ref-icon">📘</div>
+        <div class="ref-info">
+          <div class="ref-title">PC Tool E-Products — User Manual</div>
+          <div class="ref-sub">Grundfos A/S · Official documentation · grundfos.com</div>
+        </div>
+        <div class="ref-arrow">→</div>
+      </a>
+      <a class="ref-card" href="https://net.grundfos.com/Appl/ccmsservices/public/literature/filedata/Grundfosliterature-1956600.pdf" target="_blank" rel="noopener">
+        <div class="ref-icon">🔌</div>
+        <div class="ref-info">
+          <div class="ref-title">PC Tool Link — Hardware Adapter Guide</div>
+          <div class="ref-sub">Grundfos A/S · p/n 96705378 · TTL &amp; RS-485 to USB</div>
+        </div>
+        <div class="ref-arrow">→</div>
+      </a>
+      <a class="ref-card" href="/Grundfos/resources/hydro-mpc-si-98394087.pdf">
+        <div class="ref-icon">📄</div>
+        <div class="ref-info">
+          <div class="ref-title">Hydro MPC Service Instructions — 98394087 04.2024</div>
+          <div class="ref-sub">Grundfos A/S · CU 352 · IO 351A/B · Terminal wiring · Alarm list</div>
+        </div>
+        <div class="ref-arrow">↓</div>
+      </a>
+      <a class="ref-card" href="/Grundfos/cu352/si.html">
+        <div class="ref-icon">📋</div>
+        <div class="ref-info">
+          <div class="ref-title">CU 352 — Service Instructions Reference</div>
+          <div class="ref-sub">Structured HTML reference · Terminal tables · IO 351 wiring · GSC file numbers</div>
+        </div>
+        <div class="ref-arrow">→</div>
+      </a>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>Grundfos Technical Support — 800-921-7867</strong>
+      <p>For contractor lockout situations on large commercial installations, Grundfos US support can authorize factory-level access or dispatch a factory representative. Have CU 352 serial number, site address, and proof of current service responsibility available.</p>
+    </div>
+  </section>
+
+
+  <!-- ── TL;DR ── -->
+  <section id="tldr">
+    <div class="section-hdr">
+      <div class="sec-eyebrow ok">Key Takeaways</div>
+      <div class="sec-title ok">TL;<span>DR</span></div>
+    </div>
+
+    <div class="tldr-block">
+      <div class="tldr-header">Field Summary — CU 352 Access &amp; Commissioning</div>
+      <div class="tldr-items">
+        <div class="tldr-item">
+          <div class="tldr-num">01</div>
+          <div class="tldr-text"><strong>Universal service override code is <code>6814</code>.</strong> Bypasses contractor-set password without wiping configuration. Document everything before making changes.</div>
+        </div>
+        <div class="tldr-item">
+          <div class="tldr-num">02</div>
+          <div class="tldr-text"><strong>Connect via USB-B to the CU 352 USB port.</strong> If TTL only, the PC Tool Link adapter (p/n 96705378) bridges to USB.</div>
+        </div>
+        <div class="tldr-item">
+          <div class="tldr-num">03</div>
+          <div class="tldr-text"><strong>PC Tool E-products is free.</strong> Install and run the GSC library update before leaving for the site.</div>
+        </div>
+        <div class="tldr-item">
+          <div class="tldr-num">04</div>
+          <div class="tldr-text"><strong>GSC files load in fixed sequence:</strong> 1 Control MPC → 2 Options → 3 Hydro MPC → 4 Options → 5 Pump Data. One restart after all files are sent.</div>
+        </div>
+        <div class="tldr-item">
+          <div class="tldr-num">05</div>
+          <div class="tldr-text"><strong>Verify setpoint with static head math.</strong> Height (ft) × 0.433 + fixture pressure + friction. Start 2–4 PSI above minimum, verify top floor, lock in.</div>
+        </div>
+        <div class="tldr-item">
+          <div class="tldr-num">06</div>
+          <div class="tldr-text"><strong>Configure dry-run protection before first run.</strong> Alarm 214 stops all pumps on suction failure. Without it configured, a suction event runs pumps dry.</div>
+        </div>
+        <div class="tldr-item">
+          <div class="tldr-num">07</div>
+          <div class="tldr-text"><strong>GENIbus addresses must be assigned before CU 352 can talk to each E-pump.</strong> Left to right starting at 1. Pilot pumps fixed at 10. IO 351 primary at 31.</div>
+        </div>
+        <div class="tldr-item">
+          <div class="tldr-num">08</div>
+          <div class="tldr-text"><strong>On suction-sensitive systems, start conservative on cascade and speed limits.</strong> Tighten only after observing stable behavior through at least one full staging cycle.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="page-footer">
+    <span>Grundfos CU 352 · Hydro MPC · om3ni.github.io</span>
+    <span>Field reference only — verify against current Grundfos service literature before use</span>
+  </footer>
+
+</div>
+</div>
+
+</body>
+</html>
