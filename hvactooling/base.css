@@ -65,6 +65,13 @@ header {
   cursor: pointer; padding: 2px 8px 2px 0; flex-shrink: 0; line-height: 1;
   text-decoration: none; display: flex; align-items: center;
 }
+.hdr-home {
+  background: none; border: none; color: var(--text-mute); font-size: 1rem;
+  cursor: pointer; padding: 2px 4px 2px 0; flex-shrink: 0; line-height: 1;
+  text-decoration: none; display: flex; align-items: center;
+  transition: color .15s;
+}
+.hdr-home:hover { color: var(--orange); }
 .hdr-titles { flex: 1; min-width: 0; }
 .hdr-title { font-family: var(--ui); font-weight: 700; font-size: 1rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text); }
 .hdr-sub { font-family: var(--mono); font-size: .64rem; color: var(--text-mute); letter-spacing: .05em; margin-top: 1px; }
