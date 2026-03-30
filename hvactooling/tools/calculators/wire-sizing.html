@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Wire Sizing · HVAC Calculators</title>
+<title>Wire & Breaker Sizing · HVAC Calculators</title>
 <link rel="stylesheet" href="../../base.css">
 <link rel="stylesheet" href="calc.css">
 <style>
@@ -37,11 +37,11 @@
 </head>
 <body>
 <header>
-  <a class="hdr-home" href="/" title="Site home">⌂</a>
-  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <a class="hdr-home" href="../../index.html" title="Project home">⌂</a>
+  <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
   <div class="hdr-titles">
-    <div class="hdr-title">Wire Sizing</div>
-    <div class="hdr-sub"><span class="hdr-tier t3">advanced</span>NEC Ampacity · Voltage Drop · Derating</div>
+    <div class="hdr-title">Wire & Breaker Sizing</div>
+    <div class="hdr-sub"><span class="hdr-tier t3">advanced</span>NEC Ampacity · Voltage Drop · Derating · Breaker</div>
   </div>
 </header>
 <main>
@@ -148,6 +148,22 @@
   </div>
 
   <div class="results" id="results">
+    <div class="result-sec-hdr">Overcurrent Protection</div>
+    <div class="result-row dim" id="rowBreaker">
+      <div class="rr-left">
+        <div class="rr-label">Minimum Breaker</div>
+        <div class="rr-sub" id="subBreaker">Next standard NEC size ≥ calculated load</div>
+      </div>
+      <div class="rr-val" id="valBreaker">—</div>
+    </div>
+    <div class="result-row dim" id="rowPoles">
+      <div class="rr-left">
+        <div class="rr-label">Breaker Config</div>
+        <div class="rr-sub" id="subPoles">—</div>
+      </div>
+      <div class="rr-val" id="valPoles">—</div>
+    </div>
+    <div class="result-sec-hdr">Conductor</div>
     <div class="result-row dim" id="rowGauge">
       <div class="rr-left">
         <div class="rr-label">Minimum Wire Size</div>
@@ -178,10 +194,22 @@
     </div>
   </div>
   <div class="hint" id="hintText"></div>
+  <div style="padding:14px 0 0;"><button class="btn btn-primary" id="btnReport">Generate Report</button></div>
 </main>
+
+<div class="modal-overlay" id="reportModal">
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title" id="modalTitle">Field Report</div><button class="modal-close" id="modalClose">✕</button></div>
+    <div class="modal-body"><pre class="report-pre" id="reportText"></pre></div>
+    <div class="modal-footer"><button class="btn btn-ghost" id="btnCopy">Copy Text</button><button class="btn btn-primary" id="btnPrint">Print</button></div>
+  </div>
+</div>
+<div class="toast" id="toast">Copied to clipboard</div>
+
 <script>
 'use strict';
 function init() {
+  var stdBreakers = [15,20,25,30,35,40,45,50,60,70,80,90,100,110,125,150,175,200,225,250,300,350,400,450,500,600];
   var gauges = ['14','12','10','8','6','4','3','2','1','1/0','2/0','3/0','4/0','250','300','350','400','500'];
   var cmils = [4110,6530,10380,16510,26240,41740,52620,66360,83690,105600,133100,167800,211600,250000,300000,350000,400000,500000];
   /* NEC Table 310.16 — 75°C column (THWN-2, XHHW, etc.) */
@@ -223,6 +251,19 @@ function init() {
     return 0; /* Above 158°F — no ampacity allowed */
   }
 
+  function nextBreaker(amps) {
+    for (var i = 0; i < stdBreakers.length; i++) {
+      if (stdBreakers[i] >= amps) return stdBreakers[i];
+    }
+    return -1;
+  }
+
+  function getPoles(v, ph) {
+    if (ph === 3) return 3;
+    if (v === 120 || v === 277) return 1;
+    return 2;
+  }
+
   var voltage = 240;
   var phase = 1;
   var mat = 'cu';
@@ -257,8 +298,10 @@ function init() {
 
   function calcVdrop(gaugeIdx, amps, dist) {
     var K = mat === 'cu' ? 12.9 : 21.2;
-    var multiplier = phase === 3 ? 1.732 : 1;
-    var vd = (2 * K * multiplier * amps * dist) / cmils[gaugeIdx];
+    /* 1-phase: VD = 2·K·I·D / cmil  (round-trip, 2 conductors)
+       3-phase: VD = √3·K·I·D / cmil  (balanced return through other phases) */
+    var multiplier = phase === 3 ? 1.732 : 2;
+    var vd = (multiplier * K * amps * dist) / cmils[gaugeIdx];
     return vd;
   }
 
@@ -285,6 +328,8 @@ function init() {
     var hintText = document.getElementById('hintText');
 
     /* Reset */
+    setRow('Breaker', 'dim', '—', 'Next standard NEC size ≥ calculated load');
+    setRow('Poles', 'dim', '—', '—');
     setRow('Gauge', 'dim', '—', 'Based on NEC 75°C derated ampacity');
     setRow('Ampacity', 'dim', '—', 'Table ampacity × ambient × fill factors');
     setRow('Drop', 'dim', '— %', 'At minimum gauge');
@@ -302,6 +347,18 @@ function init() {
 
     /* Continuous load: conductor must carry 125% of load */
     var designAmps = continuous ? amps * 1.25 : amps;
+
+    /* Breaker — preliminary from load only (refined after conductor is known) */
+    var breakerSize = nextBreaker(designAmps);
+    var poles = getPoles(voltage, phase);
+    var poleLabel = poles + '-Pole' + (voltage === 277 && phase === 1 ? ' (L-N on 480Y/277)' : '');
+    if (breakerSize === -1) {
+      setRow('Breaker', 'high', 'Exceeds 600A', 'Load exceeds maximum standard breaker size');
+    } else {
+      setRow('Breaker', 'live', breakerSize + ' A',
+        'From load: ' + designAmps.toFixed(1) + 'A' + (continuous ? ' (125% continuous)' : '') + ' — refining with derating…');
+    }
+    setRow('Poles', 'live', poleLabel, breakerSize !== -1 ? breakerSize + 'A / ' + poles + '-pole breaker' : '—');
 
     /* Required table ampacity: designAmps / combinedFactor
        Because: derated ampacity = table × factor, so table must be ≥ designAmps / factor */
@@ -349,6 +406,41 @@ function init() {
       deratedAmp.toFixed(1) + ' A',
       'NEC 310.16 ' + ampTable[minIdx] + 'A × ' + (ambFactor * 100).toFixed(0) + '% amb × ' + (fillFactor * 100).toFixed(0) + '% fill');
 
+    /* Finalize breaker with conductor context — NEC 240.4:
+       breaker must not exceed the conductor's derated ampacity.
+       NEC 240.4(D) further caps small conductors (14→15A, 12→20A, 10→30A). */
+    if (breakerSize !== -1) {
+      var maxBreakerForGauge = { '14': 15, '12': 20, '10': 30 };
+      var gaugeLimit = maxBreakerForGauge[gauges[minIdx]];
+      var conductorLimit = gaugeLimit || deratedAmp;
+
+      if (breakerSize > conductorLimit) {
+        /* Breaker exceeds what the conductor can carry — find the right std size */
+        var cappedBreaker = nextBreaker(designAmps);
+        /* Walk down: breaker must be ≤ conductor limit */
+        for (var b = 0; b < stdBreakers.length; b++) {
+          if (stdBreakers[b] >= designAmps && stdBreakers[b] <= conductorLimit) {
+            cappedBreaker = stdBreakers[b]; break;
+          }
+        }
+        if (cappedBreaker > conductorLimit) {
+          /* No standard breaker fits between load and conductor limit — must upsize wire */
+          setRow('Breaker', 'warn', breakerSize + ' A',
+            gaugeLimit
+              ? 'NEC 240.4(D): ' + labels[minIdx] + ' limited to ' + gaugeLimit + 'A — upsize conductor'
+              : 'Exceeds derated ampacity (' + deratedAmp.toFixed(1) + 'A) — upsize conductor');
+        } else {
+          setRow('Breaker', 'ok', cappedBreaker + ' A',
+            'Capped to conductor limit (' + conductorLimit.toFixed(0) + 'A derated)');
+          breakerSize = cappedBreaker;
+        }
+      } else {
+        setRow('Breaker', 'ok', breakerSize + ' A',
+          'NEC std size ≥ ' + designAmps.toFixed(1) + 'A' + (continuous ? ' (125% continuous)' : ''));
+      }
+      setRow('Poles', 'live', poleLabel, breakerSize + 'A / ' + poles + '-pole breaker');
+    }
+
     if (isNaN(dist) || dist <= 0) {
       hintText.textContent = 'Enter distance to calculate voltage drop.';
       return;
@@ -389,6 +481,69 @@ function init() {
   conduitFill.addEventListener('change', calc);
 }
 document.addEventListener('DOMContentLoaded', init);
+
+/* ── Report ── */
+function getVal(id) { var el = document.getElementById(id); return el ? el.textContent : '—'; }
+
+document.getElementById('btnReport').addEventListener('click', function() {
+  var amps = document.getElementById('inAmps').value || '—';
+  var dist = document.getElementById('inDist').value || '—';
+  var amb = document.getElementById('inAmbient').value || '—';
+
+  /* Read active button states */
+  var voltage = '—', phase = '—', mat = '—', cont = '—', fill = '—';
+  document.querySelectorAll('#voltGrid .phase-btn.active').forEach(function(b) { voltage = b.textContent; });
+  document.querySelectorAll('#phaseGrid .phase-btn.active').forEach(function(b) { phase = b.textContent; });
+  document.querySelectorAll('#matGrid .phase-btn.active').forEach(function(b) { mat = b.textContent; });
+  document.querySelectorAll('#contGrid .phase-btn.active').forEach(function(b) { cont = b.textContent; });
+  var fillEl = document.getElementById('conduitFill');
+  fill = fillEl.options[fillEl.selectedIndex].text;
+
+  var ts = new Date().toLocaleString();
+  var L = [
+    '══════════════════════════════════════════',
+    ' WIRE & BREAKER SIZING — FIELD REPORT',
+    ' ' + ts,
+    '══════════════════════════════════════════',
+    '',
+    '── CIRCUIT ──',
+    'Load:        ' + amps + ' A',
+    'Continuous:  ' + cont,
+    'Voltage:     ' + voltage + 'V',
+    'Phase:       ' + phase,
+    'Distance:    ' + dist + ' ft (one-way)',
+    'Conductor:   ' + mat,
+    '',
+    '── DERATING ──',
+    'Ambient:     ' + amb + '°F  →  ' + getVal('drAmbient'),
+    'Conduit:     ' + fill + '  →  ' + getVal('drFill'),
+    'Required:    ' + getVal('drRequired'),
+    '',
+    '── OVERCURRENT PROTECTION ──',
+    'Breaker:     ' + getVal('valBreaker'),
+    'Config:      ' + getVal('valPoles'),
+    '',
+    '── CONDUCTOR ──',
+    'Min Gauge:   ' + getVal('valGauge'),
+    'Ampacity:    ' + getVal('valAmpacity'),
+    'VD:          ' + getVal('valDrop'),
+    'Recommended: ' + getVal('valRec'),
+    '',
+    '══════════════════════════════════════════',
+    ' NEC 310.16 (75°C) · NEC 240.4 · NEC 310.15',
+    ' om3ni.github.io',
+    '══════════════════════════════════════════'
+  ];
+  openModal('Wire & Breaker — Report', L.join('\n'));
+});
+
+/* ── Modal / Toast / Print ── */
+function openModal(title, text) { document.getElementById('modalTitle').textContent = title; document.getElementById('reportText').textContent = text; document.getElementById('reportModal').classList.add('open'); }
+document.getElementById('modalClose').addEventListener('click', function() { document.getElementById('reportModal').classList.remove('open'); });
+document.getElementById('reportModal').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+document.getElementById('btnCopy').addEventListener('click', function() { var t = document.getElementById('reportText').textContent; if (navigator.clipboard) { navigator.clipboard.writeText(t).then(showToast); } else { var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast(); } });
+document.getElementById('btnPrint').addEventListener('click', function() { var t = document.getElementById('reportText').textContent; var w = window.open('','_blank'); w.document.write('<html><head><title>Report<\/title><style>body{font-family:monospace;font-size:13px;padding:24px;white-space:pre;color:#000;background:#fff}<\/style><\/head><body>' + t.replace(/</g,'&lt;') + '<\/body><\/html>'); w.document.close(); w.print(); });
+function showToast() { var t = document.getElementById('toast'); t.classList.add('show'); setTimeout(function() { t.classList.remove('show'); }, 1800); }
 </script>
 </body>
 </html>
