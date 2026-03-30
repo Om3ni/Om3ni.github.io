@@ -6,6 +6,10 @@
 <title>Project Hermes
 </title>
 <link rel="stylesheet" href="base.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c85a00">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 
 /* ── License gate ── */
@@ -3699,6 +3703,11 @@ if (isOwner()) syncModelIndex();
 // First visit tutorial — delayed to let license gate clear first
 if (!localStorage.getItem(TUT_KEY) && localStorage.getItem(LICENSE_KEY)) {
   setTimeout(() => startTutSection('quickstart'), 500);
+}
+
+// ── Service Worker ──────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(function() {});
 }
 </script>
 </body>
