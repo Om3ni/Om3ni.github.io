@@ -11,8 +11,8 @@
 </head>
 <body>
 <header>
-  <a class="hdr-home" href="/" title="Site home">⌂</a>
-  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <a class="hdr-home" href="../../index.html" title="Project home">⌂</a>
+  <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
   <div class="hdr-titles">
     <div class="hdr-title">Capacitor Sizing</div>
     <div class="hdr-sub"><span class="hdr-tier t2">field</span>PSC Motor Run Capacitor</div>
@@ -61,6 +61,13 @@
       </div>
       <div class="rr-val" id="valStd">— MFD</div>
     </div>
+    <div class="result-row dim" id="rowCapV">
+      <div class="rr-left">
+        <div class="rr-label">Voltage Rating</div>
+        <div class="rr-sub" id="subCapV">Must meet or exceed motor voltage</div>
+      </div>
+      <div class="rr-val" id="valCapV">—</div>
+    </div>
   </div>
 
   <div class="hint">Approximation for PSC motors. Always verify against manufacturer specs.</div>
@@ -87,15 +94,20 @@ function init() {
   function calc() {
     var volts = parseFloat(inVolts.value);
     var amps = parseFloat(inAmps.value);
+    var capVolts = parseFloat(inCapVolts.value);
 
     if (!volts || volts <= 0 || !amps || amps <= 0) {
       document.getElementById('rowCalc').className = 'result-row dim';
       document.getElementById('rowStd').className = 'result-row dim';
+      document.getElementById('rowCapV').className = 'result-row dim';
       document.getElementById('valCalc').className = 'rr-val';
       document.getElementById('valStd').className = 'rr-val';
+      document.getElementById('valCapV').className = 'rr-val';
       document.getElementById('valCalc').textContent = '— MFD';
       document.getElementById('valStd').textContent = '— MFD';
+      document.getElementById('valCapV').textContent = '—';
       document.getElementById('subTolerance').textContent = '±6% tolerance range';
+      document.getElementById('subCapV').textContent = 'Must meet or exceed motor voltage';
       return;
     }
 
@@ -112,6 +124,21 @@ function init() {
     document.getElementById('rowStd').className = 'result-row live';
     document.getElementById('valCalc').className = 'rr-val live';
     document.getElementById('valStd').className = 'rr-val live';
+
+    /* Cap voltage rating check */
+    var minCapV = volts >= 208 ? 370 : 250;
+    if (capVolts && capVolts > 0) {
+      var pass = capVolts >= minCapV;
+      document.getElementById('rowCapV').className = 'result-row ' + (pass ? 'ok' : 'high');
+      document.getElementById('valCapV').className = 'rr-val ' + (pass ? 'ok' : 'high');
+      document.getElementById('valCapV').textContent = capVolts + ' VAC';
+      document.getElementById('subCapV').textContent = pass ? 'Meets minimum ' + minCapV + ' VAC' : 'Below minimum ' + minCapV + ' VAC for ' + volts + 'V motor';
+    } else {
+      document.getElementById('rowCapV').className = 'result-row live';
+      document.getElementById('valCapV').className = 'rr-val live';
+      document.getElementById('valCapV').textContent = 'Min ' + minCapV + ' VAC';
+      document.getElementById('subCapV').textContent = 'Enter cap voltage to verify';
+    }
   }
 
   inVolts.addEventListener('input', calc);
