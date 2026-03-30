@@ -19,8 +19,8 @@
 </head>
 <body>
 <header>
-  <a class="hdr-home" href="/" title="Site home">⌂</a>
-  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <a class="hdr-home" href="../../index.html" title="Project home">⌂</a>
+  <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
   <div class="hdr-titles">
     <div class="hdr-title">Duct Sizing</div>
     <div class="hdr-sub"><span class="hdr-tier t2">field</span>CFM · Velocity · Round & Rectangular</div>
@@ -36,20 +36,11 @@
         <span class="iw-unit">CFM</span>
       </div>
     </div>
-    <div class="input-pair">
-      <div class="fg">
-        <label class="fl">Friction Rate</label>
-        <div class="iw">
-          <input type="number" id="inFriction" inputmode="decimal" placeholder="0.08" value="0.08">
-          <span class="iw-unit">in.wg/100ft</span>
-        </div>
-      </div>
-      <div class="fg">
-        <label class="fl">Max Velocity</label>
-        <div class="iw">
-          <input type="number" id="inVelocity" inputmode="decimal" placeholder="900" value="900">
-          <span class="iw-unit">FPM</span>
-        </div>
+    <div class="fg">
+      <label class="fl">Max Velocity</label>
+      <div class="iw">
+        <input type="number" id="inVelocity" inputmode="decimal" placeholder="900" value="900">
+        <span class="iw-unit">FPM</span>
       </div>
     </div>
   </div>
@@ -91,13 +82,12 @@
     </table>
   </div>
 
-  <div class="hint">Sizes based on velocity method. Verify against friction chart for pressure drop.</div>
+  <div class="hint">Velocity method. For pressure drop verification, cross-reference with ACCA Manual D or ASHRAE friction charts.</div>
 </main>
 <script>
 'use strict';
 function init() {
   var inCFM = document.getElementById('inCFM');
-  var inFriction = document.getElementById('inFriction');
   var inVelocity = document.getElementById('inVelocity');
   var stdSizes = [6,7,8,9,10,12,14,16,18,20,22,24];
   var ratios = [
@@ -183,7 +173,6 @@ function init() {
   }
 
   inCFM.addEventListener('input', calc);
-  inFriction.addEventListener('input', calc);
   inVelocity.addEventListener('input', calc);
 }
 document.addEventListener('DOMContentLoaded', init);
