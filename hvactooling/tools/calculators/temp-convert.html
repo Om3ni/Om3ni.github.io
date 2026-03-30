@@ -17,6 +17,7 @@
     <div class="hdr-title">Temperature Conversion</div>
     <div class="hdr-sub"><span class="hdr-tier t1">utility</span>F · C · R · K</div>
   </div>
+  <button class="hdr-fav" id="favBtn" title="Favorite" onclick="toggleFav()">&#9734;</button>
 </header>
 <main>
   <div class="sec sec-flush">
@@ -158,6 +159,29 @@ function init() {
   });
 }
 document.addEventListener('DOMContentLoaded', init);
+
+// Favorites
+(function(){
+  var KEY='hermes_favorites';
+  var id=location.pathname.split('/').pop().replace('.html','');
+  var title=document.title.split('·')[0].trim();
+  var tierEl=document.querySelector('.hdr-tier');
+  var tier=tierEl?(tierEl.classList.contains('t1')?'t1':tierEl.classList.contains('t3')?'t3':'t2'):'t2';
+  var btn=document.getElementById('favBtn');
+  if(!btn)return;
+  function getFavs(){try{return JSON.parse(localStorage.getItem(KEY))||[];}catch(e){return[];}}
+  function isFav(){return getFavs().some(function(f){return f.id===id;});}
+  function sync(){btn.textContent=isFav()?'★':'☆';btn.classList.toggle('on',isFav());}
+  window.toggleFav=function(){
+    var favs=getFavs();var idx=-1;
+    for(var i=0;i<favs.length;i++){if(favs[i].id===id){idx=i;break;}}
+    if(idx!==-1)favs.splice(idx,1);
+    else favs.push({id:id,title:title,tier:tier,label:title,type:'calc'});
+    localStorage.setItem(KEY,JSON.stringify(favs));sync();
+    try{if(window.parent!==window)window.parent.postMessage({type:'hermes-fav-toggle'},'*');}catch(e){}
+  };
+  sync();
+})();
 </script>
 </body>
 </html>
