@@ -12,8 +12,8 @@
 </head>
 <body>
 <header>
-  <a class="hdr-home" href="/" title="Site home">⌂</a>
-  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <a class="hdr-home" href="../../index.html" title="Project home">⌂</a>
+  <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
   <div class="hdr-titles">
     <div class="hdr-title">Long Lineset</div>
     <div class="hdr-sub"><span class="hdr-tier t3">advanced</span>Charge Adjustment · Pressure Drop</div>
@@ -22,20 +22,11 @@
 <main>
   <div class="sec sec-flush">
     <div class="sec-lbl sec-lbl-flush">System</div>
-    <div class="input-pair">
-      <div class="fg">
-        <label class="fl">Tonnage</label>
-        <div class="iw">
-          <input type="number" id="inTon" inputmode="decimal" placeholder="—">
-          <span class="iw-unit">ton</span>
-        </div>
-      </div>
-      <div class="fg">
-        <label class="fl">Total Lineset</label>
-        <div class="iw">
-          <input type="number" id="inTotal" inputmode="decimal" placeholder="—">
-          <span class="iw-unit">ft</span>
-        </div>
+    <div class="fg">
+      <label class="fl">Total Lineset</label>
+      <div class="iw">
+        <input type="number" id="inTotal" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">ft</span>
       </div>
     </div>
     <div class="fg">
@@ -130,7 +121,6 @@ function init() {
 
   var refBtns = document.querySelectorAll('#refGrid .phase-btn');
   var sizeBtns = document.querySelectorAll('#sizeGrid .phase-btn');
-  var inTon = document.getElementById('inTon');
   var inTotal = document.getElementById('inTotal');
   var inFactory = document.getElementById('inFactory');
   var inElev = document.getElementById('inElev');
@@ -205,7 +195,6 @@ function init() {
     });
   }
 
-  inTon.addEventListener('input', calc);
   inTotal.addEventListener('input', calc);
   inFactory.addEventListener('input', calc);
   inElev.addEventListener('input', calc);
