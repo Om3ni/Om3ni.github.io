@@ -75,6 +75,13 @@ header {
 .hdr-titles { flex: 1; min-width: 0; }
 .hdr-title { font-family: var(--ui); font-weight: 700; font-size: 1rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text); }
 .hdr-sub { font-family: var(--mono); font-size: .64rem; color: var(--text-mute); letter-spacing: .05em; margin-top: 1px; }
+.hdr-fav {
+  background: none; border: none; cursor: pointer;
+  font-size: 1.1rem; line-height: 1; padding: 4px;
+  color: var(--text-mute); transition: color .15s;
+  margin-left: auto; flex-shrink: 0;
+}
+.hdr-fav.on { color: #e86d10; }
 
 /* ── Layout ── */
 main { padding: 14px 14px 80px; max-width: 520px; margin: 0 auto; }
