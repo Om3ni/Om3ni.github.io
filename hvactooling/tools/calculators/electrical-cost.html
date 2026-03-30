@@ -20,8 +20,8 @@
 </head>
 <body>
 <header>
-  <a class="hdr-home" href="/" title="Site home">⌂</a>
-  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <a class="hdr-home" href="../../index.html" title="Project home">⌂</a>
+  <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
   <div class="hdr-titles">
     <div class="hdr-title">Operating Cost</div>
     <div class="hdr-sub"><span class="hdr-tier t2">field</span>kW · Hours · Rate</div>
@@ -68,6 +68,22 @@
           <div class="iw">
             <input type="number" id="inAmps" inputmode="decimal" placeholder="—">
             <span class="iw-unit">A</span>
+          </div>
+        </div>
+      </div>
+      <div class="input-pair">
+        <div class="fg">
+          <label class="fl">Phase</label>
+          <div class="phase-grid" id="vaPhaseGrid">
+            <button class="phase-btn active" data-ph="1">1-Phase</button>
+            <button class="phase-btn" data-ph="3">3-Phase</button>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Power Factor</label>
+          <div class="iw">
+            <input type="number" id="inPF" inputmode="decimal" placeholder="1.0" value="1.0" step="0.01">
+            <span class="iw-unit">PF</span>
           </div>
         </div>
       </div>
@@ -147,26 +163,40 @@
     </div>
   </div>
 
-  <div class="hint">Estimate only. Actual costs vary with demand charges and rate tiers.</div>
+  <div class="hint">Estimate only. V×A mode: set PF to 1.0 for resistive loads (heaters), 0.85 for motors. Actual costs vary with demand charges and rate tiers.</div>
 </main>
 <script>
 'use strict';
 function init() {
   var mode = 'kw';
+  var vaPhase = 1;
   var modeBtns = document.querySelectorAll('#modeToggle button');
   var inKW = document.getElementById('inKW');
   var inWatts = document.getElementById('inWatts');
   var inVolts = document.getElementById('inVolts');
   var inAmps = document.getElementById('inAmps');
+  var inPF = document.getElementById('inPF');
   var inHours = document.getElementById('inHours');
   var inDays = document.getElementById('inDays');
   var inRate = document.getElementById('inRate');
+
+  var vaPhaseBtns = document.querySelectorAll('#vaPhaseGrid .phase-btn');
+  vaPhaseBtns.forEach(function(b) {
+    b.addEventListener('click', function() {
+      vaPhase = parseInt(b.dataset.ph);
+      vaPhaseBtns.forEach(function(x) { x.classList.toggle('active', x.dataset.ph === String(vaPhase)); });
+      calc();
+    });
+  });
 
   function getKW() {
     if (mode === 'va') {
       var v = parseFloat(inVolts.value) || 0;
       var a = parseFloat(inAmps.value) || 0;
-      return (v * a) / 1000;
+      var pf = parseFloat(inPF.value);
+      if (isNaN(pf) || pf <= 0 || pf > 1) pf = 1.0;
+      var va = vaPhase === 3 ? v * a * 1.732 : v * a;
+      return (va * pf) / 1000;
     }
     var kw = parseFloat(inKW.value) || 0;
     var w = parseFloat(inWatts.value) || 0;
@@ -255,6 +285,7 @@ function init() {
   inWatts.addEventListener('input', calc);
   inVolts.addEventListener('input', calc);
   inAmps.addEventListener('input', calc);
+  inPF.addEventListener('input', calc);
   inHours.addEventListener('input', calc);
   inDays.addEventListener('input', calc);
   inRate.addEventListener('input', calc);
