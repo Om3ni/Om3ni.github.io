@@ -509,6 +509,27 @@ textarea { resize: vertical; min-height: 72px; }
   font-family: var(--ui); font-weight: 700; font-size: .76rem;
   letter-spacing: .08em; text-transform: uppercase; color: #4a9de8;
 }
+/* ── Favorites ── */
+.fav-section { margin-bottom: 14px; }
+.fav-section.empty { display: none; }
+.fav-hdr {
+  font-family: var(--mono); font-size: .55rem; font-weight: 600;
+  letter-spacing: .15em; text-transform: uppercase; color: var(--orange-lo);
+  margin-bottom: 6px; padding-left: 2px;
+}
+.fav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.fav-star {
+  position: absolute; top: 4px; right: 6px;
+  background: none; border: none; cursor: pointer;
+  font-size: .8rem; line-height: 1; padding: 2px;
+  color: var(--text-mute); opacity: 0; transition: opacity .15s, color .15s;
+}
+.calc-btn { position: relative; }
+.calc-btn:hover .fav-star, .calc-btn .fav-star.on { opacity: 1; }
+.fav-star.on { color: var(--orange-hi); opacity: 1; }
+/* touch: always show stars */
+@media (hover: none) { .fav-star { opacity: .6; } .fav-star.on { opacity: 1; } }
+
 #tool-frame-wrap {
   position: fixed; inset: 0; z-index: 300;
   background: var(--bg); display: none; flex-direction: column;
@@ -688,6 +709,11 @@ This software is provided "as is" without warranty of any kind, express or impli
 
   <!-- HOME TAB -->
   <div class="panel active" id="tab-entry">
+
+    <div class="fav-section empty" id="favSection">
+      <div class="fav-hdr">Favorites</div>
+      <div class="fav-grid" id="favGrid"></div>
+    </div>
 
     <div class="fg">
       <label class="fl">Job #</label>
@@ -936,43 +962,42 @@ This software is provided "as is" without warranty of any kind, express or impli
 
     <div class="calc-cat">Electrical</div>
     <div class="calc-grid">
-      <div class="calc-btn t1" onclick="openCalc('ohms-law', 'Ohm\'s Law')"><div class="calc-btn-name">Ohm's Law</div></div>
-      <div class="calc-btn t3" onclick="openCalc('wire-sizing', 'Wire Sizing')"><div class="calc-btn-name">Wire Sizing</div></div>
-      <div class="calc-btn t2" onclick="openCalc('breaker-sizing', 'Breaker Sizing')"><div class="calc-btn-name">Breaker Sizing</div></div>
-      <div class="calc-btn t3" onclick="openCalc('mca-mocp', 'MCA / MOCP')"><div class="calc-btn-name">MCA / MOCP</div></div>
-      <div class="calc-btn t2" onclick="openCalc('capacitor-sizing', 'Capacitor Sizing')"><div class="calc-btn-name">Capacitor</div></div>
-      <div class="calc-btn t3" onclick="openCalc('motor-start-controls', 'Motor Start Controls')"><div class="calc-btn-name">Start Controls</div></div>
-      <div class="calc-btn t1" onclick="openCalc('motor-convert', 'Motor Conversions')"><div class="calc-btn-name">Motor Convert</div></div>
-      <div class="calc-btn t2" onclick="openCalc('electrical-cost', 'Operating Cost')"><div class="calc-btn-name">Operating Cost</div></div>
+      <div class="calc-btn t1" data-calc="ohms-law" data-title="Ohm's Law" data-tier="t1" onclick="openCalc('ohms-law', 'Ohm\'s Law')"><div class="calc-btn-name">Ohm's Law</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t3" data-calc="wire-sizing" data-title="Wire &amp; Breaker Sizing" data-tier="t3" onclick="openCalc('wire-sizing', 'Wire &amp; Breaker Sizing')"><div class="calc-btn-name">Wire &amp; Breaker</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t3" data-calc="mca-mocp" data-title="MCA / MOCP" data-tier="t3" onclick="openCalc('mca-mocp', 'MCA / MOCP')"><div class="calc-btn-name">MCA / MOCP</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t2" data-calc="capacitor-sizing" data-title="Capacitor Sizing" data-tier="t2" onclick="openCalc('capacitor-sizing', 'Capacitor Sizing')"><div class="calc-btn-name">Capacitor</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t3" data-calc="motor-start-controls" data-title="Motor Start Controls" data-tier="t3" onclick="openCalc('motor-start-controls', 'Motor Start Controls')"><div class="calc-btn-name">Start Controls</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t1" data-calc="motor-convert" data-title="Motor Conversions" data-tier="t1" onclick="openCalc('motor-convert', 'Motor Conversions')"><div class="calc-btn-name">Motor Convert</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t2" data-calc="electrical-cost" data-title="Operating Cost" data-tier="t2" onclick="openCalc('electrical-cost', 'Operating Cost')"><div class="calc-btn-name">Operating Cost</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
     </div>
 
     <div class="calc-cat">Airflow &amp; Duct</div>
     <div class="calc-grid">
-      <div class="calc-btn t2" onclick="openCalc('duct-sizing', 'Duct Sizing')"><div class="calc-btn-name">Duct Sizing</div></div>
-      <div class="calc-btn t2" onclick="openCalc('cfm-per-ton', 'CFM per Ton')"><div class="calc-btn-name">CFM / Ton</div></div>
-      <div class="calc-btn t2" onclick="openCalc('combustion-air', 'Combustion Air')"><div class="calc-btn-name">Combustion Air</div></div>
-      <div class="calc-btn t2" onclick="openCalc('condensate-drain', 'Condensate Drain')"><div class="calc-btn-name">Condensate Drain</div></div>
+      <div class="calc-btn t2" data-calc="duct-sizing" data-title="Duct Sizing" data-tier="t2" onclick="openCalc('duct-sizing', 'Duct Sizing')"><div class="calc-btn-name">Duct Sizing</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t2" data-calc="cfm-per-ton" data-title="CFM per Ton" data-tier="t2" onclick="openCalc('cfm-per-ton', 'CFM per Ton')"><div class="calc-btn-name">CFM / Ton</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t2" data-calc="combustion-air" data-title="Combustion Air" data-tier="t2" onclick="openCalc('combustion-air', 'Combustion Air')"><div class="calc-btn-name">Combustion Air</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t2" data-calc="condensate-drain" data-title="Condensate Drain" data-tier="t2" onclick="openCalc('condensate-drain', 'Condensate Drain')"><div class="calc-btn-name">Condensate Drain</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
     </div>
 
     <div class="calc-cat">Refrigerant &amp; Piping</div>
     <div class="calc-grid">
-      <div class="calc-btn t2" onclick="openCalc('refrigerant-charge', 'Line Charge')"><div class="calc-btn-name">Line Charge</div></div>
-      <div class="calc-btn t3" onclick="openCalc('long-lineset', 'Long Lineset')"><div class="calc-btn-name">Long Lineset</div></div>
-      <div class="calc-btn t2" onclick="openCalc('gas-pipe', 'Gas Pipe Sizing')"><div class="calc-btn-name">Gas Pipe</div></div>
+      <div class="calc-btn t2" data-calc="refrigerant-charge" data-title="Line Charge" data-tier="t2" onclick="openCalc('refrigerant-charge', 'Line Charge')"><div class="calc-btn-name">Line Charge</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t3" data-calc="long-lineset" data-title="Long Lineset" data-tier="t3" onclick="openCalc('long-lineset', 'Long Lineset')"><div class="calc-btn-name">Long Lineset</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t2" data-calc="gas-pipe" data-title="Gas Pipe Sizing" data-tier="t2" onclick="openCalc('gas-pipe', 'Gas Pipe Sizing')"><div class="calc-btn-name">Gas Pipe</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
     </div>
 
     <div class="calc-cat">Load &amp; Mechanical</div>
     <div class="calc-grid">
-      <div class="calc-btn t2" onclick="openCalc('load-calc', 'Load Estimate')"><div class="calc-btn-name">Load Estimate</div></div>
-      <div class="calc-btn t2" onclick="openCalc('belt-length', 'Belt Length')"><div class="calc-btn-name">Belt Length</div></div>
-      <div class="calc-btn t2" onclick="openCalc('enthalpy', 'Enthalpy')"><div class="calc-btn-name">Enthalpy</div></div>
-      <div class="calc-btn t3" onclick="openCalc('system-head', 'Pump Sizing')"><div class="calc-btn-name">Pump Sizing</div></div>
+      <div class="calc-btn t2" data-calc="load-calc" data-title="Load Estimate" data-tier="t2" onclick="openCalc('load-calc', 'Load Estimate')"><div class="calc-btn-name">Load Estimate</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t2" data-calc="belt-length" data-title="Belt Length" data-tier="t2" onclick="openCalc('belt-length', 'Belt Length')"><div class="calc-btn-name">Belt Length</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t2" data-calc="enthalpy" data-title="Enthalpy" data-tier="t2" onclick="openCalc('enthalpy', 'Enthalpy')"><div class="calc-btn-name">Enthalpy</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t3" data-calc="system-head" data-title="Pump Sizing" data-tier="t3" onclick="openCalc('system-head', 'Pump Sizing')"><div class="calc-btn-name">Pump Sizing</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
     </div>
 
     <div class="calc-cat">Conversion</div>
     <div class="calc-grid">
-      <div class="calc-btn t1" onclick="openCalc('temp-convert', 'Temp Conversion')"><div class="calc-btn-name">Temp Convert</div></div>
-      <div class="calc-btn t1" onclick="openCalc('pressure-convert', 'Pressure Conversion')"><div class="calc-btn-name">Pressure Convert</div></div>
+      <div class="calc-btn t1" data-calc="temp-convert" data-title="Temp Conversion" data-tier="t1" onclick="openCalc('temp-convert', 'Temp Conversion')"><div class="calc-btn-name">Temp Convert</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
+      <div class="calc-btn t1" data-calc="pressure-convert" data-title="Pressure Conversion" data-tier="t1" onclick="openCalc('pressure-convert', 'Pressure Conversion')"><div class="calc-btn-name">Pressure Convert</div><button class="fav-star" onclick="event.stopPropagation();toggleFav(this)" title="Favorite">&#9734;</button></div>
     </div>
   </div>
 
@@ -2860,6 +2885,61 @@ function closeTool() {
   activeTool = null;
   sessionStorage.removeItem('hermes_activeTool');
 }
+
+// ── Favorites ──────────────────────────────────────────────────────────────
+const FAV_KEY = 'hermes_favorites';
+
+function getFavs() {
+  try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; }
+  catch(e) { return []; }
+}
+function saveFavs(favs) { localStorage.setItem(FAV_KEY, JSON.stringify(favs)); }
+
+function toggleFav(starBtn) {
+  const btn = starBtn.closest('.calc-btn');
+  const id = btn.dataset.calc;
+  let favs = getFavs();
+  const idx = favs.findIndex(f => f.id === id);
+  if (idx !== -1) {
+    favs.splice(idx, 1);
+    starBtn.classList.remove('on');
+    starBtn.innerHTML = '&#9734;';
+  } else {
+    favs.push({ id: id, title: btn.dataset.title, tier: btn.dataset.tier,
+                label: btn.querySelector('.calc-btn-name').textContent });
+    starBtn.classList.add('on');
+    starBtn.innerHTML = '&#9733;';
+  }
+  saveFavs(favs);
+  renderFavs();
+}
+
+function renderFavs() {
+  const favs = getFavs();
+  const section = document.getElementById('favSection');
+  const grid = document.getElementById('favGrid');
+  grid.innerHTML = '';
+  if (favs.length === 0) { section.classList.add('empty'); return; }
+  section.classList.remove('empty');
+  favs.forEach(function(f) {
+    const div = document.createElement('div');
+    div.className = 'calc-btn ' + f.tier;
+    div.onclick = function() { openCalc(f.id, f.title); };
+    div.innerHTML = '<div class="calc-btn-name">' + f.label + '</div>';
+    grid.appendChild(div);
+  });
+
+  // Sync star states on Tools tab
+  document.querySelectorAll('.calc-btn[data-calc] .fav-star').forEach(function(star) {
+    const id = star.closest('.calc-btn').dataset.calc;
+    const isFav = favs.some(f => f.id === id);
+    star.classList.toggle('on', isFav);
+    star.innerHTML = isFav ? '&#9733;' : '&#9734;';
+  });
+}
+
+// Init on load
+document.addEventListener('DOMContentLoaded', function() { renderFavs(); });
 
 // ── Resources ───────────────────────────────────────────────────────────────
 function toggleResCategory(hdr) {
