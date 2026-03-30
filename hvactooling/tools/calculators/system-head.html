@@ -75,6 +75,29 @@
   width: 100%; height: 220px; background: var(--surface);
   border: 1px solid var(--border); border-radius: 3px; display: block;
 }
+.custom-loss-row {
+  display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px;
+  align-items: center; margin-bottom: 6px;
+  padding: 8px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 3px;
+}
+.custom-loss-row .iw { min-width: 90px; }
+.custom-loss-name {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 3px; color: var(--text); font-family: var(--mono);
+  font-size: .78rem; padding: 7px 8px; outline: none;
+}
+.custom-loss-name:focus { border-color: var(--orange); }
+.custom-loss-type {
+  font-family: var(--mono); font-size: .58rem; color: var(--text-mute);
+  letter-spacing: .05em; text-transform: uppercase; text-align: center; min-width: 40px;
+}
+.btn-add {
+  display: block; width: 100%; padding: 8px; border-radius: 3px;
+  border: 1px dashed var(--border); background: none;
+  color: var(--text-mute); font-family: var(--mono); font-size: .72rem;
+  letter-spacing: .05em; cursor: pointer; transition: all .15s;
+}
+.btn-add:hover { border-color: var(--orange-lo); color: var(--orange-hi); }
 .result-sec-hdr-sm {
   font-size: .6rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
   color: var(--text-mute); padding: 8px 2px 4px; margin-top: 4px;
@@ -372,6 +395,13 @@
   </div>
 
   <div class="sec">
+    <div class="sec-lbl">Custom Losses</div>
+    <div class="source-ref" style="margin-bottom:8px">Coils, heat exchangers, control valves, triple duty valves, and other components with published pressure drops. Enter manufacturer spec'd values at design flow.</div>
+    <div id="customLossesList"></div>
+    <button class="btn-add" id="btnAddCustom" style="margin-bottom:4px">+ Add Component</button>
+  </div>
+
+  <div class="sec">
     <div class="sec-lbl">Safety Margin</div>
     <div class="fg">
       <label class="fl">Design Margin</label>
@@ -401,6 +431,13 @@
       </div>
       <div class="rr-val" id="valHfFit">—</div>
     </div>
+    <div class="result-row dim" id="rowHfCustom">
+      <div class="rr-left">
+        <div class="rr-label">Custom Component Losses</div>
+        <div class="rr-sub" id="subHfCustom">Coils, HX, valves — manufacturer data</div>
+      </div>
+      <div class="rr-val" id="valHfCustom">—</div>
+    </div>
     <div class="result-row dim" id="rowHStatic">
       <div class="rr-left">
         <div class="rr-label">Static Head</div>
@@ -411,7 +448,7 @@
     <div class="result-row dim" id="rowTDH">
       <div class="rr-left">
         <div class="rr-label">TDH (Raw)</div>
-        <div class="rr-sub">Pipe + fittings + static</div>
+        <div class="rr-sub">Pipe + fittings + components + static</div>
       </div>
       <div class="rr-val" id="valTDH">—</div>
     </div>
@@ -921,6 +958,8 @@ var STATE = {
   safetyMargin: 10,
   fittingQtys: {},
   hfFittings: NaN,
+  customLosses: [],
+  hfCustom: NaN,
   tdh_raw: NaN,
   tdh_design: NaN,
   pumpEff: NaN,
@@ -1250,6 +1289,45 @@ function calcPipe() {
   });
 })();
 
+/* ── Custom losses (coils, HX, valves, etc.) ── */
+function renderCustomLosses() {
+  var container = document.getElementById('customLossesList');
+  container.innerHTML = '';
+  STATE.customLosses.forEach(function(cl, i) {
+    var row = document.createElement('div');
+    row.className = 'custom-loss-row';
+    row.innerHTML =
+      '<input type="text" class="custom-loss-name cl-name" data-idx="' + i + '" placeholder="Component name" value="' + (cl.name || '') + '">' +
+      '<div class="iw"><input type="number" class="cl-val" data-idx="' + i + '" inputmode="decimal" placeholder="—" value="' + (cl.value || '') + '"><span class="iw-unit">ft</span></div>' +
+      '<div class="custom-loss-type">' + (cl.type === 'eqlen' ? 'eq. ft' : 'head') + '</div>' +
+      '<button class="pump-point-del cl-del" data-idx="' + i + '">✕</button>';
+    container.appendChild(row);
+  });
+  container.querySelectorAll('.cl-name').forEach(function(el) {
+    el.addEventListener('input', function() { STATE.customLosses[parseInt(this.dataset.idx)].name = this.value; });
+  });
+  container.querySelectorAll('.cl-val').forEach(function(el) {
+    el.addEventListener('input', function() {
+      STATE.customLosses[parseInt(this.dataset.idx)].value = this.value;
+      calcHead();
+    });
+  });
+  container.querySelectorAll('.cl-del').forEach(function(el) {
+    el.addEventListener('click', function() {
+      STATE.customLosses.splice(parseInt(this.dataset.idx), 1);
+      renderCustomLosses();
+      calcHead();
+    });
+  });
+}
+
+document.getElementById('btnAddCustom').addEventListener('click', function() {
+  /* Alternate between equivalent length and direct head loss */
+  var lastType = STATE.customLosses.length > 0 ? STATE.customLosses[STATE.customLosses.length - 1].type : 'head';
+  STATE.customLosses.push({ name: '', value: '', type: 'head' });
+  renderCustomLosses();
+});
+
 var loopBtns = document.querySelectorAll('#loopGrid .phase-btn');
 loopBtns.forEach(function(b) {
   b.addEventListener('click', function() {
@@ -1308,6 +1386,24 @@ function calcHead() {
     hfFit.toFixed(3) + ' ft' + (!isNaN(fitPSI) ? '  (' + fitPSI.toFixed(3) + ' PSI)' : ''),
     'ASHRAE Fund. Ch. 22, Table 7 — equivalent length method');
 
+  // Custom component losses (coils, HX, valves, etc.)
+  var hfCustom = 0;
+  var customCount = 0;
+  var customNames = [];
+  STATE.customLosses.forEach(function(cl) {
+    var v = parseFloat(cl.value);
+    if (!isNaN(v) && v > 0) {
+      hfCustom += v;
+      customCount++;
+      if (cl.name) customNames.push(cl.name);
+    }
+  });
+  STATE.hfCustom = hfCustom;
+  var customPSI = (!isNaN(STATE.rho) && STATE.rho > 0) ? ftToPSI(hfCustom, STATE.rho) : NaN;
+  setRow('HfCustom', hfCustom > 0 ? 'live' : 'dim',
+    hfCustom.toFixed(3) + ' ft' + (!isNaN(customPSI) ? '  (' + customPSI.toFixed(3) + ' PSI)' : ''),
+    customCount > 0 ? customCount + ' component' + (customCount > 1 ? 's' : '') + (customNames.length > 0 ? ': ' + customNames.join(', ') : '') : 'Add components above');
+
   // Static head
   var hStatic = 0;
   if (STATE.loopType === 'open' && !isNaN(STATE.staticHead) && STATE.staticHead > 0) {
@@ -1322,7 +1418,7 @@ function calcHead() {
   }
 
   // TDH raw
-  var tdh = hfPipe + hfFit + hStatic;
+  var tdh = hfPipe + hfFit + hfCustom + hStatic;
   STATE.tdh_raw = tdh;
   var tdhPSI = (!isNaN(STATE.rho) && STATE.rho > 0) ? ftToPSI(tdh, STATE.rho) : NaN;
   var tdhState = (isNaN(STATE.hfPipe) && hfFit === 0) ? 'dim' : 'live';
@@ -1776,6 +1872,7 @@ function generateReport() {
     '── HEAD ANALYSIS (ASHRAE Fund. 2021, Ch. 13) ─────',
     'Pipe Friction   : ' + (isNaN(STATE.hfPipe) ? '—' : STATE.hfPipe.toFixed(3) + ' ft'),
     'Fitting Friction: ' + (isNaN(STATE.hfFittings) ? '—' : STATE.hfFittings.toFixed(3) + ' ft') + ' (ASHRAE Ch. 22 Table 7)',
+    'Component Losses: ' + (isNaN(STATE.hfCustom) || STATE.hfCustom === 0 ? '0 ft' : STATE.hfCustom.toFixed(3) + ' ft') + ' (manufacturer data @ design flow)',
     'Static Head     : ' + (STATE.loopType === 'closed' ? '0 ft (closed loop — excluded)' : (!isNaN(STATE.staticHead) ? STATE.staticHead.toFixed(1) + ' ft' : '—')),
     'TDH (Raw)       : ' + (isNaN(STATE.tdh_raw) ? '—' : STATE.tdh_raw.toFixed(3) + ' ft'),
     'TDH (Design)    : ' + (isNaN(STATE.tdh_design) ? '—' : STATE.tdh_design.toFixed(3) + ' ft  (+' + STATE.safetyMargin + '% margin)'),
