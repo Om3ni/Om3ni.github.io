@@ -73,6 +73,7 @@
     <div class="hdr-title">Electrical Analysis</div>
     <div class="hdr-sub">Supply Voltage · Phase Imbalance · Transformers</div>
   </div>
+  <button class="hdr-fav" id="favBtn" title="Favorite" onclick="toggleFav()">☆</button>
 </header>
 
 <main>
@@ -761,6 +762,27 @@ function init() {
 
 document.addEventListener('DOMContentLoaded', init);
 
+
+// Favorites
+(function(){
+  var KEY='hermes_favorites';
+  var id=location.pathname.split('/').pop().replace('.html','');
+  var title=document.title.split('·')[0].trim();
+  var btn=document.getElementById('favBtn');
+  if(!btn)return;
+  function getFavs(){try{return JSON.parse(localStorage.getItem(KEY))||[];}catch(e){return[];}}
+  function isFav(){return getFavs().some(function(f){return f.id===id;});}
+  function sync(){btn.textContent=isFav()?'★':'☆';btn.classList.toggle('on',isFav());}
+  window.toggleFav=function(){
+    var favs=getFavs();var idx=-1;
+    for(var i=0;i<favs.length;i++){if(favs[i].id===id){idx=i;break;}}
+    if(idx!==-1)favs.splice(idx,1);
+    else favs.push({id:id,title:title,tier:'t2',label:title,type:'module'});
+    localStorage.setItem(KEY,JSON.stringify(favs));sync();
+    try{if(window.parent!==window)window.parent.postMessage({type:'hermes-fav-toggle'},'*');}catch(e){}
+  };
+  sync();
+})();
 </script>
 </body>
 </html>
