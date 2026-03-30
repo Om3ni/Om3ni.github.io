@@ -11,8 +11,8 @@
 </head>
 <body>
 <header>
-  <a class="hdr-home" href="/" title="Site home">⌂</a>
-  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <a class="hdr-home" href="../../index.html" title="Project home">⌂</a>
+  <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
   <div class="hdr-titles">
     <div class="hdr-title">MCA / MOCP</div>
     <div class="hdr-sub"><span class="hdr-tier t3">advanced</span>Minimum Circuit Ampacity · Max Overcurrent</div>
@@ -20,15 +20,7 @@
 </header>
 <main>
   <div class="sec sec-flush">
-    <div class="sec-lbl sec-lbl-flush">Phase</div>
-    <div class="phase-grid">
-      <button class="phase-btn active" id="btn1ph">1-Phase</button>
-      <button class="phase-btn" id="btn3ph">3-Phase</button>
-    </div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-lbl">Motor Loads</div>
+    <div class="sec-lbl sec-lbl-flush">Motor Loads</div>
     <div class="input-pair">
       <div class="fg">
         <label class="fl">Compressor RLA</label>
@@ -86,8 +78,6 @@ function init() {
   var inRLA = document.getElementById('inRLA');
   var inFan = document.getElementById('inFan');
   var inExtra = document.getElementById('inExtra');
-  var btn1ph = document.getElementById('btn1ph');
-  var btn3ph = document.getElementById('btn3ph');
 
   var breakerSizes = [15,20,25,30,35,40,45,50,60,70,80,90,100,110,125,150,175,200,225,250,300];
 
@@ -120,17 +110,6 @@ function init() {
     }
     return '> 4/0 AWG';
   }
-
-  btn1ph.addEventListener('click', function() {
-    btn1ph.classList.add('active');
-    btn3ph.classList.remove('active');
-    calc();
-  });
-  btn3ph.addEventListener('click', function() {
-    btn3ph.classList.add('active');
-    btn1ph.classList.remove('active');
-    calc();
-  });
 
   function calc() {
     var rla = parseFloat(inRLA.value) || 0;
