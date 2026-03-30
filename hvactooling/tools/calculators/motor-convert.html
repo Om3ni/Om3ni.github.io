@@ -11,8 +11,8 @@
 </head>
 <body>
 <header>
-  <a class="hdr-home" href="/" title="Site home">⌂</a>
-  <a class="hdr-back" href="../../index.html">&#8592;</a>
+  <a class="hdr-home" href="../../index.html" title="Project home">⌂</a>
+  <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
   <div class="hdr-titles">
     <div class="hdr-title">Motor Conversions</div>
     <div class="hdr-sub"><span class="hdr-tier t1">utility</span>HP · kW · BTU/h · Tons</div>
@@ -101,9 +101,7 @@ function init() {
   // Conversion constants (all relative to HP)
   var HP_TO_KW = 0.7457;
   var HP_TO_BTU = 2544.43;
-  var HP_TO_TONS = 0.2121;
-
-  var activeField = null;
+  var HP_TO_TONS = HP_TO_BTU / 12000;
 
   function fmt(n) {
     if (n === null || isNaN(n) || !isFinite(n)) return '—';
@@ -147,7 +145,6 @@ function init() {
   }
 
   ids.forEach(function(id) {
-    fields[id].addEventListener('focus', function() { activeField = id; });
     fields[id].addEventListener('input', function() {
       // Clear other fields so user knows which is the source
       ids.forEach(function(otherId) {
