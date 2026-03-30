@@ -510,14 +510,6 @@ textarea { resize: vertical; min-height: 72px; }
   letter-spacing: .08em; text-transform: uppercase; color: #4a9de8;
 }
 /* ── Favorites ── */
-.fav-section { margin-bottom: 14px; }
-.fav-section.empty { display: none; }
-.fav-hdr {
-  font-family: var(--mono); font-size: .55rem; font-weight: 600;
-  letter-spacing: .15em; text-transform: uppercase; color: var(--orange-lo);
-  margin-bottom: 6px; padding-left: 2px;
-}
-.fav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 
 #tool-frame-wrap {
   position: fixed; inset: 0; z-index: 300;
@@ -533,6 +525,11 @@ textarea { resize: vertical; min-height: 72px; }
   background: none; border: none; color: var(--orange); font-size: 1.25rem;
   cursor: pointer; padding: 2px 8px 2px 0; line-height: 1;
 }
+#tool-frame-bar .hdr-fav {
+  margin-left: auto; font-size: 1.2rem; color: var(--text-mute);
+  padding: 2px 4px; transition: color .15s;
+}
+#tool-frame-bar .hdr-fav.on { color: #e86d10; }
 #tool-frame-bar span {
   font-family: var(--ui); font-weight: 700; font-size: .88rem;
   letter-spacing: .12em; text-transform: uppercase; color: var(--text);
@@ -693,16 +690,11 @@ This software is provided "as is" without warranty of any kind, express or impli
     <div class="tab" data-tab="queue" onclick="switchTab(this)">Units</div>
     <div class="tab" data-tab="parts" onclick="switchTab(this)">Parts</div>
     <div class="tab" data-tab="tools" onclick="switchTab(this)">Tools</div>
-    <div class="tab" data-tab="resources" id="tabRef" onclick="switchTab(this)">References<span id="refPending" class="tab-pending">(pending)</span></div>
+    <div class="tab" data-tab="favs" onclick="switchTab(this)">Favorites</div>
   </div>
 
   <!-- HOME TAB -->
   <div class="panel active" id="tab-entry">
-
-    <div class="fav-section empty" id="favSection">
-      <div class="fav-hdr">Favorites</div>
-      <div class="fav-grid" id="favGrid"></div>
-    </div>
 
     <div class="fg">
       <label class="fl">Job #</label>
@@ -990,8 +982,18 @@ This software is provided "as is" without warranty of any kind, express or impli
     </div>
   </div>
 
-  <!-- RESOURCES TAB -->
-  <div class="panel" id="tab-resources">
+  <!-- FAVORITES TAB -->
+  <div class="panel" id="tab-favs">
+    <div class="fav-empty" id="favEmpty" style="text-align:center;padding:40px 20px;">
+      <div style="font-size:1.8rem;color:var(--text-mute);margin-bottom:8px;">&#9734;</div>
+      <div style="font-family:var(--mono);font-size:.72rem;color:var(--text-mute);letter-spacing:.04em;">No favorites yet</div>
+      <div style="font-family:var(--mono);font-size:.6rem;color:var(--text-mute);margin-top:6px;letter-spacing:.03em;">Open any tool and tap the &#9734; in the title bar to add it here</div>
+    </div>
+    <div class="fav-grid" id="favGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;"></div>
+  </div>
+
+  <!-- RESOURCES TAB (hidden — kept for future use) -->
+  <div class="panel" id="tab-resources" style="display:none">
 
     <div class="res-category">
       <div class="res-cat-hdr" onclick="toggleResCategory(this)">
@@ -1150,6 +1152,7 @@ This software is provided "as is" without warranty of any kind, express or impli
   <div id="tool-frame-bar">
     <button onclick="closeTool()">&#8592;</button>
     <span id="tool-frame-title"></span>
+    <button id="toolFavBtn" class="hdr-fav" onclick="toggleToolFav()" title="Favorite">&#9734;</button>
   </div>
   <iframe id="tool-frame"></iframe>
 </div>
@@ -1706,7 +1709,6 @@ function forceTitle(el) {
 
 // ── Tabs ───────────────────────────────────────────────────────────────────
 function switchTab(el) {
-  if (el.dataset.tab === 'resources' && !isOwner()) return;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
@@ -1714,6 +1716,7 @@ function switchTab(el) {
   document.getElementById(id).classList.add('active');
   if (el.dataset.tab === 'queue')  renderQueue();
   if (el.dataset.tab === 'parts')  renderParts();
+  if (el.dataset.tab === 'favs')   renderFavs();
 }
 
 // ── Y/N toggles ────────────────────────────────────────────────────────────
@@ -2821,6 +2824,7 @@ let activeTool = null;
 
 function openTool(name, title) {
   activeTool = name;
+  activeToolType = 'module';
   document.getElementById('tool-frame-title').textContent = title;
   const frame = document.getElementById('tool-frame');
 
@@ -2840,12 +2844,14 @@ function openTool(name, title) {
 
   frame.src = 'tools/' + name + '.html';
   document.getElementById('tool-frame-wrap').classList.add('open');
+  syncToolFavBtn();
   // Persist for refresh recovery
   sessionStorage.setItem('hermes_activeTool', JSON.stringify({ type: 'tool', name: name, title: title }));
 }
 
 function openCalc(name, title) {
   activeTool = name;
+  activeToolType = 'calc';
   document.getElementById('tool-frame-title').textContent = title;
   const frame = document.getElementById('tool-frame');
 
@@ -2863,6 +2869,7 @@ function openCalc(name, title) {
 
   frame.src = 'tools/calculators/' + name + '.html';
   document.getElementById('tool-frame-wrap').classList.add('open');
+  syncToolFavBtn();
   // Persist for refresh recovery
   sessionStorage.setItem('hermes_activeTool', JSON.stringify({ type: 'calc', name: name, title: title }));
 }
@@ -2877,19 +2884,24 @@ function closeTool() {
 
 // ── Favorites ──────────────────────────────────────────────────────────────
 const FAV_KEY = 'hermes_favorites';
+var activeToolType = null; // 'calc' or 'module'
 
 function getFavs() {
   try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; }
   catch(e) { return []; }
 }
+function saveFavs(favs) { localStorage.setItem(FAV_KEY, JSON.stringify(favs)); }
 
 function renderFavs() {
   const favs = getFavs();
-  const section = document.getElementById('favSection');
   const grid = document.getElementById('favGrid');
+  const empty = document.getElementById('favEmpty');
   grid.innerHTML = '';
-  if (favs.length === 0) { section.classList.add('empty'); return; }
-  section.classList.remove('empty');
+  if (favs.length === 0) {
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
   favs.forEach(function(f) {
     const div = document.createElement('div');
     div.className = 'calc-btn ' + (f.tier || 't2');
@@ -2902,12 +2914,47 @@ function renderFavs() {
   });
 }
 
-// Listen for favorite toggles from iframe children
-window.addEventListener('message', function(e) {
-  if (e.data && e.data.type === 'hermes-fav-toggle') renderFavs();
-});
+function syncToolFavBtn() {
+  const btn = document.getElementById('toolFavBtn');
+  if (!btn || !activeTool) return;
+  const favs = getFavs();
+  const isFav = favs.some(function(f) { return f.id === activeTool; });
+  btn.textContent = isFav ? '\u2605' : '\u2606';
+  btn.classList.toggle('on', isFav);
+}
 
-// Re-render favorites when tool frame closes (covers direct localStorage writes)
+function getToolTier(name) {
+  // Try to find the tier from the calc-btn on the Tools tab
+  const btns = document.querySelectorAll('.calc-btn');
+  for (let i = 0; i < btns.length; i++) {
+    const oc = btns[i].getAttribute('onclick') || '';
+    if (oc.includes("'" + name + "'")) {
+      if (btns[i].classList.contains('t1')) return 't1';
+      if (btns[i].classList.contains('t3')) return 't3';
+      return 't2';
+    }
+  }
+  return 't2';
+}
+
+function toggleToolFav() {
+  if (!activeTool) return;
+  const title = document.getElementById('tool-frame-title').textContent;
+  const favs = getFavs();
+  let idx = -1;
+  for (let i = 0; i < favs.length; i++) { if (favs[i].id === activeTool) { idx = i; break; } }
+  if (idx !== -1) {
+    favs.splice(idx, 1);
+  } else {
+    const tier = getToolTier(activeTool);
+    favs.push({ id: activeTool, title: title, tier: tier, label: title, type: activeToolType || 'calc' });
+  }
+  saveFavs(favs);
+  syncToolFavBtn();
+  renderFavs();
+}
+
+// Re-render favorites when tool frame closes
 const _origCloseTool = closeTool;
 closeTool = function() { _origCloseTool(); renderFavs(); };
 
