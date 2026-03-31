@@ -4,11 +4,11 @@
     {
       "job": "123456-1111",
       "unit": "1",
-      "name": "Living Room",
+      "name": "",
       "loc": "Roof",
       "make": "LENNOX",
       "type": "RTU",
-      "model": "L5432",
+      "model": "L455",
       "serial": "1234567890",
       "fsize": "",
       "fqty": "",
@@ -21,10 +21,168 @@
       "working": "Y",
       "done": "N",
       "date": "3/30/2026",
-      "notes": "",
-      "modules": [],
-      "moduleStates": {},
-      "moduleNames": []
+      "notes": "This is just a test module where numbers have been made up",
+      "modules": [
+        "REFRIGERATION ANALYSIS\n3/30/2026\n\n\nRefrigerant:        R-454B (zeotropic)\nMetering:           TXV / EEV\nMode:               Cooling\n\nSUCTION\nSuction:            90.0 PSIG\nSat Temp:           28.5 F (dew)\nLine Temp:          39.0 F\nSuperheat:          10.5 F\n\nLIQUID\nLiquid:             290.0 PSIG\nSat Temp:           99.6 F (bubble)\nLine Temp:          88.0 F\nSubcooling:         11.6 F\n\nSYSTEM\nCompression Ratio:  2.91\n\nAIRSIDE\nReturn Air:         68.0 F\nSupply Air:         49.0 F\nDelta T:            19.0 F\nEvap Approach:      39.5 F\nOutdoor Ambient:    86.0 F\nCond Approach:      13.6 F\nCFM:                2445",
+        "ELECTRICAL ANALYSIS\nConfiguration:          Three Phase\n\nNAMEPLATE\nRated Voltage:          480 V\n\nSUPPLY VOLTAGE\nL1-L2:                  477.0 V\nL2-L3:                  479.0 V\nL1-L3:                  478.2 V\nL1-G:                   277.0 V\nL2-G:                   275.0 V\nL3-G:                   277.0 V\nAverage L-L:            478.1 V\nDeviation from Rated:   -1.9 V\n% Deviation:            -0.4 %\nNEMA Voltage Unbalance: 0.22 %\n\nTRANSFORMER 1\nPrimary (1Ph)\nSecondary (1Ph)\n\nTRANSFORMER 2\nPrimary (3Ph)\nSecondary (1Ph)",
+        "MOTOR TYPE: Compressor (3Φ)\n\nNAMEPLATE\nRated Voltage:        480 V\nRLA:                  27.0 A\n\nRUNNING\nSupply Voltage:       480.0 V\nRunning Amps:         23.0 A\n% of RLA:             85.2 %\n\nWINDINGS\nT1-T2:                0.5 Ohm\nT2-T3:                0.5 Ohm\nT1-T3:                0.5 Ohm\nMax Deviation:        1.9 %\n\nINSULATION\nTest Voltage:         1000 V\nWinding to Ground\n  T1 — Ground:        150.0 MOhm\n  T2 — Ground:        150.0 MOhm\n  T3 — Ground:        150.0 MOhm\nPhase to Phase\n  T1 — T2:            15.0 MOhm\n  T2 — T3:            15.0 MOhm\n  T1 — T3:            15.0 MOhm"
+      ],
+      "moduleStates": {
+        "refrigeration": {
+          "refrigerant": "R-454B",
+          "zeotropic": true,
+          "meteringDevice": "txv",
+          "mode": "cool",
+          "source": "air",
+          "suctionPressure": 90,
+          "suctionSatTemp": 28.47,
+          "suctionLineTemp": 39,
+          "superheat": 10.5,
+          "liquidPressure": 290,
+          "liquidSatTemp": 99.6,
+          "liquidLineTemp": 88,
+          "subcooling": 11.6,
+          "compressionRatio": 2.91,
+          "returnAir": 68,
+          "supplyAir": 49,
+          "dt": 19,
+          "ambient": 86,
+          "cfm": 2445,
+          "ewt": null,
+          "lwt": null,
+          "evaporatorApproach": 39.5,
+          "condenserApproach": 13.6
+        },
+        "electrical": {
+          "phase": 3,
+          "npV": 480,
+          "ll_vals": [
+            477,
+            479,
+            478.2
+          ],
+          "lg_vals": [
+            277,
+            275,
+            277
+          ],
+          "avgLL": 478.06666666666666,
+          "vImbal": 0.22,
+          "vDev": -1.9,
+          "vDevPct": -0.4,
+          "transformers": [
+            {
+              "id": 1,
+              "num": 1,
+              "priPhase": 1,
+              "secPhase": 1,
+              "pri": {
+                "ll": [
+                  null
+                ],
+                "lg": [
+                  null,
+                  null
+                ]
+              },
+              "sec": {
+                "ll": [
+                  null
+                ],
+                "lg": [
+                  null,
+                  null
+                ]
+              },
+              "priAvgLL": null,
+              "secAvgLL": null,
+              "priImbal": null,
+              "secImbal": null
+            },
+            {
+              "id": 2,
+              "num": 2,
+              "priPhase": 3,
+              "secPhase": 1,
+              "pri": {
+                "ll": [
+                  null,
+                  null,
+                  null
+                ],
+                "lg": [
+                  null,
+                  null,
+                  null
+                ]
+              },
+              "sec": {
+                "ll": [
+                  null
+                ],
+                "lg": [
+                  null,
+                  null
+                ]
+              },
+              "priAvgLL": null,
+              "secAvgLL": null,
+              "priImbal": null,
+              "secImbal": null
+            }
+          ]
+        },
+        "motors": {
+          "type": "compressor",
+          "phase": "3",
+          "nameplate": {
+            "voltage": 480,
+            "rla": 27,
+            "lra": null
+          },
+          "running": {
+            "voltage": 480,
+            "amps": 23,
+            "pctRLA": 85.2
+          },
+          "notes": "",
+          "windings": {
+            "values": [
+              0.51,
+              0.52,
+              0.53
+            ],
+            "maxDeviationPct": 1.9
+          },
+          "insulation": {
+            "testVoltage": 1000,
+            "windingToGround": {
+              "t1": 150,
+              "t2": 150,
+              "t3": 150
+            },
+            "phaseToPhase": {
+              "t1t2": 15,
+              "t2t3": 15,
+              "t1t3": 15
+            }
+          }
+        }
+      },
+      "moduleNames": [
+        {
+          "name": "refrigeration",
+          "title": "Refrigeration"
+        },
+        {
+          "name": "electrical",
+          "title": "Electrical"
+        },
+        {
+          "name": "motors",
+          "title": "Motors"
+        }
+      ]
     }
   ]
 }
