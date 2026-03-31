@@ -892,6 +892,17 @@ This software is provided "as is" without warranty of any kind, express or impli
       </div>
     </div>
 
+    <!-- MODULE SLOTS -->
+    <div id="module-list"></div>
+    <button class="btn btn-add" onclick="showModulePicker()">+ Add Module</button>
+    <div class="module-picker" id="module-picker">
+      <div class="module-pick-btn" onclick="addModule('electrical', 'Electrical')">Electrical</div>
+      <div class="module-pick-btn" onclick="addModule('heat', 'Heat')">Heat</div>
+      <div class="module-pick-btn" onclick="addModule('refrigeration', 'Refrigeration')">Refrigeration</div>
+      <div class="module-pick-btn" onclick="addModule('airflow', 'Airflow')">Airflow</div>
+      <div class="module-pick-btn" onclick="addModule('motors', 'Motors')">Motors</div>
+    </div>
+
     <hr class="sec">
     <div class="sec-lbl">Status</div>
 
@@ -917,17 +928,6 @@ This software is provided "as is" without warranty of any kind, express or impli
     <div class="fg">
       <label class="fl">Notes</label>
       <textarea id="f-notes" placeholder="Faults, observations, parts needed..."></textarea>
-    </div>
-
-    <!-- MODULE SLOTS -->
-    <div id="module-list"></div>
-    <button class="btn btn-add" onclick="showModulePicker()">+ Add Module</button>
-    <div class="module-picker" id="module-picker">
-      <div class="module-pick-btn" onclick="addModule('electrical', 'Electrical')">Electrical</div>
-      <div class="module-pick-btn" onclick="addModule('heat', 'Heat')">Heat</div>
-      <div class="module-pick-btn" onclick="addModule('refrigeration', 'Refrigeration')">Refrigeration</div>
-      <div class="module-pick-btn" onclick="addModule('airflow', 'Airflow')">Airflow</div>
-      <div class="module-pick-btn" onclick="addModule('motors', 'Motors')">Motors</div>
     </div>
 
     <button class="btn btn-primary" onclick="addRecord()">+ Add to Queue</button>
