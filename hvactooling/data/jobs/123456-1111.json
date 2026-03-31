@@ -1,0 +1,30 @@
+{
+  "job": "123456-1111",
+  "units": [
+    {
+      "job": "123456-1111",
+      "unit": "1",
+      "name": "Living Room",
+      "loc": "Roof",
+      "make": "LENNOX",
+      "type": "RTU",
+      "model": "L5432",
+      "serial": "1234567890",
+      "fsize": "",
+      "fqty": "",
+      "f2size": "",
+      "f2qty": "",
+      "fchg": "",
+      "belt": "",
+      "bqty": "",
+      "bchg": "",
+      "working": "Y",
+      "done": "N",
+      "date": "3/30/2026",
+      "notes": "",
+      "modules": [],
+      "moduleStates": {},
+      "moduleNames": []
+    }
+  ]
+}
