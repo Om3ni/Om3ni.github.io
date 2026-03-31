@@ -461,6 +461,32 @@ textarea { resize: vertical; min-height: 72px; }
 }
 .module-pick-btn:active { border-color: var(--orange); color: var(--orange-hi); }
 
+/* ── Collapsible field sections ── */
+.field-section {
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+}
+.field-section-hdr {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 0; cursor: pointer; user-select: none;
+}
+.field-section-hdr .arrow {
+  font-size: .6rem; color: var(--orange-lo); transition: transform .2s;
+  display: inline-block;
+}
+.field-section.open .field-section-hdr .arrow { transform: rotate(90deg); }
+.field-section-hdr .sec-lbl {
+  margin: 0; font-size: .62rem; font-weight: 700; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--text-mute);
+}
+.field-section-hdr .sec-badge {
+  font-family: var(--mono); font-size: .52rem; color: var(--text-mute);
+  letter-spacing: .04em; margin-left: auto;
+}
+.field-section-hdr .sec-badge.has-data { color: var(--orange-hi); }
+.field-section-body { display: none; padding-bottom: 6px; }
+.field-section.open .field-section-body { display: block; }
+
 /* ── TOOLS TAB ── */
 .tool-sec-lbl {
   font-size: .64rem; font-weight: 700; letter-spacing: .22em;
@@ -783,76 +809,87 @@ This software is provided "as is" without warranty of any kind, express or impli
         oninput="forceUpper(this)">
     </div>
 
-    <hr class="sec">
-    <div class="sec-lbl">Filters</div>
-
-    <!-- Filter 1 -->
-    <div class="fg">
-      <label class="fl">Filter Size &nbsp;<span class="preview" id="prev-f1"></span></label>
-      <div class="dim-row">
-        <input type="number" id="f-fw" placeholder="20" min="0" oninput="buildFilter()" class="dim-cell">
-        <span class="dim-sep">×</span>
-        <input type="number" id="f-fh" placeholder="20" min="0" oninput="buildFilter()" class="dim-cell">
-        <span class="dim-sep">×</span>
-        <input type="number" id="f-fd" placeholder="2" min="0" step="0.25" oninput="buildFilter()" class="dim-cell dim-narrow">
-        <input type="number" id="f-fqty" placeholder="qty" min="0" class="dim-qty">
+    <div class="field-section" id="secFilters" onclick="if(event.target.closest('.field-section-hdr'))this.classList.toggle('open')">
+      <div class="field-section-hdr">
+        <span class="arrow">&#9654;</span>
+        <span class="sec-lbl">Filters</span>
+        <span class="sec-badge" id="filterBadge"></span>
       </div>
-      <input type="hidden" id="f-fsize">
+      <div class="field-section-body">
+        <!-- Filter 1 -->
+        <div class="fg">
+          <label class="fl">Filter Size &nbsp;<span class="preview" id="prev-f1"></span></label>
+          <div class="dim-row">
+            <input type="number" id="f-fw" placeholder="20" min="0" oninput="buildFilter()" class="dim-cell">
+            <span class="dim-sep">×</span>
+            <input type="number" id="f-fh" placeholder="20" min="0" oninput="buildFilter()" class="dim-cell">
+            <span class="dim-sep">×</span>
+            <input type="number" id="f-fd" placeholder="2" min="0" step="0.25" oninput="buildFilter()" class="dim-cell dim-narrow">
+            <input type="number" id="f-fqty" placeholder="qty" min="0" class="dim-qty">
+          </div>
+          <input type="hidden" id="f-fsize">
+        </div>
+
+        <!-- Filter 2 -->
+        <div class="fg">
+          <label class="fl">2nd Filter &nbsp;<span class="preview" id="prev-f2"></span></label>
+          <div class="dim-row">
+            <input type="number" id="f-f2w" placeholder="20" min="0" oninput="buildFilter2()" class="dim-cell">
+            <span class="dim-sep">×</span>
+            <input type="number" id="f-f2h" placeholder="20" min="0" oninput="buildFilter2()" class="dim-cell">
+            <span class="dim-sep">×</span>
+            <input type="number" id="f-f2d" placeholder="2" min="0" step="0.25" oninput="buildFilter2()" class="dim-cell dim-narrow">
+            <input type="number" id="f-f2qty" placeholder="qty" min="0" class="dim-qty">
+          </div>
+          <input type="hidden" id="f-f2size">
+        </div>
+
+        <div class="fg">
+          <label class="fl">Changed?</label>
+          <div class="yn" id="yn-fchg">
+            <button class="yn-b y" onclick="ynSet(this,'f-fchg','Y')">Y</button>
+            <button class="yn-b n" onclick="ynSet(this,'f-fchg','N')">N</button>
+            <button class="yn-b na" onclick="ynSet(this,'f-fchg','N/A')">N/A</button>
+          </div>
+          <input type="hidden" id="f-fchg">
+        </div>
+      </div>
     </div>
 
-    <!-- Filter 2 -->
-    <div class="fg">
-      <label class="fl">2nd Filter &nbsp;<span class="preview" id="prev-f2"></span></label>
-      <div class="dim-row">
-        <input type="number" id="f-f2w" placeholder="20" min="0" oninput="buildFilter2()" class="dim-cell">
-        <span class="dim-sep">×</span>
-        <input type="number" id="f-f2h" placeholder="20" min="0" oninput="buildFilter2()" class="dim-cell">
-        <span class="dim-sep">×</span>
-        <input type="number" id="f-f2d" placeholder="2" min="0" step="0.25" oninput="buildFilter2()" class="dim-cell dim-narrow">
-        <input type="number" id="f-f2qty" placeholder="qty" min="0" class="dim-qty">
+    <div class="field-section" id="secBelt" onclick="if(event.target.closest('.field-section-hdr'))this.classList.toggle('open')">
+      <div class="field-section-hdr">
+        <span class="arrow">&#9654;</span>
+        <span class="sec-lbl">Belt</span>
+        <span class="sec-badge" id="beltBadge"></span>
       </div>
-      <input type="hidden" id="f-f2size">
-    </div>
+      <div class="field-section-body">
+        <div class="fg">
+          <label class="fl">Belt # &nbsp;<span class="preview" id="prev-b1"></span></label>
+          <div class="belt-row">
+            <input type="text" id="f-bp" placeholder="#" maxlength="2"
+              autocomplete="off" autocorrect="off" spellcheck="false" inputmode="numeric"
+              oninput="buildBelt()" class="belt-pre">
+            <input type="text" id="f-bl" placeholder="A"  maxlength="3"
+              autocomplete="off" autocorrect="off" spellcheck="false"
+              oninput="forceUpper(this);buildBelt()" class="belt-let">
+            <input type="text" id="f-bn" placeholder="57" maxlength="5"
+              autocomplete="off" autocorrect="off" spellcheck="false" inputmode="numeric"
+              oninput="buildBelt()" class="belt-num">
+            <input type="number" id="f-bqty" placeholder="qty" min="0" class="dim-qty">
+          </div>
+          <input type="hidden" id="f-belt">
+        </div>
 
-    <div class="fg">
-      <label class="fl">Changed?</label>
-      <div class="yn" id="yn-fchg">
-        <button class="yn-b y" onclick="ynSet(this,'f-fchg','Y')">Y</button>
-        <button class="yn-b n" onclick="ynSet(this,'f-fchg','N')">N</button>
-        <button class="yn-b na" onclick="ynSet(this,'f-fchg','N/A')">N/A</button>
+        <div class="fg">
+          <label class="fl">Changed?</label>
+          <div class="yn" id="yn-bchg">
+            <button class="yn-b y" onclick="ynSet(this,'f-bchg','Y')">Y</button>
+            <button class="yn-b n" onclick="ynSet(this,'f-bchg','N')">N</button>
+            <button class="yn-b na" onclick="ynSet(this,'f-bchg','N/A')">N/A</button>
+          </div>
+          <input type="hidden" id="f-bchg">
+        </div>
       </div>
-      <input type="hidden" id="f-fchg">
-    </div>
-
-    <hr class="sec">
-    <div class="sec-lbl">Belt</div>
-
-    <!-- Belt: [optional #] [letters] [number]  e.g. 2B57, A57, 4L240, AX32 -->
-    <div class="fg">
-      <label class="fl">Belt # &nbsp;<span class="preview" id="prev-b1"></span></label>
-      <div class="belt-row">
-        <input type="text" id="f-bp" placeholder="#" maxlength="2"
-          autocomplete="off" autocorrect="off" spellcheck="false" inputmode="numeric"
-          oninput="buildBelt()" class="belt-pre">
-        <input type="text" id="f-bl" placeholder="A"  maxlength="3"
-          autocomplete="off" autocorrect="off" spellcheck="false"
-          oninput="forceUpper(this);buildBelt()" class="belt-let">
-        <input type="text" id="f-bn" placeholder="57" maxlength="5"
-          autocomplete="off" autocorrect="off" spellcheck="false" inputmode="numeric"
-          oninput="buildBelt()" class="belt-num">
-        <input type="number" id="f-bqty" placeholder="qty" min="0" class="dim-qty">
-      </div>
-      <input type="hidden" id="f-belt">
-    </div>
-
-    <div class="fg">
-      <label class="fl">Changed?</label>
-      <div class="yn" id="yn-bchg">
-        <button class="yn-b y" onclick="ynSet(this,'f-bchg','Y')">Y</button>
-        <button class="yn-b n" onclick="ynSet(this,'f-bchg','N')">N</button>
-        <button class="yn-b na" onclick="ynSet(this,'f-bchg','N/A')">N/A</button>
-      </div>
-      <input type="hidden" id="f-bchg">
     </div>
 
     <hr class="sec">
@@ -1671,6 +1708,15 @@ function clearMakeSuggestions() {
 }
 
 // ── Filter / belt builders ─────────────────────────────────────────────────
+function updateFilterBadge() {
+  var s1 = document.getElementById('f-fsize').value;
+  var s2 = document.getElementById('f-f2size').value;
+  var badge = document.getElementById('filterBadge');
+  var parts = [s1, s2].filter(Boolean);
+  badge.textContent = parts.length ? parts.join(' + ') : '';
+  badge.className = 'sec-badge' + (parts.length ? ' has-data' : '');
+}
+
 function buildFilter() {
   const w = document.getElementById('f-fw').value.trim();
   const h = document.getElementById('f-fh').value.trim();
@@ -1678,6 +1724,7 @@ function buildFilter() {
   const str = (w && h && d) ? `${w}x${h}x${d}"` : [w,h,d].filter(Boolean).join('x');
   document.getElementById('f-fsize').value = str;
   document.getElementById('prev-f1').textContent = str;
+  updateFilterBadge();
 }
 
 function buildFilter2() {
@@ -1687,6 +1734,7 @@ function buildFilter2() {
   const str = (w && h && d) ? `${w}x${h}x${d}"` : [w,h,d].filter(Boolean).join('x');
   document.getElementById('f-f2size').value = str;
   document.getElementById('prev-f2').textContent = str;
+  updateFilterBadge();
 }
 
 function buildBelt() {
@@ -1696,6 +1744,9 @@ function buildBelt() {
   const str  = pre + let_ + num;
   document.getElementById('f-belt').value = str;
   document.getElementById('prev-b1').textContent = str;
+  var badge = document.getElementById('beltBadge');
+  badge.textContent = str || '';
+  badge.className = 'sec-badge' + (str ? ' has-data' : '');
 }
 
 // ── Auto-uppercase (Unit, Make, Model, Serial, Belt) ───────────────────────
@@ -1789,6 +1840,13 @@ function clearForm() {
   document.getElementById('prev-f1').textContent = '';
   document.getElementById('prev-f2').textContent = '';
   document.getElementById('prev-b1').textContent = '';
+  // Collapse and clear badges on field sections
+  document.getElementById('secFilters').classList.remove('open');
+  document.getElementById('secBelt').classList.remove('open');
+  document.getElementById('filterBadge').textContent = '';
+  document.getElementById('filterBadge').className = 'sec-badge';
+  document.getElementById('beltBadge').textContent = '';
+  document.getElementById('beltBadge').className = 'sec-badge';
   clearMakeSuggestions();
   clearSuggestions();
   // Clear inline modules
@@ -1881,10 +1939,16 @@ function loadRecord(i) {
   setYN('f-working', r.working);
   setYN('f-done', r.done);
 
-  // Restore filter/belt previews
+  // Restore filter/belt previews and expand sections if they have data
   if (r.fsize) document.getElementById('prev-f1').textContent = r.fsize;
   if (r.f2size) document.getElementById('prev-f2').textContent = r.f2size;
   if (r.belt) document.getElementById('prev-b1').textContent = r.belt;
+  document.getElementById('secFilters').classList.toggle('open', !!(r.fsize || r.f2size || r.fchg));
+  document.getElementById('secBelt').classList.toggle('open', !!(r.belt || r.bchg));
+  updateFilterBadge();
+  var beltBadge = document.getElementById('beltBadge');
+  beltBadge.textContent = r.belt || '';
+  beltBadge.className = 'sec-badge' + (r.belt ? ' has-data' : '');
 
   // Restore modules
   moduleSlots = [];
@@ -2473,18 +2537,25 @@ function buildUnifiedReport(rec) {
     return sharedSource[field] === moduleName;
   }
 
-  // ── PM fields
-  const hasPM = rec.fsize || rec.belt || rec.fchg || rec.bchg || rec.working || rec.done;
-  if (hasPM) {
+  // ── Status (always shown if set)
+  if (rec.working || rec.done) {
     lines.push('');
-    lines.push('PM STATUS');
+    lines.push('STATUS');
+    if (rec.working) lines.push(pad('Unit Operating:')   + rec.working);
+    if (rec.done)    lines.push(pad('Maint Complete:')   + rec.done);
+  }
+
+  // ── PM fields (only if filter or belt data was entered)
+  const hasFilters = rec.fsize || rec.f2size || rec.fchg;
+  const hasBelts   = rec.belt || rec.bchg;
+  if (hasFilters || hasBelts) {
+    lines.push('');
+    lines.push('PM');
     if (rec.fsize)   lines.push(pad('Filter 1:')        + rec.fsize + (rec.fqty ? ' x' + rec.fqty : ''));
     if (rec.f2size)  lines.push(pad('Filter 2:')        + rec.f2size + (rec.f2qty ? ' x' + rec.f2qty : ''));
     if (rec.fchg)    lines.push(pad('Filters Changed:')  + rec.fchg);
     if (rec.belt)    lines.push(pad('Belt:')             + rec.belt + (rec.bqty ? ' x' + rec.bqty : ''));
     if (rec.bchg)    lines.push(pad('Belt Changed:')     + rec.bchg);
-    if (rec.working) lines.push(pad('Unit Operating:')   + rec.working);
-    if (rec.done)    lines.push(pad('PM Complete:')      + rec.done);
   }
 
   // Shared fields are printed in SYSTEM ANALYSIS section at the end
