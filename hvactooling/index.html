@@ -2844,25 +2844,6 @@ function buildUnifiedReport(rec) {
     }
   }
 
-  // EER — only meaningful for cooling
-  if (shared.cfm !== null && coolDt !== null && coolDt !== 0) {
-    const capacity = Math.round(1.08 * shared.cfm * Math.abs(coolDt));
-
-    // EER — need watts from motor or electrical
-    let watts = null;
-    if (motor && motor.running) {
-      if (motor.type === 'three-phase' && motor.running.avgAmps !== null && motor.running.avgVolts !== null) {
-        watts = motor.running.avgVolts * motor.running.avgAmps * 1.732;
-      } else if (motor.running.voltage !== null && motor.running.amps !== null) {
-        watts = motor.running.voltage * motor.running.amps;
-      }
-    }
-    if (watts !== null && watts > 0) {
-      const eer = +(capacity / watts).toFixed(1);
-      xm.push(pad('Actual EER:') + dv(eer, 'BTU/Wh'));
-    }
-  }
-
   // Voltage drop: supply vs motor
   if (elec && elec.avgLL !== null && motor && motor.running) {
     let motorVolts = null;
