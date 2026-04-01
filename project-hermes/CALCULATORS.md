@@ -24,7 +24,6 @@ Rules for how calculators in this app are classified, what they get, and when to
 
 ### T2 — Field
 - `belt-length` — V-belt sizing with section matching
-- `breaker-sizing` — NEC breaker/fuse sizing
 - `capacitor-sizing` — Run/start cap sizing and tolerance check
 - `cfm-per-ton` — Airflow per ton calculation
 - `combustion-air` — Combustion air opening sizing
@@ -37,11 +36,11 @@ Rules for how calculators in this app are classified, what they get, and when to
 - `refrigerant-charge` — Line charge calculation
 
 ### T3 — Advanced
-- `long-lineset` — Long lineset compensation (oil traps, charge adjustment, line sizing)
 - `mca-mocp` — Minimum circuit ampacity / maximum overcurrent protection
 - `motor-start-controls` — 1ph/3ph start methods, VFD sizing, relay/cap sizing
-- `system-head` — Pump sizing: system head, Darcy-Weisbach pipe loss, pump curve intersection, BHP
-- `wire-sizing` — NEC ampacity tables, voltage drop, conductor selection
+- `system-head` — Pump sizing: single-loop head, Darcy-Weisbach pipe loss, pump curve intersection, BHP
+- `ventilation-sizing` — ASHRAE ACH exhaust/makeup air sizing and deficiency audit
+- `wire-sizing` — NEC ampacity tables, voltage drop, conductor selection, breaker sizing
 
 ---
 
