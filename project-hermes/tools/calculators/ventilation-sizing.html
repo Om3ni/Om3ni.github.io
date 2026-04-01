@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ventilation Sizing · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+.select-wrap { position: relative; margin-bottom: 8px; }
+.select-wrap::after {
+  content: '\25BE'; position: absolute; right: 10px; top: 50%;
+  transform: translateY(-50%); color: var(--text-mute);
+  pointer-events: none; font-size: .8rem;
+}
+.calc-select {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 3px; color: var(--text); font-family: var(--mono);
+  font-size: .9rem; padding: 11px 11px; outline: none;
+  transition: border-color .15s; -webkit-appearance: none; appearance: none; cursor: pointer;
+}
+.calc-select:focus { border-color: var(--orange); }
+.ref-link { font-family: var(--mono); font-size: .68rem; color: var(--text-mute); text-decoration: none; border-bottom: 1px dotted var(--text-mute); }
+.ref-link:hover { color: var(--text); border-bottom-color: var(--text); }
+.pressure-bar { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 3px; }
+.pb-label { font-family: var(--mono); font-size: .62rem; color: var(--text-mute); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+.pb-val { font-family: var(--mono); font-size: .82rem; color: var(--text-mute); margin-left: auto; }
+.pb-val.negative { color: var(--red-hi); }
+.pb-val.neutral { color: var(--green-hi); }
+.pb-val.positive { color: var(--blue, #4a9de8); }
+.deficiency-box { background: var(--surface); border: 1px solid var(--border); border-radius: 3px; padding: 8px 12px; margin-bottom: 8px; }
+.def-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+.def-row:last-child { margin-bottom: 0; }
+.def-label { font-family: var(--mono); font-size: .62rem; color: var(--text-mute); letter-spacing: .05em; text-transform: uppercase; }
+.def-val { font-family: var(--mono); font-size: .82rem; color: var(--text-mute); }
+.def-val.ok { color: var(--green-hi); }
+.def-val.warn { color: var(--yellow-hi); }
+.def-val.high { color: var(--red-hi); }
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-home" href="../../index.html" title="Project home">⌂</a>
+  <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Ventilation Sizing</div>
+    <div class="hdr-sub"><span class="hdr-tier t3">advanced</span>ASHRAE ACH · Exhaust · Makeup Air</div>
+  </div>
+  <button class="hdr-fav" id="favBtn" title="Favorite" onclick="toggleFav()">&#9734;</button>
+</header>
+
+<div class="tabs" id="modeTabs">
+  <button class="tab active" data-tab="size">Size</button>
+  <button class="tab" data-tab="audit">Audit</button>
+</div>
+
+<main>
+  <!-- ═══ Shared: Room Dimensions & ACH ═══ -->
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Room Dimensions</div>
+    <div class="input-trio">
+      <div class="fg">
+        <label class="fl">Length</label>
+        <div class="iw">
+          <input type="number" id="inLength" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">ft</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Width</label>
+        <div class="iw">
+          <input type="number" id="inWidth" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">ft</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Height</label>
+        <div class="iw">
+          <input type="number" id="inHeight" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">ft</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Air Changes per Hour</div>
+    <div class="fg">
+      <label class="fl">ASHRAE Guideline</label>
+      <div class="select-wrap">
+        <select class="calc-select" id="achPreset">
+          <optgroup label="Negative Pressure (Exhaust-Dominant)">
+            <option value="kitchen" selected>Kitchen (Commercial) — 15 ACH</option>
+            <option value="boiler">Boiler Room — 12 ACH</option>
+            <option value="restroom">Restroom / Toilet — 10 ACH</option>
+            <option value="locker">Locker Room — 8 ACH</option>
+            <option value="mechanical">Mechanical Room — 6 ACH</option>
+            <option value="electrical">Electrical Room — 6 ACH</option>
+            <option value="janitor">Janitor / Cleaning — 6 ACH</option>
+          </optgroup>
+          <optgroup label="Positive Pressure (Supply-Dominant)">
+            <option value="server">Server / IT Room — 10 ACH</option>
+            <option value="lab">Clean Room / Lab — 12 ACH</option>
+          </optgroup>
+          <optgroup label="Neutral">
+            <option value="general">General Area — 4 ACH</option>
+            <option value="office">Office — 4 ACH</option>
+            <option value="storage">Storage — 2 ACH</option>
+          </optgroup>
+          <option value="custom">Custom...</option>
+        </select>
+      </div>
+    </div>
+    <div id="customACHGroup" style="display:none">
+      <div class="fg">
+        <label class="fl">Custom ACH</label>
+        <div class="iw">
+          <input type="number" id="inACH" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">ACH</span>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Pressure Intent</label>
+        <div class="phase-grid" id="intentGrid">
+          <button class="phase-btn" data-intent="negative">Negative</button>
+          <button class="phase-btn active" data-intent="neutral">Neutral</button>
+          <button class="phase-btn" data-intent="positive">Positive</button>
+        </div>
+      </div>
+    </div>
+    <div class="hint">ASHRAE Handbook — HVAC Applications, Ch. 46, Table 4. <a class="ref-link" href="https://www.ashrae.org/technical-resources/ashrae-handbook" target="_blank" rel="noopener">ASHRAE Handbook Reference</a></div>
+  </div>
+
+  <!-- ═══ Size Tab: Results ═══ -->
+  <div id="panelSize">
+    <div class="results">
+      <div class="result-row dim" id="rowVolume">
+        <div class="rr-left">
+          <div class="rr-label">Room Volume</div>
+          <div class="rr-sub">L × W × H</div>
+        </div>
+        <div class="rr-val" id="valVolume">— ft³</div>
+      </div>
+      <div class="result-row dim" id="rowExhCFM">
+        <div class="rr-left">
+          <div class="rr-label">Required Exhaust</div>
+          <div class="rr-sub">Volume × ACH ÷ 60</div>
+        </div>
+        <div class="rr-val" id="valExhCFM">— CFM</div>
+      </div>
+      <div class="result-row dim" id="rowSupCFM">
+        <div class="rr-left">
+          <div class="rr-label">Required Makeup Air</div>
+          <div class="rr-sub">Maintain neutral / slight positive pressure</div>
+        </div>
+        <div class="rr-val" id="valSupCFM">— CFM</div>
+      </div>
+    </div>
+
+    <div class="pressure-bar" id="pressureBar" style="display:none">
+      <span class="pb-label">Pressure Balance</span>
+      <span class="pb-val neutral" id="pbVal">Neutral</span>
+    </div>
+
+    <div class="hint" id="hintSize">Enter room dimensions and confirm ACH to calculate ventilation requirements.</div>
+  </div>
+
+  <!-- ═══ Audit Tab: Existing System Evaluation ═══ -->
+  <div id="panelAudit" style="display:none">
+    <div class="sec">
+      <div class="sec-lbl">Existing System</div>
+      <div class="input-pair">
+        <div class="fg">
+          <label class="fl">Installed Exhaust</label>
+          <div class="iw">
+            <input type="number" id="inExistExh" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">CFM</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Installed Supply / Makeup</label>
+          <div class="iw">
+            <input type="number" id="inExistSup" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">CFM</span>
+          </div>
+        </div>
+      </div>
+      <div class="hint">Enter nameplate or measured CFM of installed fans.</div>
+    </div>
+
+    <div class="deficiency-box" id="defBox" style="display:none">
+      <div class="def-row">
+        <span class="def-label">Required Exhaust</span>
+        <span class="def-val" id="defReqExh">—</span>
+      </div>
+      <div class="def-row">
+        <span class="def-label">Installed Exhaust</span>
+        <span class="def-val" id="defCurExh">—</span>
+      </div>
+      <div class="def-row">
+        <span class="def-label">Exhaust Surplus / Deficit</span>
+        <span class="def-val" id="defExhDelta">—</span>
+      </div>
+      <div class="def-row">
+        <span class="def-label">Required Makeup</span>
+        <span class="def-val" id="defReqSup">—</span>
+      </div>
+      <div class="def-row">
+        <span class="def-label">Installed Supply</span>
+        <span class="def-val" id="defCurSup">—</span>
+      </div>
+      <div class="def-row">
+        <span class="def-label">Supply Surplus / Deficit</span>
+        <span class="def-val" id="defSupDelta">—</span>
+      </div>
+    </div>
+
+    <div class="results">
+      <div class="result-row dim" id="rowAuditVol">
+        <div class="rr-left">
+          <div class="rr-label">Room Volume</div>
+          <div class="rr-sub">L × W × H</div>
+        </div>
+        <div class="rr-val" id="valAuditVol">— ft³</div>
+      </div>
+      <div class="result-row dim" id="rowExhStatus">
+        <div class="rr-left">
+          <div class="rr-label">Exhaust Status</div>
+          <div class="rr-sub" id="subExhStatus">Installed vs. ASHRAE requirement</div>
+        </div>
+        <div class="rr-val" id="valExhStatus">—</div>
+      </div>
+      <div class="result-row dim" id="rowSupStatus">
+        <div class="rr-left">
+          <div class="rr-label">Makeup Air Status</div>
+          <div class="rr-sub" id="subSupStatus">Installed vs. exhaust balance</div>
+        </div>
+        <div class="rr-val" id="valSupStatus">—</div>
+      </div>
+      <div class="result-row dim" id="rowPressure">
+        <div class="rr-left">
+          <div class="rr-label">Pressure Condition</div>
+          <div class="rr-sub" id="subPressure">Supply − Exhaust balance</div>
+        </div>
+        <div class="rr-val" id="valPressure">—</div>
+      </div>
+    </div>
+
+    <div class="hint" id="hintAudit">Enter room dimensions, confirm ACH, and enter installed fan CFMs to evaluate.</div>
+  </div>
+
+  <div style="padding:14px 0 0;"><button class="btn btn-primary" id="btnReport">Generate Report</button></div>
+</main>
+
+<div class="modal-overlay" id="reportModal">
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title" id="modalTitle">Field Report</div><button class="modal-close" id="modalClose">&#10005;</button></div>
+    <div class="modal-body"><pre class="report-pre" id="reportText"></pre></div>
+    <div class="modal-footer"><button class="btn btn-ghost" id="btnCopy">Copy Text</button><button class="btn btn-primary" id="btnPrint">Print</button></div>
+  </div>
+</div>
+<div class="toast" id="toast">Copied to clipboard</div>
+
+<script>
+'use strict';
+function init() {
+  /* ── Room presets: ACH, pressure intent, supply ratio ──
+     supplyRatio: fraction of exhaust CFM that should be supplied as makeup air
+       > 1.0 = positive pressure (supply-dominant)
+       = 1.0 = neutral
+       < 1.0 = negative pressure (exhaust-dominant)
+     intent: 'negative' | 'positive' | 'neutral' — for status display */
+  var PRESETS = {
+    kitchen:    { ach: 15, supplyRatio: 0.85, intent: 'negative', label: 'Kitchen (Commercial)' },
+    boiler:     { ach: 12, supplyRatio: 0.90, intent: 'negative', label: 'Boiler Room' },
+    restroom:   { ach: 10, supplyRatio: 0.00, intent: 'negative', label: 'Restroom / Toilet' },
+    locker:     { ach: 8,  supplyRatio: 0.80, intent: 'negative', label: 'Locker Room' },
+    mechanical: { ach: 6,  supplyRatio: 0.90, intent: 'negative', label: 'Mechanical Room' },
+    electrical: { ach: 6,  supplyRatio: 0.90, intent: 'negative', label: 'Electrical Room' },
+    janitor:    { ach: 6,  supplyRatio: 0.00, intent: 'negative', label: 'Janitor / Cleaning' },
+    server:     { ach: 10, supplyRatio: 1.10, intent: 'positive', label: 'Server / IT Room' },
+    lab:        { ach: 12, supplyRatio: 1.15, intent: 'positive', label: 'Clean Room / Lab' },
+    general:    { ach: 4,  supplyRatio: 1.00, intent: 'neutral',  label: 'General Area' },
+    office:     { ach: 4,  supplyRatio: 1.00, intent: 'neutral',  label: 'Office' },
+    storage:    { ach: 2,  supplyRatio: 1.00, intent: 'neutral',  label: 'Storage' }
+  };
+
+  var activeTab = 'size';
+
+  /* ── DOM refs ── */
+  var inLength = document.getElementById('inLength');
+  var inWidth  = document.getElementById('inWidth');
+  var inHeight = document.getElementById('inHeight');
+  var achPreset = document.getElementById('achPreset');
+  var inACH = document.getElementById('inACH');
+  var customACHGroup = document.getElementById('customACHGroup');
+
+  var inExistExh = document.getElementById('inExistExh');
+  var inExistSup = document.getElementById('inExistSup');
+
+  /* ── Tab switching ── */
+  var tabs = document.querySelectorAll('#modeTabs .tab');
+  var panelSize  = document.getElementById('panelSize');
+  var panelAudit = document.getElementById('panelAudit');
+
+  tabs.forEach(function(t) {
+    t.addEventListener('click', function() {
+      activeTab = t.dataset.tab;
+      tabs.forEach(function(b) { b.classList.toggle('active', b === t); });
+      panelSize.style.display  = activeTab === 'size'  ? '' : 'none';
+      panelAudit.style.display = activeTab === 'audit' ? '' : 'none';
+      calc();
+    });
+  });
+
+  /* ── ACH preset dropdown ── */
+  achPreset.addEventListener('change', function() {
+    if (achPreset.value === 'custom') {
+      customACHGroup.style.display = '';
+      inACH.focus();
+    } else {
+      customACHGroup.style.display = 'none';
+      inACH.value = '';
+    }
+    calc();
+  });
+
+  /* ── Custom intent toggle ── */
+  var customIntent = 'neutral';
+  var intentBtns = document.querySelectorAll('#intentGrid .phase-btn');
+  intentBtns.forEach(function(b) {
+    b.addEventListener('click', function() {
+      customIntent = b.dataset.intent;
+      intentBtns.forEach(function(x) { x.classList.toggle('active', x === b); });
+      calc();
+    });
+  });
+
+  var CUSTOM_RATIOS = { negative: 0.90, neutral: 1.00, positive: 1.10 };
+
+  function getPreset() {
+    return PRESETS[achPreset.value] || null;
+  }
+
+  /* ── Helpers ── */
+  function getACH() {
+    var p = getPreset();
+    if (p) return p.ach;
+    var v = parseFloat(inACH.value);
+    return (isNaN(v) || v <= 0) ? NaN : v;
+  }
+
+  function getSupplyRatio() {
+    var p = getPreset();
+    return p ? p.supplyRatio : (CUSTOM_RATIOS[customIntent] || 1.0);
+  }
+
+  function getIntent() {
+    var p = getPreset();
+    return p ? p.intent : customIntent;
+  }
+
+  function getPresetLabel() {
+    var p = getPreset();
+    return p ? p.label : 'Custom';
+  }
+
+  function getVolume() {
+    var l = parseFloat(inLength.value);
+    var w = parseFloat(inWidth.value);
+    var h = parseFloat(inHeight.value);
+    if (!l || l <= 0 || !w || w <= 0 || !h || h <= 0) return NaN;
+    return l * w * h;
+  }
+
+  function setRow(id, state, val, sub) {
+    var row = document.getElementById('row' + id);
+    var valEl = document.getElementById('val' + id);
+    var subEl = document.getElementById('sub' + id);
+    if (!row) return;
+    row.className = 'result-row ' + (state === 'dim' ? 'dim' : 'live');
+    if (state === 'ok') row.classList.add('ok');
+    if (state === 'high') row.classList.add('high');
+    if (state === 'warn') row.classList.add('warn');
+    valEl.className = 'rr-val' + (state !== 'dim' ? ' ' + (state === 'live' ? 'live' : state) : '');
+    if (val !== undefined) valEl.textContent = val;
+    if (sub !== undefined && subEl) subEl.textContent = sub;
+  }
+
+  function fmt(n) { return n >= 1000 ? n.toLocaleString('en-US', { maximumFractionDigits: 0 }) : n.toFixed(0); }
+
+  /* ── Main calculation ── */
+  function calc() {
+    if (activeTab === 'size') calcSize();
+    else calcAudit();
+  }
+
+  function calcSize() {
+    var vol = getVolume();
+    var ach = getACH();
+    var hint = document.getElementById('hintSize');
+    var pBar = document.getElementById('pressureBar');
+
+    /* Reset */
+    setRow('Volume', 'dim', '— ft\u00B3');
+    setRow('ExhCFM', 'dim', '— CFM');
+    setRow('SupCFM', 'dim', '— CFM');
+    pBar.style.display = 'none';
+    hint.textContent = 'Enter room dimensions and confirm ACH to calculate ventilation requirements.';
+    hint.className = 'hint';
+
+    if (isNaN(vol) || isNaN(ach)) return;
+
+    var exhCFM = (vol * ach) / 60;
+    var ratio = getSupplyRatio();
+    var supCFM = exhCFM * ratio;
+    var intent = getIntent();
+
+    setRow('Volume', 'live', fmt(vol) + ' ft\u00B3', fmt(parseFloat(inLength.value)) + ' \u00D7 ' + fmt(parseFloat(inWidth.value)) + ' \u00D7 ' + fmt(parseFloat(inHeight.value)));
+    setRow('ExhCFM', 'ok', fmt(exhCFM) + ' CFM', 'Volume \u00D7 ' + ach + ' ACH \u00F7 60');
+
+    var supPctLabel = (ratio * 100).toFixed(0) + '% of exhaust';
+    if (ratio === 0) {
+      setRow('SupCFM', 'live', 'Transfer air only', 'No dedicated makeup — relies on transfer from adjacent spaces');
+    } else if (intent === 'negative') {
+      setRow('SupCFM', 'ok', fmt(supCFM) + ' CFM', supPctLabel + ' — maintains negative pressure');
+    } else if (intent === 'positive') {
+      setRow('SupCFM', 'ok', fmt(supCFM) + ' CFM', supPctLabel + ' — maintains positive pressure');
+    } else {
+      setRow('SupCFM', 'ok', fmt(supCFM) + ' CFM', supPctLabel + ' — neutral pressure balance');
+    }
+
+    pBar.style.display = 'flex';
+    var pbVal = document.getElementById('pbVal');
+    var intentLabels = { negative: 'Negative (intended)', positive: 'Positive (intended)', neutral: 'Neutral' };
+    var intentClasses = { negative: 'pb-val negative', positive: 'pb-val positive', neutral: 'pb-val neutral' };
+    pbVal.textContent = intentLabels[intent] || 'Neutral';
+    pbVal.className = intentClasses[intent] || 'pb-val neutral';
+
+    var intentNote = intent === 'negative' ? 'Room should be held negative to prevent contaminant spread to adjacent spaces.'
+      : intent === 'positive' ? 'Room should be held positive to prevent infiltration of contaminants.'
+      : 'Balanced supply and exhaust.';
+    hint.textContent = getPresetLabel() + ' @ ' + ach + ' ACH. ' + intentNote;
+    hint.className = 'hint';
+  }
+
+  function calcAudit() {
+    var vol = getVolume();
+    var ach = getACH();
+    var curExh = parseFloat(inExistExh.value);
+    var curSup = parseFloat(inExistSup.value);
+    var hint = document.getElementById('hintAudit');
+    var defBox = document.getElementById('defBox');
+
+    /* Reset */
+    setRow('AuditVol', 'dim', '— ft\u00B3');
+    setRow('ExhStatus', 'dim', '—', 'Installed vs. ASHRAE requirement');
+    setRow('SupStatus', 'dim', '—', 'Installed vs. exhaust balance');
+    setRow('Pressure', 'dim', '—', 'Supply \u2212 Exhaust balance');
+    defBox.style.display = 'none';
+    hint.textContent = 'Enter room dimensions, confirm ACH, and enter installed fan CFMs to evaluate.';
+    hint.className = 'hint';
+
+    if (isNaN(vol) || isNaN(ach)) return;
+
+    var reqExh = (vol * ach) / 60;
+    var ratio = getSupplyRatio();
+    var reqSup = reqExh * ratio;
+    var intent = getIntent();
+
+    setRow('AuditVol', 'live', fmt(vol) + ' ft\u00B3', fmt(parseFloat(inLength.value)) + ' × ' + fmt(parseFloat(inWidth.value)) + ' × ' + fmt(parseFloat(inHeight.value)));
+
+    if (isNaN(curExh) || curExh < 0) return;
+
+    /* Exhaust evaluation */
+    var exhDelta = curExh - reqExh;
+    var exhPct = reqExh > 0 ? (exhDelta / reqExh) * 100 : 0;
+    var exhState, exhLabel;
+
+    if (exhDelta >= 0) {
+      exhState = 'ok';
+      exhLabel = 'Adequate';
+    } else if (exhPct >= -15) {
+      exhState = 'warn';
+      exhLabel = 'Marginal';
+    } else {
+      exhState = 'high';
+      exhLabel = 'Deficient';
+    }
+
+    setRow('ExhStatus', exhState, exhLabel,
+      fmt(curExh) + ' installed vs. ' + fmt(reqExh) + ' required (' + (exhDelta >= 0 ? '+' : '') + fmt(exhDelta) + ' CFM / ' + (exhPct >= 0 ? '+' : '') + exhPct.toFixed(1) + '%)');
+
+    /* Show deficiency box */
+    defBox.style.display = 'block';
+    document.getElementById('defReqExh').textContent = fmt(reqExh) + ' CFM';
+    document.getElementById('defCurExh').textContent = fmt(curExh) + ' CFM';
+    var dExhEl = document.getElementById('defExhDelta');
+    dExhEl.textContent = (exhDelta >= 0 ? '+' : '') + fmt(exhDelta) + ' CFM (' + (exhPct >= 0 ? '+' : '') + exhPct.toFixed(1) + '%)';
+    dExhEl.className = 'def-val ' + exhState;
+
+    /* Supply evaluation */
+    if (!isNaN(curSup) && curSup >= 0) {
+      var supDelta = curSup - reqSup;
+      var supPct = reqSup > 0 ? (supDelta / reqSup) * 100 : 0;
+      var supState, supLabel;
+
+      if (supDelta >= 0) {
+        supState = 'ok';
+        supLabel = 'Adequate';
+      } else if (supPct >= -15) {
+        supState = 'warn';
+        supLabel = 'Marginal';
+      } else {
+        supState = 'high';
+        supLabel = 'Deficient';
+      }
+
+      setRow('SupStatus', supState, supLabel,
+        fmt(curSup) + ' installed vs. ' + fmt(reqSup) + ' required (' + (supDelta >= 0 ? '+' : '') + fmt(supDelta) + ' CFM / ' + (supPct >= 0 ? '+' : '') + supPct.toFixed(1) + '%)');
+
+      document.getElementById('defReqSup').textContent = fmt(reqSup) + ' CFM';
+      document.getElementById('defCurSup').textContent = fmt(curSup) + ' CFM';
+      var dSupEl = document.getElementById('defSupDelta');
+      dSupEl.textContent = (supDelta >= 0 ? '+' : '') + fmt(supDelta) + ' CFM (' + (supPct >= 0 ? '+' : '') + supPct.toFixed(1) + '%)';
+      dSupEl.className = 'def-val ' + supState;
+
+      /* Pressure condition — evaluate against intended pressure relationship */
+      var netCFM = curSup - curExh;
+      var actualPressure = Math.abs(netCFM) <= curExh * 0.05 ? 'neutral' : (netCFM > 0 ? 'positive' : 'negative');
+      var pressState, pressLabel, pressSub;
+
+      if (intent === 'negative') {
+        /* Room SHOULD be negative */
+        if (actualPressure === 'negative') {
+          pressState = 'ok';
+          pressLabel = 'Negative';
+          pressSub = 'Correct — room is negative as intended';
+        } else if (actualPressure === 'neutral') {
+          pressState = 'warn';
+          pressLabel = 'Neutral';
+          pressSub = 'Should be negative — supply too close to exhaust';
+        } else {
+          pressState = 'high';
+          pressLabel = 'POSITIVE';
+          pressSub = 'WRONG DIRECTION — room must be negative, not positive. Fire/contaminant spread risk.';
+        }
+      } else if (intent === 'positive') {
+        /* Room SHOULD be positive */
+        if (actualPressure === 'positive') {
+          pressState = 'ok';
+          pressLabel = 'Positive';
+          pressSub = 'Correct — room is positive as intended';
+        } else if (actualPressure === 'neutral') {
+          pressState = 'warn';
+          pressLabel = 'Neutral';
+          pressSub = 'Should be positive — supply too close to exhaust';
+        } else {
+          pressState = 'high';
+          pressLabel = 'NEGATIVE';
+          pressSub = 'WRONG DIRECTION — room must be positive, not negative. Contaminant infiltration risk.';
+        }
+      } else {
+        /* Neutral intent */
+        pressState = actualPressure === 'neutral' ? 'ok' : 'warn';
+        pressLabel = actualPressure === 'positive' ? 'Positive' : actualPressure === 'negative' ? 'Negative' : 'Neutral';
+        pressSub = actualPressure === 'neutral' ? 'Balanced as intended' : 'Slight imbalance — ' + (netCFM > 0 ? 'supply dominant' : 'exhaust dominant');
+      }
+
+      setRow('Pressure', pressState, pressLabel,
+        'Net: ' + (netCFM >= 0 ? '+' : '') + fmt(netCFM) + ' CFM — ' + pressSub);
+
+      /* Hint — prioritize worst condition */
+      if (pressState === 'high') {
+        hint.textContent = pressSub;
+        hint.className = 'hint warn';
+      } else if (exhState === 'high') {
+        hint.textContent = 'Exhaust capacity is deficient by ' + Math.abs(exhPct).toFixed(1) + '%. Additional exhaust fan capacity needed.';
+        hint.className = 'hint warn';
+      } else if (pressState === 'warn') {
+        hint.textContent = pressSub;
+        hint.className = 'hint warn';
+      } else {
+        hint.textContent = 'System meets ASHRAE ventilation requirements for ' + getPresetLabel().toLowerCase() + '.';
+        hint.className = 'hint';
+      }
+    } else {
+      document.getElementById('defReqSup').textContent = fmt(reqSup) + ' CFM';
+      document.getElementById('defCurSup').textContent = '—';
+      document.getElementById('defSupDelta').textContent = '—';
+      document.getElementById('defSupDelta').className = 'def-val';
+      hint.textContent = 'Enter installed supply / makeup air CFM to evaluate pressure balance.';
+    }
+  }
+
+  /* ── Event listeners ── */
+  inLength.addEventListener('input', calc);
+  inWidth.addEventListener('input', calc);
+  inHeight.addEventListener('input', calc);
+  inACH.addEventListener('input', calc);
+  inExistExh.addEventListener('input', calc);
+  inExistSup.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+
+/* ── Report ── */
+function getVal(id) { var el = document.getElementById(id); return el ? el.textContent : '—'; }
+
+document.getElementById('btnReport').addEventListener('click', function() {
+  var l = document.getElementById('inLength').value || '—';
+  var w = document.getElementById('inWidth').value || '—';
+  var h = document.getElementById('inHeight').value || '—';
+  var achSel = document.getElementById('achPreset');
+  var ach = achSel.value === 'custom' ? (document.getElementById('inACH').value || '—') : achSel.value;
+  var roomLabel = achSel.value === 'custom' ? 'Custom' : achSel.options[achSel.selectedIndex].text;
+
+  var activeTab = document.querySelector('#modeTabs .tab.active').dataset.tab;
+  var ts = new Date().toLocaleString();
+
+  var L = [
+    '\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550',
+    ' VENTILATION SIZING \u2014 FIELD REPORT',
+    ' ' + ts,
+    '\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550',
+    '',
+    '\u2500\u2500 ROOM \u2500\u2500',
+    'Guideline:   ' + roomLabel,
+    'Dimensions:  ' + l + ' \u00D7 ' + w + ' \u00D7 ' + h + ' ft',
+    'Volume:      ' + (activeTab === 'size' ? getVal('valVolume') : getVal('valAuditVol')),
+    'ACH:         ' + ach,
+    'Intent:      ' + (achSel.value === 'custom' ? 'Custom (' + (document.querySelector('#intentGrid .phase-btn.active') || {}).textContent + ')' : achSel.options[achSel.selectedIndex].parentNode.label || '—'),
+    ''
+  ];
+
+  if (activeTab === 'size') {
+    L.push(
+      '\u2500\u2500 SIZING RESULTS \u2500\u2500',
+      'Exhaust:     ' + getVal('valExhCFM'),
+      'Makeup Air:  ' + getVal('valSupCFM'),
+      'Pressure:    ' + getVal('pbVal'),
+      ''
+    );
+  } else {
+    var existExh = document.getElementById('inExistExh').value || '—';
+    var existSup = document.getElementById('inExistSup').value || '—';
+    L.push(
+      '\u2500\u2500 INSTALLED SYSTEM \u2500\u2500',
+      'Exhaust:     ' + existExh + ' CFM',
+      'Supply:      ' + existSup + ' CFM',
+      '',
+      '\u2500\u2500 AUDIT RESULTS \u2500\u2500',
+      'Exh Status:  ' + getVal('valExhStatus'),
+      '             ' + (document.getElementById('subExhStatus') ? document.getElementById('subExhStatus').textContent : ''),
+      'Sup Status:  ' + getVal('valSupStatus'),
+      '             ' + (document.getElementById('subSupStatus') ? document.getElementById('subSupStatus').textContent : ''),
+      'Pressure:    ' + getVal('valPressure'),
+      '             ' + (document.getElementById('subPressure') ? document.getElementById('subPressure').textContent : ''),
+      '',
+      '\u2500\u2500 DEFICIENCY SUMMARY \u2500\u2500',
+      'Exh Delta:   ' + getVal('defExhDelta'),
+      'Sup Delta:   ' + getVal('defSupDelta'),
+      ''
+    );
+  }
+
+  L.push(
+    '\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550',
+    ' ASHRAE Ventilation Guidelines',
+    ' Reference only \u2014 verify with local codes',
+    ' om3ni.github.io',
+    '\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550'
+  );
+
+  openModal('Ventilation Sizing \u2014 Report', L.join('\n'));
+});
+
+/* ── Modal / Toast / Print ── */
+function openModal(title, text) { document.getElementById('modalTitle').textContent = title; document.getElementById('reportText').textContent = text; document.getElementById('reportModal').classList.add('open'); }
+document.getElementById('modalClose').addEventListener('click', function() { document.getElementById('reportModal').classList.remove('open'); });
+document.getElementById('reportModal').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+document.getElementById('btnCopy').addEventListener('click', function() { var t = document.getElementById('reportText').textContent; if (navigator.clipboard) { navigator.clipboard.writeText(t).then(showToast); } else { var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast(); } });
+document.getElementById('btnPrint').addEventListener('click', function() { var t = document.getElementById('reportText').textContent; var w = window.open('','_blank'); w.document.write('<html><head><title>Report<\/title><style>body{font-family:monospace;font-size:13px;padding:24px;white-space:pre;color:#000;background:#fff}<\/style><\/head><body>' + t.replace(/</g,'&lt;') + '<\/body><\/html>'); w.document.close(); w.print(); });
+function showToast() { var t = document.getElementById('toast'); t.classList.add('show'); setTimeout(function() { t.classList.remove('show'); }, 1800); }
+
+// Favorites
+(function(){
+  var KEY='hermes_favorites';
+  var id=location.pathname.split('/').pop().replace('.html','');
+  var title=document.title.split('\u00B7')[0].trim();
+  var tierEl=document.querySelector('.hdr-tier');
+  var tier=tierEl?(tierEl.classList.contains('t1')?'t1':tierEl.classList.contains('t3')?'t3':'t2'):'t2';
+  var btn=document.getElementById('favBtn');
+  if(!btn)return;
+  function getFavs(){try{return JSON.parse(localStorage.getItem(KEY))||[];}catch(e){return[];}}
+  function isFav(){return getFavs().some(function(f){return f.id===id;});}
+  function sync(){btn.textContent=isFav()?'\u2605':'\u2606';btn.classList.toggle('on',isFav());}
+  window.toggleFav=function(){
+    var favs=getFavs();var idx=-1;
+    for(var i=0;i<favs.length;i++){if(favs[i].id===id){idx=i;break;}}
+    if(idx!==-1)favs.splice(idx,1);
+    else favs.push({id:id,title:title,tier:tier,label:title,type:'calc'});
+    localStorage.setItem(KEY,JSON.stringify(favs));sync();
+    try{if(window.parent!==window)window.parent.postMessage({type:'hermes-fav-toggle'},'*');}catch(e){}
+  };
+  sync();
+})();
+</script>
+</body>
+</html>
