@@ -1,0 +1,30 @@
+{
+  "job": "53626",
+  "units": [
+    {
+      "job": "53626",
+      "unit": "1",
+      "name": "Jdhd",
+      "loc": "Doc",
+      "make": "HXXJXJX",
+      "type": "SUUDDI",
+      "model": "HXHXHD",
+      "serial": "JXJCCCJ",
+      "fsize": "20x20x2\"",
+      "fqty": "",
+      "f2size": "20x2x2\"",
+      "f2qty": "",
+      "fchg": "Y",
+      "belt": "B57",
+      "bqty": "1",
+      "bchg": "",
+      "working": "Y",
+      "done": "N",
+      "date": "4/3/2026",
+      "notes": "",
+      "modules": [],
+      "moduleStates": {},
+      "moduleNames": []
+    }
+  ]
+}
