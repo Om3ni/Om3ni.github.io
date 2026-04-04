@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Belt Deflection · HVAC Calculators</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="calc.css">
+<style>
+/* ── How to measure ── */
+.how-toggle {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 8px 12px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 3px; margin-bottom: 10px; user-select: none;
+  transition: border-color .15s;
+}
+.how-toggle:hover { border-color: var(--orange-lo); }
+.how-toggle-icon { font-size: .7rem; transition: transform .2s; display: inline-block; color: var(--orange); }
+.how-toggle.open .how-toggle-icon { transform: rotate(90deg); }
+.how-toggle-text { font-family: var(--mono); font-size: .65rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-mute); }
+.how-body { display: none; margin-bottom: 14px; }
+.how-body.open { display: block; }
+.how-method {
+  padding: 10px 12px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 3px; margin-bottom: 6px;
+}
+.how-method-title {
+  font-family: var(--mono); font-size: .65rem; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--orange-hi);
+  margin-bottom: 4px;
+}
+.how-method-body {
+  font-family: var(--mono); font-size: .62rem; color: var(--text-dim);
+  line-height: 1.6;
+}
+.how-method-body ol { margin: 4px 0 0; padding-left: 16px; }
+.how-method-body li { margin-bottom: 3px; }
+.how-method-body .how-note {
+  margin-top: 6px; padding: 4px 8px; background: var(--surface2);
+  border-left: 2px solid var(--orange-lo); font-size: .58rem; color: var(--text-mute);
+}
+.force-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: .6rem; }
+.force-table th { background: var(--surface2); color: var(--text-mute); font-size: .52rem; letter-spacing: .1em; text-transform: uppercase; padding: 4px 6px; text-align: left; border: 1px solid var(--border); }
+.force-table td { padding: 4px 6px; border: 1px solid var(--border); color: var(--text); }
+.section-note { font-family: var(--mono); font-size: .6rem; color: var(--text-mute); margin-top: 4px; line-height: 1.5; }
+
+/* ── Diagram ── */
+.diagram-box {
+  padding: 14px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 3px; margin-bottom: 10px; text-align: center;
+}
+.diagram-box svg { max-width: 100%; height: auto; }
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-home" href="../../index.html" title="Project home">⌂</a>
+  <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Belt Deflection</div>
+    <div class="hdr-sub"><span class="hdr-tier t2">field</span>V-Belt Tension Check · A · B · C</div>
+  </div>
+  <button class="hdr-fav" id="favBtn" title="Favorite" onclick="toggleFav()">&#9734;</button>
+</header>
+<main>
+
+  <!-- How to Measure -->
+  <div class="how-toggle" id="howToggle" onclick="document.getElementById('howToggle').classList.toggle('open'); document.getElementById('howBody').classList.toggle('open');">
+    <span class="how-toggle-icon">▶</span>
+    <span class="how-toggle-text">How to Measure Belt Deflection</span>
+  </div>
+  <div class="how-body" id="howBody">
+
+    <div class="how-method">
+      <div class="how-method-title">What You Need</div>
+      <div class="how-method-body">
+        <ol>
+          <li>A <strong>straight edge</strong> (ruler, level, or string) long enough to span between pulleys</li>
+          <li>A <strong>spring scale</strong> (belt tension gauge) or a known weight — measures force in pounds</li>
+          <li>A <strong>ruler or tape</strong> to measure deflection distance</li>
+        </ol>
+        <div class="how-note">A dedicated belt tension gauge (Browning, Gates, or Krikit) combines the force and distance measurement in one tool. Under $20 and worth having in your bag.</div>
+      </div>
+    </div>
+
+    <div class="how-method">
+      <div class="how-method-title">Step 1 — Find the Span Length</div>
+      <div class="how-method-body">
+        <ol>
+          <li>Measure from the <strong>point where the belt leaves one pulley</strong> to the <strong>point where it contacts the other pulley</strong></li>
+          <li>This is the <strong>free span</strong> — the unsupported belt length between sheaves</li>
+          <li>If you can't measure directly: lay a straight edge across the tops of both pulleys and measure the distance between contact points</li>
+        </ol>
+        <div class="how-note">Do NOT use center-to-center distance. Span length is always shorter than center distance because the belt wraps around each pulley.</div>
+      </div>
+    </div>
+
+    <div class="how-method">
+      <div class="how-method-title">Step 2 — Measure Deflection</div>
+      <div class="how-method-body">
+        <ol>
+          <li>Place a straight edge across the tops of both pulleys, resting on the belt at each contact point</li>
+          <li>At the <strong>midpoint</strong> of the span, press down on the belt with your spring scale perpendicular to the straight edge</li>
+          <li>Push until the belt deflects <strong>1/64" per inch of span length</strong> (the target deflection)</li>
+          <li>Read the <strong>force</strong> on the spring scale at that deflection</li>
+        </ol>
+        <div class="how-note">Example: 32" span → target deflection = 32/64 = ½". Push the belt down ½" and read the force.</div>
+      </div>
+    </div>
+
+    <div class="how-method">
+      <div class="how-method-title">Step 3 — Compare to Spec</div>
+      <div class="how-method-body">
+        The force you measured should fall within the range for your belt section. If it doesn't:
+        <ol>
+          <li><strong>Force too low</strong> → belt is too loose → tighten by increasing center distance</li>
+          <li><strong>Force too high</strong> → belt is too tight → loosen by decreasing center distance</li>
+        </ol>
+        <div class="how-note">New belts should be tensioned to the higher end of the range. They will stretch and settle into the run-in range within 24–48 hours of operation. Re-check tension after the first day of run time.</div>
+      </div>
+    </div>
+
+    <div class="how-method">
+      <div class="how-method-title">Quick Field Method (No Gauge)</div>
+      <div class="how-method-body">
+        If you don't have a spring scale:
+        <ol>
+          <li>Calculate the target deflection (span ÷ 64)</li>
+          <li>Press the belt at mid-span with your thumb</li>
+          <li>With moderate thumb pressure (roughly 5–8 lbs), an A/4L belt should deflect close to the target distance</li>
+          <li>If you can easily push it past the target → too loose. If you can barely move it → too tight</li>
+        </ol>
+        <div class="how-note">The thumb method is an estimate only. Use a tension gauge for critical applications, multi-belt drives, and any drive over 5 HP.</div>
+      </div>
+    </div>
+
+    <div class="how-method">
+      <div class="how-method-title">Deflection Force Reference</div>
+      <div class="how-method-body">
+        <div class="how-note" style="margin-top:0;">Force ranges per belt section at the standard 1/64"/inch deflection. Small pulley speed factor affects the range — values below are for typical HVAC speeds (1000–1800 RPM small pulley).</div>
+        <table class="force-table">
+          <tr><th>Section</th><th>New Belt</th><th>Run-In Belt</th></tr>
+          <tr><td>3L</td><td>2¼ – 3¾ lbs</td><td>1½ – 2½ lbs</td></tr>
+          <tr><td>4L / A</td><td>3¼ – 5¼ lbs</td><td>2 – 3½ lbs</td></tr>
+          <tr><td>5L / B</td><td>5¼ – 8½ lbs</td><td>3¼ – 5½ lbs</td></tr>
+          <tr><td>C</td><td>10 – 16 lbs</td><td>6½ – 10½ lbs</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diagram -->
+  <div class="diagram-box">
+    <svg viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg" style="max-width:300px;">
+      <!-- pulleys -->
+      <circle cx="60" cy="50" r="24" fill="none" stroke="#4a9de8" stroke-width="1.5"/>
+      <circle cx="60" cy="50" r="2" fill="#4a9de8"/>
+      <circle cx="260" cy="50" r="16" fill="none" stroke="#4a9de8" stroke-width="1.5"/>
+      <circle cx="260" cy="50" r="2" fill="#4a9de8"/>
+      <!-- belt top span -->
+      <line x1="60" y1="26" x2="260" y2="34" stroke="#b0a090" stroke-width="1.5"/>
+      <!-- belt bottom span -->
+      <line x1="60" y1="74" x2="260" y2="66" stroke="#b0a090" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <!-- span dimension -->
+      <line x1="84" y1="26" x2="244" y2="34" stroke="#4a9de8" stroke-width="0.5" stroke-dasharray="2,2"/>
+      <text x="160" y="22" fill="#4a9de8" font-family="Share Tech Mono, monospace" font-size="9" text-anchor="middle">SPAN</text>
+      <!-- straight edge -->
+      <line x1="80" y1="26" x2="248" y2="34" stroke="#706050" stroke-width="1" stroke-dasharray="3,2"/>
+      <!-- deflection arrow at midpoint -->
+      <line x1="160" y1="30" x2="160" y2="58" stroke="#e86d10" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="174" y="48" fill="#e86d10" font-family="Share Tech Mono, monospace" font-size="8">1/64" per in.</text>
+      <!-- force label -->
+      <text x="160" y="72" fill="#706050" font-family="Share Tech Mono, monospace" font-size="7" text-anchor="middle">force ↓</text>
+      <!-- deflected belt hint -->
+      <path d="M84,26 Q160,60 244,34" fill="none" stroke="#e86d10" stroke-width="1" stroke-dasharray="3,2"/>
+      <!-- arrowhead -->
+      <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#e86d10" stroke-width="1"/></marker></defs>
+    </svg>
+  </div>
+
+  <div class="sec sec-flush">
+    <div class="sec-lbl sec-lbl-flush">Belt Section</div>
+    <div class="section-note" style="margin-bottom:6px;color:var(--text-dim);font-size:.58rem;">FHP — Fractional Horsepower</div>
+    <div id="sectionGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:6px;">
+      <button class="phase-btn" data-s="3L">3L</button>
+      <button class="phase-btn active" data-s="4L">4L</button>
+      <button class="phase-btn" data-s="5L">5L</button>
+    </div>
+    <div class="section-note" style="margin-bottom:6px;color:var(--text-dim);font-size:.58rem;">Industrial — Standard V-Belt</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:10px;">
+      <button class="phase-btn" data-s="A">A</button>
+      <button class="phase-btn" data-s="B">B</button>
+      <button class="phase-btn" data-s="C">C</button>
+    </div>
+    <div class="section-note" id="sectionNote">4L / A: ½" top width — most common residential/light commercial HVAC belt.</div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Belt Condition</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px;">
+      <button class="phase-btn active" data-c="new" id="btnNew">New Belt</button>
+      <button class="phase-btn" data-c="run" id="btnRun">Run-In Belt</button>
+    </div>
+    <div class="section-note" id="condNote">New belt: first installation or less than 24 hrs run time. Tension to higher range.</div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-lbl">Measurements</div>
+    <div class="fg">
+      <label class="fl">Span Length</label>
+      <div class="iw">
+        <input type="number" id="inSpan" inputmode="decimal" placeholder="—">
+        <span class="iw-unit">in</span>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Measured Deflection Force</label>
+      <div class="iw">
+        <input type="number" id="inForce" inputmode="decimal" placeholder="— (optional)">
+        <span class="iw-unit">lbs</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="results">
+    <div class="result-sec-hdr">Target Values</div>
+    <div class="result-row dim" id="rowDefl">
+      <div class="rr-left">
+        <div class="rr-label">Target Deflection</div>
+        <div class="rr-sub" id="subDefl">Span ÷ 64</div>
+      </div>
+      <div class="rr-val" id="valDefl">—</div>
+    </div>
+    <div class="result-row dim" id="rowForceRange">
+      <div class="rr-left">
+        <div class="rr-label">Force Range</div>
+        <div class="rr-sub" id="subForceRange">At target deflection</div>
+      </div>
+      <div class="rr-val" id="valForceRange">—</div>
+    </div>
+
+    <div class="result-sec-hdr" id="hdrVerdict" style="display:none">Tension Check</div>
+    <div class="result-row dim" id="rowVerdict" style="display:none">
+      <div class="rr-left">
+        <div class="rr-label">Verdict</div>
+        <div class="rr-sub" id="subVerdict">Measured vs. target range</div>
+      </div>
+      <div class="rr-val" id="valVerdict">—</div>
+    </div>
+  </div>
+
+  <div class="hint">Push belt at mid-span perpendicular to the straight edge. 1/64" deflection per inch of span length is the standard.</div>
+</main>
+<script>
+'use strict';
+
+/* ══════════════════════════════════════════════
+   DEFLECTION FORCE RANGES (lbs)
+   At 1/64" per inch of span deflection
+   [newMin, newMax, runMin, runMax]
+   ══════════════════════════════════════════════ */
+var SECTIONS = {
+  '3L': { desc: '3L: 3/8" top width — small blower motors, appliance fans.', force: [2.25, 3.75, 1.5, 2.5] },
+  '4L': { desc: '4L / A: ½" top width — most common residential/light commercial HVAC belt.', force: [3.25, 5.25, 2.0, 3.5] },
+  '5L': { desc: '5L / B: 21/32" top width — larger FHP applications.', force: [5.25, 8.5, 3.25, 5.5] },
+  'A':  { desc: 'A Section: ½" top width — 1 to 10 HP. Same cross-section as 4L.', force: [3.25, 5.25, 2.0, 3.5] },
+  'B':  { desc: 'B Section: 21/32" top width — 1 to 25 HP. Commercial AHU and condensers.', force: [5.25, 8.5, 3.25, 5.5] },
+  'C':  { desc: 'C Section: 7/8" top width — 7.5 to 100 HP. Large commercial / industrial.', force: [10, 16, 6.5, 10.5] }
+};
+
+var currentSection = '4L';
+var currentCond = 'new';
+
+function init() {
+  var inSpan = document.getElementById('inSpan');
+  var inForce = document.getElementById('inForce');
+
+  /* Section buttons */
+  document.querySelectorAll('.phase-btn[data-s]').forEach(function(b) {
+    b.addEventListener('click', function() {
+      currentSection = b.dataset.s;
+      document.querySelectorAll('.phase-btn[data-s]').forEach(function(x) {
+        x.classList.toggle('active', x.dataset.s === currentSection);
+      });
+      document.getElementById('sectionNote').textContent = SECTIONS[currentSection].desc;
+      calc();
+    });
+  });
+
+  /* Condition buttons */
+  document.querySelectorAll('.phase-btn[data-c]').forEach(function(b) {
+    b.addEventListener('click', function() {
+      currentCond = b.dataset.c;
+      document.querySelectorAll('.phase-btn[data-c]').forEach(function(x) {
+        x.classList.toggle('active', x.dataset.c === currentCond);
+      });
+      document.getElementById('condNote').textContent = currentCond === 'new'
+        ? 'New belt: first installation or less than 24 hrs run time. Tension to higher range.'
+        : 'Run-in belt: 24+ hrs of operation. Belt has stretched and seated into grooves.';
+      calc();
+    });
+  });
+
+  function setR(rowId, state, val, sub) {
+    var row = document.getElementById(rowId);
+    var valEl = document.getElementById(rowId.replace('row', 'val'));
+    var subEl = document.getElementById(rowId.replace('row', 'sub'));
+    if (!row || !valEl) return;
+    row.className = 'result-row ' + (state === 'dim' ? 'dim' : 'live');
+    if (state === 'ok') row.classList.add('ok');
+    if (state === 'warn') row.classList.add('warn');
+    if (state === 'high') row.classList.add('high');
+    if (state === 'low') row.classList.add('low');
+    valEl.className = 'rr-val' + (state !== 'dim' ? ' ' + (state === 'live' ? 'live' : state) : '');
+    if (val !== undefined) valEl.textContent = val;
+    if (sub !== undefined && subEl) subEl.textContent = sub;
+  }
+
+  function fmtDefl(inches) {
+    /* Show as fraction when it's a clean value */
+    var sixtyFourths = Math.round(inches * 64);
+    if (sixtyFourths <= 0) return inches.toFixed(3) + '"';
+
+    /* Simplify fraction */
+    var num = sixtyFourths;
+    var den = 64;
+    while (num % 2 === 0 && den % 2 === 0) { num /= 2; den /= 2; }
+
+    var decimal = inches.toFixed(3) + '"';
+    if (den === 1) return num + '"  (' + decimal + ')';
+    return num + '/' + den + '"  (' + decimal + ')';
+  }
+
+  function calc() {
+    var span = parseFloat(inSpan.value);
+    var force = parseFloat(inForce.value);
+    var sec = SECTIONS[currentSection];
+    var f = sec.force; /* [newMin, newMax, runMin, runMax] */
+    var fMin = currentCond === 'new' ? f[0] : f[2];
+    var fMax = currentCond === 'new' ? f[1] : f[3];
+
+    if (isNaN(span) || span <= 0) {
+      setR('rowDefl', 'dim', '—', 'Span ÷ 64');
+      setR('rowForceRange', 'dim', '—', 'At target deflection');
+      document.getElementById('hdrVerdict').style.display = 'none';
+      document.getElementById('rowVerdict').style.display = 'none';
+      return;
+    }
+
+    /* Target deflection: 1/64" per inch of span */
+    var defl = span / 64;
+    setR('rowDefl', 'live', fmtDefl(defl), 'Push belt this far at mid-span');
+
+    /* Force range */
+    var condLabel = currentCond === 'new' ? 'new belt' : 'run-in belt';
+    setR('rowForceRange', 'live',
+      fMin.toFixed(1) + ' – ' + fMax.toFixed(1) + ' lbs',
+      currentSection + ' section, ' + condLabel + ' @ ' + fmtDefl(defl) + ' deflection');
+
+    /* Verdict if force is entered */
+    if (!isNaN(force) && force > 0) {
+      document.getElementById('hdrVerdict').style.display = '';
+      document.getElementById('rowVerdict').style.display = '';
+
+      if (force < fMin) {
+        var pctLow = ((fMin - force) / fMin * 100).toFixed(0);
+        setR('rowVerdict', 'low', 'TOO LOOSE',
+          force.toFixed(1) + ' lbs is ' + pctLow + '% below minimum (' + fMin.toFixed(1) + ' lbs) — increase center distance');
+      } else if (force > fMax) {
+        var pctHigh = ((force - fMax) / fMax * 100).toFixed(0);
+        setR('rowVerdict', 'high', 'TOO TIGHT',
+          force.toFixed(1) + ' lbs is ' + pctHigh + '% above maximum (' + fMax.toFixed(1) + ' lbs) — decrease center distance');
+      } else {
+        setR('rowVerdict', 'ok', 'GOOD',
+          force.toFixed(1) + ' lbs is within ' + fMin.toFixed(1) + ' – ' + fMax.toFixed(1) + ' lbs range');
+      }
+    } else {
+      document.getElementById('hdrVerdict').style.display = 'none';
+      document.getElementById('rowVerdict').style.display = 'none';
+    }
+  }
+
+  inSpan.addEventListener('input', calc);
+  inForce.addEventListener('input', calc);
+}
+document.addEventListener('DOMContentLoaded', init);
+
+// Favorites
+(function(){
+  var KEY='hermes_favorites';
+  var id=location.pathname.split('/').pop().replace('.html','');
+  var title=document.title.split('·')[0].trim();
+  var tierEl=document.querySelector('.hdr-tier');
+  var tier=tierEl?(tierEl.classList.contains('t1')?'t1':tierEl.classList.contains('t3')?'t3':'t2'):'t2';
+  var btn=document.getElementById('favBtn');
+  if(!btn)return;
+  function getFavs(){try{return JSON.parse(localStorage.getItem(KEY))||[];}catch(e){return[];}}
+  function isFav(){return getFavs().some(function(f){return f.id===id;});}
+  function sync(){btn.textContent=isFav()?'★':'☆';btn.classList.toggle('on',isFav());}
+  window.toggleFav=function(){
+    var favs=getFavs();var idx=-1;
+    for(var i=0;i<favs.length;i++){if(favs[i].id===id){idx=i;break;}}
+    if(idx!==-1)favs.splice(idx,1);
+    else favs.push({id:id,title:title,tier:tier,label:title,type:'calc'});
+    localStorage.setItem(KEY,JSON.stringify(favs));sync();
+    try{if(window.parent!==window)window.parent.postMessage({type:'hermes-fav-toggle'},'*');}catch(e){}
+  };
+  sync();
+})();
+</script>
+</body>
+</html>
