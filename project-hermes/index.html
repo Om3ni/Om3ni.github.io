@@ -1209,7 +1209,7 @@ This software is provided "as is" without warranty of any kind, express or impli
 const STORE_KEY = 'sl_field_records';
 const PAT_KEY   = 'sl_owner_pat';
 const REPO      = 'Om3ni/Om3ni.github.io';
-const DATA_PATH = 'hvactooling/data';
+const DATA_PATH = 'project-hermes/data';
 
 function getRecords() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); }
@@ -2880,7 +2880,41 @@ function buildUnifiedReport(rec) {
 // ── Tool launcher ────────────────────────────────────────────────────────
 let activeTool = null;
 
-function openTool(name, title) {
+function setActiveRoute(type, name) {
+  const suffix = type && name ? '#' + type + '=' + encodeURIComponent(name) : '';
+  history.replaceState(null, '', window.location.pathname + window.location.search + suffix);
+}
+
+function getActiveRoute() {
+  const raw = window.location.hash.replace(/^#/, '');
+  if (!raw) return null;
+  const params = new URLSearchParams(raw);
+  if (params.has('calc')) return { type: 'calc', name: params.get('calc') };
+  if (params.has('tool')) return { type: 'tool', name: params.get('tool') };
+  return null;
+}
+
+function findLauncherTitle(type, name) {
+  const selector = type === 'calc' ? '.calc-btn' : '.tool-btn';
+  const labelSelector = type === 'calc' ? '.calc-btn-name' : '.tool-btn-name';
+  const launcher = type === 'calc' ? 'openCalc' : 'openTool';
+  const buttons = document.querySelectorAll(selector);
+
+  for (const button of buttons) {
+    const onclick = button.getAttribute('onclick') || '';
+    if (onclick.indexOf(launcher + "('" + name + "'") !== -1) {
+      const label = button.querySelector(labelSelector);
+      if (label) return label.textContent.trim();
+    }
+  }
+
+  return name.split('-').map(function(part) {
+    return part ? part.charAt(0).toUpperCase() + part.slice(1) : part;
+  }).join(' ');
+}
+
+function openTool(name, title, opts) {
+  opts = opts || {};
   activeTool = name;
   activeToolType = 'module';
   document.getElementById('tool-frame-title').textContent = title;
@@ -2902,12 +2936,14 @@ function openTool(name, title) {
 
   frame.src = 'tools/' + name + '.html';
   document.getElementById('tool-frame-wrap').classList.add('open');
+  if (opts.syncRoute !== false) setActiveRoute('tool', name);
   syncToolFavBtn();
   // Persist for refresh recovery
   sessionStorage.setItem('hermes_activeTool', JSON.stringify({ type: 'tool', name: name, title: title }));
 }
 
-function openCalc(name, title) {
+function openCalc(name, title, opts) {
+  opts = opts || {};
   activeTool = name;
   activeToolType = 'calc';
   document.getElementById('tool-frame-title').textContent = title;
@@ -2927,6 +2963,7 @@ function openCalc(name, title) {
 
   frame.src = 'tools/calculators/' + name + '.html';
   document.getElementById('tool-frame-wrap').classList.add('open');
+  if (opts.syncRoute !== false) setActiveRoute('calc', name);
   syncToolFavBtn();
   // Persist for refresh recovery
   sessionStorage.setItem('hermes_activeTool', JSON.stringify({ type: 'calc', name: name, title: title }));
@@ -2937,6 +2974,7 @@ function closeTool() {
   document.getElementById('tool-frame-wrap').classList.remove('open');
   frame.src = 'about:blank';
   activeTool = null;
+  setActiveRoute(null, null);
   sessionStorage.removeItem('hermes_activeTool');
 }
 
@@ -3747,6 +3785,13 @@ if (isOwner()) syncModelIndex();
 // Restore tool/calc on refresh
 (function restoreActiveTool() {
   try {
+    const route = getActiveRoute();
+    if (route && route.name) {
+      const title = findLauncherTitle(route.type, route.name);
+      if (route.type === 'calc') openCalc(route.name, title, { syncRoute: false });
+      else if (route.type === 'tool') openTool(route.name, title, { syncRoute: false });
+      return;
+    }
     const saved = sessionStorage.getItem('hermes_activeTool');
     if (!saved) return;
     const { type, name, title } = JSON.parse(saved);
