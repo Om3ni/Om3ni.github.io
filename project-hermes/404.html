@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redirecting...</title>
+<style>
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f0f0f;
+  color: #f0ebe4;
+  font-family: sans-serif;
+}
+</style>
+</head>
+<body>
+<div>Redirecting to Project Hermes...</div>
+<script>
+(function() {
+  var repoBase = '/project-hermes/';
+  var path = window.location.pathname;
+  var calcPrefix = repoBase + 'tools/calculators/';
+  var toolPrefix = repoBase + 'tools/';
+  var target = repoBase + 'index.html';
+
+  if (path.indexOf(calcPrefix) === 0) {
+    var calcName = path.slice(calcPrefix.length).replace(/\.html$/, '').replace(/\/$/, '');
+    if (calcName) target += '#calc=' + encodeURIComponent(calcName);
+  } else if (path.indexOf(toolPrefix) === 0) {
+    var toolName = path.slice(toolPrefix.length).replace(/\.html$/, '').replace(/\/$/, '');
+    if (toolName) target += '#tool=' + encodeURIComponent(toolName);
+  }
+
+  window.location.replace(target);
+})();
+</script>
+</body>
+</html>
