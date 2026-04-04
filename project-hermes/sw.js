@@ -19,6 +19,7 @@ var APP_SHELL = [
   './tools/motors.html',
   './tools/refrigeration.html',
   './tools/calculators/belt-length.html',
+  './tools/calculators/belt-deflection.html',
   './tools/calculators/breaker-sizing.html',
   './tools/calculators/capacitor-sizing.html',
   './tools/calculators/cfm-per-ton.html',
