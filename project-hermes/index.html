@@ -6,7 +6,7 @@
 <title>Project Hermes
 </title>
 <link rel="stylesheet" href="base.css">
-<link rel="stylesheet" href="tools/_shared/capture.css">
+<link rel="stylesheet" href="tools/shared/capture.css">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#c85a00">
 <link rel="apple-touch-icon" href="icon-512.png">
@@ -3860,7 +3860,7 @@ if ('serviceWorker' in navigator) {
 <!-- ══ Capture / OCR — Phase 1 ══ -->
 <script type="module">
   import { openCaptureModal, readScratchpad, clearScratchpad }
-    from './tools/_shared/capture.js';
+    from './tools/shared/capture.js';
 
   const SCRATCH_KEY = 'hermes_scratchpad';
   const camBtn      = document.getElementById('capCamBtn');
