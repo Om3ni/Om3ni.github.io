@@ -3831,7 +3831,29 @@ if (!localStorage.getItem(TUT_KEY) && localStorage.getItem(LICENSE_KEY)) {
 
 // ── Service Worker ──────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(function() {});
+  /* updateViaCache:'none' = always re-fetch sw.js from network, bypassing the
+     browser's HTTP cache. Without this, iOS Safari and some Android Chrome
+     configs serve the SW script from disk cache for up to 24h, so the PWA
+     never even discovers a new version. */
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+    .then(function(reg) {
+      /* Force a check on every page load + once an hour while open. */
+      try { reg.update(); } catch(e) {}
+      setInterval(function() { try { reg.update(); } catch(e) {} }, 60 * 60 * 1000);
+    })
+    .catch(function() {});
+
+  /* When a new SW takes control (after its skipWaiting + clients.claim),
+     auto-reload so the page picks up fresh HTML/CSS/JS. Guard so we don't
+     reload during the first-ever install when there was no prior controller. */
+  var __hermes_swRefreshing = false;
+  var __hermes_hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    if (__hermes_swRefreshing) return;
+    if (!__hermes_hadController) { __hermes_hadController = true; return; }
+    __hermes_swRefreshing = true;
+    window.location.reload();
+  });
 }
 </script>
 
