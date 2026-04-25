@@ -3993,6 +3993,46 @@ if ('serviceWorker' in navigator) {
   });
 
   refreshBadge();
+
+  /* ── Nameplate OCR: focus on Model # or Serial # → camera/OCR ────────────
+     Tapping an empty Model or Serial field opens the OCR modal in scoped
+     mode with both fields as fill targets. Once the field has content,
+     normal typing/editing works. Clearing both fields re-arms the trigger. */
+  const NAMEPLATE_OCR_FIELDS = [
+    { id: 'f-model',  label: 'Model #',  type: 'text' },
+    { id: 'f-serial', label: 'Serial #', type: 'text' }
+  ];
+  const fModel  = document.getElementById('f-model');
+  const fSerial = document.getElementById('f-serial');
+  let nameplateOcrShown = false;
+
+  function maybeOpenNameplateOcr(field) {
+    if (nameplateOcrShown) return;
+    if (!field || field.value.trim() !== '') return;
+    nameplateOcrShown = true;
+    /* Dismiss keyboard before showing the modal so the camera UI isn't
+       fighting an on-screen keyboard on iOS. */
+    try { field.blur(); } catch (e) {}
+    openCaptureModal({
+      mode: 'scoped',
+      fields: NAMEPLATE_OCR_FIELDS,
+      title: 'Scan Nameplate (Model / Serial)'
+    });
+  }
+
+  function resetNameplateOcrIfEmpty() {
+    if (fModel && fSerial &&
+        fModel.value.trim() === '' &&
+        fSerial.value.trim() === '') {
+      nameplateOcrShown = false;
+    }
+  }
+
+  [fModel, fSerial].forEach(function(f) {
+    if (!f) return;
+    f.addEventListener('focus', function() { maybeOpenNameplateOcr(f); });
+    f.addEventListener('input', resetNameplateOcrIfEmpty);
+  });
 </script>
 </body>
 </html>
