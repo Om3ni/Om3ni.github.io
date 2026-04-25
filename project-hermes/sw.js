@@ -3,7 +3,7 @@
   Strategy: cache-first for app shell, network-first for external resources.
   Bump CACHE_VERSION to force update after deploy.
 */
-var CACHE_VERSION = 'hermes-v8';
+var CACHE_VERSION = 'hermes-v12';
 
 var APP_SHELL = [
   './',
@@ -13,11 +13,18 @@ var APP_SHELL = [
   './icon-192.png',
   './icon-512.png',
   './tools/calculators/calc.css',
+  './tools/_shared/capture.js',
+  './tools/_shared/capture.css',
   './tools/airflow.html',
   './tools/electrical.html',
   './tools/heat.html',
   './tools/motors.html',
   './tools/refrigeration.html',
+  './tools/psychrometric/index.html',
+  './tools/psychrometric/math.js',
+  './tools/psychrometric/chart.js',
+  './tools/psychrometric/report.js',
+  './tools/psychrometric/ui.js',
   './tools/calculators/belt-length.html',
   './tools/calculators/belt-deflection.html',
   './tools/calculators/breaker-sizing.html',
@@ -27,10 +34,8 @@ var APP_SHELL = [
   './tools/calculators/condensate-drain.html',
   './tools/calculators/duct-sizing.html',
   './tools/calculators/electrical-cost.html',
-  './tools/calculators/enthalpy.html',
   './tools/calculators/gas-pipe.html',
   './tools/calculators/load-calc.html',
-  './tools/calculators/long-lineset.html',
   './tools/calculators/mca-mocp.html',
   './tools/calculators/motor-convert.html',
   './tools/calculators/motor-start-controls.html',

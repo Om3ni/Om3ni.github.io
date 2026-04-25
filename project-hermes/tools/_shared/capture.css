@@ -1,0 +1,264 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Capture modal — additive styles only. Reuses .modal-overlay / .modal /
+   .modal-hdr / .modal-body / .modal-footer / .btn / .toast from base.css.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Body of the capture modal */
+.cap-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cap-take {
+  width: 100%;
+  padding: 14px;
+  font-size: .82rem;
+  letter-spacing: .08em;
+}
+
+.cap-platform-note {
+  display: none;
+  font-family: var(--mono);
+  font-size: .65rem;
+  color: var(--text-mute);
+  letter-spacing: .03em;
+  line-height: 1.5;
+  padding: 6px 8px;
+  background: var(--surface2);
+  border-left: 2px solid var(--orange-lo);
+  border-radius: 2px;
+}
+.cap-platform-note.shown { display: block; }
+
+.cap-fields-hdr {
+  font-family: var(--mono);
+  font-size: .6rem;
+  color: var(--text-mute);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.cap-preview {
+  display: none;
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+.cap-preview.shown { display: block; }
+
+.cap-status {
+  font-family: var(--mono);
+  font-size: .68rem;
+  color: var(--orange-hi);
+  letter-spacing: .03em;
+  min-height: 1em;
+  padding: 2px 0;
+}
+
+/* Lines list */
+.cap-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cap-lines-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cap-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: .78rem;
+  color: var(--text);
+  word-break: break-word;
+}
+.cap-line-scoped {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.cap-line-text {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: .8rem;
+  color: var(--text);
+}
+.cap-line-scoped .cap-line-text {
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 6px;
+}
+
+.cap-line-btn {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  font-size: .7rem;
+}
+.cap-line-btn.done,
+.cap-field-btn.done {
+  background: var(--green-dim, var(--surface2));
+  color: var(--green-hi, var(--orange-hi));
+  border-color: var(--green-hi, var(--orange-lo));
+}
+
+.cap-field-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.cap-field-btn {
+  flex: 1 1 auto;
+  min-width: 90px;
+  padding: 6px 10px;
+  font-size: .68rem;
+  letter-spacing: .03em;
+}
+
+/* Paste fallback */
+.cap-fallback {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cap-paste {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: .78rem;
+  padding: 8px 10px;
+  resize: vertical;
+  outline: none;
+  transition: border-color .15s;
+  box-sizing: border-box;
+}
+.cap-paste:focus { border-color: var(--orange-lo); }
+
+/* ── Header capture button ─────────────────────────────────────────────── */
+.hdr-cam {
+  background: none;
+  border: none;
+  color: var(--text-mute);
+  font-size: 1.05rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  position: relative;
+  transition: color .12s;
+}
+.hdr-cam:hover { color: var(--orange-hi); }
+.hdr-cam:active { color: var(--orange); }
+.hdr-cam .cam-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: var(--orange);
+  color: #fff;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: .55rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  min-width: 14px;
+  text-align: center;
+  line-height: 1.2;
+  display: none;
+}
+.hdr-cam .cam-badge.shown { display: inline-block; }
+
+/* ── Scratchpad slide-down panel ───────────────────────────────────────── */
+.scratchpad-panel {
+  position: fixed;
+  top: 49px;          /* sits below header (header is 49px tall) */
+  right: 0;
+  width: min(380px, 100vw);
+  max-height: calc(100vh - 49px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 0 6px;
+  z-index: 150;
+  display: none;
+  flex-direction: column;
+  box-shadow: -4px 4px 16px rgba(0, 0, 0, .4);
+}
+.scratchpad-panel.open { display: flex; }
+.scratchpad-hdr {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.scratchpad-title {
+  font-family: var(--mono);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--orange-hi);
+}
+.scratchpad-actions { display: flex; gap: 6px; }
+.scratchpad-clear {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-mute);
+  font-family: var(--mono);
+  font-size: .58rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.scratchpad-clear:hover { color: var(--red-hi); border-color: var(--red-hi); }
+.scratchpad-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.scratchpad-empty {
+  padding: 20px 0;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: .65rem;
+  color: var(--text-mute);
+  font-style: italic;
+}
+
+/* ── Per-module scoped capture button ──────────────────────────────────── */
+.cap-section-btn {
+  background: none;
+  border: 1px solid var(--orange-lo);
+  border-radius: 3px;
+  color: var(--orange-hi);
+  font-family: var(--mono);
+  font-size: .62rem;
+  letter-spacing: .05em;
+  padding: 4px 9px;
+  cursor: pointer;
+  transition: all .12s;
+}
+.cap-section-btn:hover {
+  background: var(--orange-dim);
+  border-color: var(--orange);
+}
+.cap-section-btn:active { background: var(--orange); color: #fff; }

@@ -7,6 +7,70 @@
 <link rel="stylesheet" href="../../base.css">
 <link rel="stylesheet" href="calc.css">
 <style>
+.src {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: .62rem;
+  color: var(--text-mute);
+  line-height: 1.6;
+}
+
+.help {
+  margin-top: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.help > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 12px;
+  font-family: var(--mono);
+  font-size: .65rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--orange-hi);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+.help > summary::-webkit-details-marker { display: none; }
+.help > summary::after {
+  content: '+';
+  font-weight: 400;
+  font-size: 1rem;
+  color: var(--text-mute);
+}
+.help[open] > summary::after { content: '−'; }
+.help-body {
+  padding: 10px 12px 12px;
+  font-family: var(--mono);
+  font-size: .68rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border);
+}
+.help-body ol { margin: 8px 0 0 0; padding-left: 20px; }
+.help-body ol li { margin-bottom: 6px; }
+.help-body strong { color: var(--text); }
+.help-body .warn-box {
+  background: var(--yellow-dim);
+  border: 1px solid var(--yellow-hi);
+  border-radius: 3px;
+  padding: 8px 10px;
+  margin: 10px 0;
+  font-family: var(--mono);
+  font-size: .65rem;
+  color: var(--yellow-hi);
+  line-height: 1.5;
+}
 </style>
 </head>
 <body>
@@ -15,70 +79,164 @@
   <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
   <div class="hdr-titles">
     <div class="hdr-title">Capacitor Sizing</div>
-    <div class="hdr-sub"><span class="hdr-tier t2">field</span>PSC Motor Run Capacitor</div>
+    <div class="hdr-sub"><span class="hdr-tier t2">field</span>PSC Motor · Verify or Estimate</div>
   </div>
   <button class="hdr-fav" id="favBtn" title="Favorite" onclick="toggleFav()">&#9734;</button>
 </header>
 <main>
   <div class="sec sec-flush">
-    <div class="sec-lbl sec-lbl-flush">Motor Data</div>
-    <div class="input-pair">
-      <div class="fg">
-        <label class="fl">Motor Rated Voltage</label>
-        <div class="iw">
-          <input type="number" id="inVolts" inputmode="decimal" placeholder="—">
-          <span class="iw-unit">V</span>
-        </div>
-      </div>
-      <div class="fg">
-        <label class="fl">Motor FLA</label>
-        <div class="iw">
-          <input type="number" id="inAmps" inputmode="decimal" placeholder="—">
-          <span class="iw-unit">A</span>
-        </div>
-      </div>
-    </div>
-    <div class="fg">
-      <label class="fl">Capacitor Voltage Rating (optional)</label>
-      <div class="iw">
-        <input type="number" id="inCapVolts" inputmode="decimal" placeholder="same as motor">
-        <span class="iw-unit">V</span>
-      </div>
+    <div class="sec-lbl sec-lbl-flush">Mode</div>
+    <div class="phase-grid" id="modeGrid">
+      <button class="phase-btn active" data-mode="verify">Verify</button>
+      <button class="phase-btn" data-mode="size">Size (No Nameplate)</button>
     </div>
   </div>
 
-  <div class="results">
-    <div class="result-row dim" id="rowCalc">
-      <div class="rr-left">
-        <div class="rr-label">Calculated MFD</div>
-        <div class="rr-sub">MFD = (Amps × 2652) / Volts</div>
+  <!-- ═══════════════════════ VERIFY MODE ═══════════════════════ -->
+  <div id="secVerify">
+    <div class="sec">
+      <div class="sec-lbl">Measured at Running Capacitor</div>
+      <div class="input-pair">
+        <div class="fg">
+          <label class="fl">Measured Voltage</label>
+          <div class="iw">
+            <input type="number" id="inVv" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">V</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Measured Current</label>
+          <div class="iw">
+            <input type="number" id="inVa" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">A</span>
+          </div>
+        </div>
       </div>
-      <div class="rr-val" id="valCalc">— MFD</div>
-    </div>
-    <div class="result-row dim" id="rowStd">
-      <div class="rr-left">
-        <div class="rr-label">Nearest Standard</div>
-        <div class="rr-sub" id="subTolerance">±6% tolerance range</div>
+      <div class="fg">
+        <label class="fl">Nameplate MFD (optional)</label>
+        <div class="iw">
+          <input type="number" id="inVnp" inputmode="decimal" placeholder="—">
+          <span class="iw-unit">MFD</span>
+        </div>
       </div>
-      <div class="rr-val" id="valStd">— MFD</div>
     </div>
-    <div class="result-row dim" id="rowCapV">
-      <div class="rr-left">
-        <div class="rr-label">Voltage Rating</div>
-        <div class="rr-sub" id="subCapV">Must meet or exceed motor voltage</div>
+
+    <div class="results">
+      <div class="result-row dim" id="rowVcalc">
+        <div class="rr-left">
+          <div class="rr-label">Actual Capacitance</div>
+          <div class="rr-sub">MFD = (Amps × 2652) / Volts · 60 Hz</div>
+        </div>
+        <div class="rr-val" id="valVcalc">— MFD</div>
       </div>
-      <div class="rr-val" id="valCapV">—</div>
+      <div class="result-row dim" id="rowVcheck">
+        <div class="rr-left">
+          <div class="rr-label">Condition</div>
+          <div class="rr-sub" id="subVcheck">Enter nameplate MFD to evaluate</div>
+        </div>
+        <div class="rr-val" id="valVcheck">—</div>
+      </div>
     </div>
+
+    <div class="hint">
+      Measure amps through one capacitor lead and voltage across the terminals while the unit is running. Constant 2652 = 10⁶ / (2π × 60). Use 3183 at 50 Hz.
+    </div>
+
+    <details class="help">
+      <summary>How to measure</summary>
+      <div class="help-body">
+        <div class="warn-box">
+          Capacitors hold charge with power off. Discharge with an insulated 20 kΩ / 5 W resistor across the terminals and verify 0 V before handling.
+        </div>
+        <ol>
+          <li>Identify terminals: <strong>HERM</strong> (compressor), <strong>FAN</strong> (condenser fan), <strong>C</strong> (common, to contactor).</li>
+          <li>Set clamp meter to AC amps. Clamp around <em>only one</em> lead on the terminal you're testing (HERM for compressor section, FAN for fan section).</li>
+          <li>Restore power, run in cooling, let it stabilize 30–60 seconds.</li>
+          <li>Read and enter the amperage above.</li>
+          <li>Switch meter to AC volts. Measure tested-terminal to C. Enter that voltage above.</li>
+          <li>Enter the printed nameplate MFD. Within ±6% is good; 6–10% is marginal; beyond 10% replace the cap.</li>
+        </ol>
+      </div>
+    </details>
   </div>
 
-  <div class="hint">Approximation for PSC motors. Always verify against manufacturer specs.</div>
+  <!-- ═══════════════════════ SIZE MODE ═══════════════════════ -->
+  <div id="secSize" style="display:none;">
+    <div class="sec">
+      <div class="sec-lbl">Motor Data</div>
+      <div class="input-pair">
+        <div class="fg">
+          <label class="fl">Motor Horsepower</label>
+          <div class="iw">
+            <input type="number" id="inSHp" inputmode="decimal" placeholder="—">
+            <span class="iw-unit">HP</span>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">Line Voltage</label>
+          <div class="iw">
+            <input type="number" id="inSV" inputmode="decimal" placeholder="230" value="230">
+            <span class="iw-unit">V</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="results">
+      <div class="result-row dim" id="rowSRange">
+        <div class="rr-left">
+          <div class="rr-label">Estimated MFD Range</div>
+          <div class="rr-sub">12–18 µF/HP @ 230 V, scaled by (230/V)²</div>
+        </div>
+        <div class="rr-val" id="valSRange">—</div>
+      </div>
+      <div class="result-row dim" id="rowSStd">
+        <div class="rr-left">
+          <div class="rr-label">Nearest Standard</div>
+          <div class="rr-sub">Start at midpoint; verify once running</div>
+        </div>
+        <div class="rr-val" id="valSStd">— MFD</div>
+      </div>
+      <div class="result-row dim" id="rowSVrating">
+        <div class="rr-left">
+          <div class="rr-label">Voltage Rating</div>
+          <div class="rr-sub" id="subSVrating">Standard HVAC cap rating for line voltage</div>
+        </div>
+        <div class="rr-val" id="valSVrating">—</div>
+      </div>
+    </div>
+
+    <div class="hint">
+      Estimate only — manufacturer spec always wins. No formula returns an exact µF without motor winding data. After install, switch to Verify mode on the running motor.
+    </div>
+
+    <details class="help">
+      <summary>How to pick a value</summary>
+      <div class="help-body">
+        <ol>
+          <li>Read motor HP from the nameplate or body label. If missing, estimate from the equipment spec (condenser fan motors are usually 1/6–1/2 HP).</li>
+          <li>Read line voltage at the motor leads with the unit off. Common values: 115, 208, 230, 277, 460 V.</li>
+          <li>Pick the nearest standard size to the midpoint: 3, 4, 5, 7.5, 10, 12.5, 15, 17.5, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80 µF.</li>
+          <li>Voltage rating: 370 VAC for 208/230 V systems, 440 VAC for 277 V, 660 VAC for 460/480 V, 250 VAC for 115 V. Higher rating is always fine and extends life.</li>
+          <li>After installing, run the unit and switch to Verify mode. Motor should not run hot, hum, or draw excessive current.</li>
+        </ol>
+        <div class="warn-box">
+          Last-resort estimate. Undersized caps reduce torque and overheat the motor; oversized caps overdrive the start winding. Prefer the manufacturer's specification in every case.
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <div class="src">
+    Verify formula derives from I = V · 2πfC (capacitor reactive current). Size rule-of-thumb: typical 12–18 µF/HP at 230 V for PSC run capacitors, scaled by 1/V² for the same reactive support at other voltages.
+  </div>
 </main>
 <script>
 'use strict';
 function init() {
-  var inVolts = document.getElementById('inVolts');
-  var inAmps = document.getElementById('inAmps');
-  var inCapVolts = document.getElementById('inCapVolts');
+  var modeBtns = document.querySelectorAll('#modeGrid .phase-btn');
+  var secVerify = document.getElementById('secVerify');
+  var secSize = document.getElementById('secSize');
 
   var stdMFD = [3, 4, 5, 7.5, 10, 12.5, 15, 17.5, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80];
 
@@ -92,59 +250,129 @@ function init() {
     return best;
   }
 
-  function calc() {
-    var volts = parseFloat(inVolts.value);
-    var amps = parseFloat(inAmps.value);
-    var capVolts = parseFloat(inCapVolts.value);
+  /* ── Mode switching ── */
+  modeBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      modeBtns.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var mode = btn.getAttribute('data-mode');
+      secVerify.style.display = (mode === 'verify') ? '' : 'none';
+      secSize.style.display = (mode === 'size') ? '' : 'none';
+    });
+  });
 
-    if (!volts || volts <= 0 || !amps || amps <= 0) {
-      document.getElementById('rowCalc').className = 'result-row dim';
-      document.getElementById('rowStd').className = 'result-row dim';
-      document.getElementById('rowCapV').className = 'result-row dim';
-      document.getElementById('valCalc').className = 'rr-val';
-      document.getElementById('valStd').className = 'rr-val';
-      document.getElementById('valCapV').className = 'rr-val';
-      document.getElementById('valCalc').textContent = '— MFD';
-      document.getElementById('valStd').textContent = '— MFD';
-      document.getElementById('valCapV').textContent = '—';
-      document.getElementById('subTolerance').textContent = '±6% tolerance range';
-      document.getElementById('subCapV').textContent = 'Must meet or exceed motor voltage';
+  /* ── Verify mode ── */
+  var inVv = document.getElementById('inVv');
+  var inVa = document.getElementById('inVa');
+  var inVnp = document.getElementById('inVnp');
+  var rowVcalc = document.getElementById('rowVcalc');
+  var valVcalc = document.getElementById('valVcalc');
+  var rowVcheck = document.getElementById('rowVcheck');
+  var valVcheck = document.getElementById('valVcheck');
+  var subVcheck = document.getElementById('subVcheck');
+
+  function calcVerify() {
+    var v = parseFloat(inVv.value);
+    var a = parseFloat(inVa.value);
+    var np = parseFloat(inVnp.value);
+
+    if (!v || v <= 0 || !a || a <= 0) {
+      rowVcalc.className = 'result-row dim';
+      valVcalc.className = 'rr-val';
+      valVcalc.textContent = '— MFD';
+      rowVcheck.className = 'result-row dim';
+      valVcheck.className = 'rr-val';
+      valVcheck.textContent = '—';
+      subVcheck.textContent = 'Enter nameplate MFD to evaluate';
       return;
     }
 
-    var mfd = (amps * 2652) / volts;
-    var std = nearestStd(mfd);
-    var lo = (std * 0.94).toFixed(1);
-    var hi = (std * 1.06).toFixed(1);
+    var mfd = (a * 2652) / v;
+    valVcalc.textContent = mfd.toFixed(1) + ' MFD';
+    rowVcalc.className = 'result-row live';
+    valVcalc.className = 'rr-val live';
 
-    document.getElementById('valCalc').textContent = mfd.toFixed(1) + ' MFD';
-    document.getElementById('valStd').textContent = std + ' MFD';
-    document.getElementById('subTolerance').textContent = '±6% range: ' + lo + ' – ' + hi + ' MFD';
-
-    document.getElementById('rowCalc').className = 'result-row live';
-    document.getElementById('rowStd').className = 'result-row live';
-    document.getElementById('valCalc').className = 'rr-val live';
-    document.getElementById('valStd').className = 'rr-val live';
-
-    /* Cap voltage rating check */
-    var minCapV = volts >= 208 ? 370 : 250;
-    if (capVolts && capVolts > 0) {
-      var pass = capVolts >= minCapV;
-      document.getElementById('rowCapV').className = 'result-row ' + (pass ? 'ok' : 'high');
-      document.getElementById('valCapV').className = 'rr-val ' + (pass ? 'ok' : 'high');
-      document.getElementById('valCapV').textContent = capVolts + ' VAC';
-      document.getElementById('subCapV').textContent = pass ? 'Meets minimum ' + minCapV + ' VAC' : 'Below minimum ' + minCapV + ' VAC for ' + volts + 'V motor';
-    } else {
-      document.getElementById('rowCapV').className = 'result-row live';
-      document.getElementById('valCapV').className = 'rr-val live';
-      document.getElementById('valCapV').textContent = 'Min ' + minCapV + ' VAC';
-      document.getElementById('subCapV').textContent = 'Enter cap voltage to verify';
+    if (!np || np <= 0) {
+      rowVcheck.className = 'result-row dim';
+      valVcheck.className = 'rr-val';
+      valVcheck.textContent = '—';
+      subVcheck.textContent = 'Enter nameplate MFD to evaluate';
+      return;
     }
+
+    var pct = ((mfd - np) / np) * 100;
+    var status, statusClass;
+    var abs = Math.abs(pct);
+    if (abs <= 6) { status = 'GOOD'; statusClass = 'ok'; }
+    else if (abs <= 10) { status = 'MARGINAL'; statusClass = 'warn'; }
+    else { status = 'FAILED'; statusClass = 'high'; }
+
+    valVcheck.textContent = status;
+    rowVcheck.className = 'result-row live ' + statusClass;
+    valVcheck.className = 'rr-val live ' + statusClass;
+    subVcheck.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '% vs nameplate · ±6% typical tolerance';
   }
 
-  inVolts.addEventListener('input', calc);
-  inAmps.addEventListener('input', calc);
-  inCapVolts.addEventListener('input', calc);
+  /* ── Size mode ── */
+  var inSHp = document.getElementById('inSHp');
+  var inSV = document.getElementById('inSV');
+  var rowSRange = document.getElementById('rowSRange');
+  var valSRange = document.getElementById('valSRange');
+  var rowSStd = document.getElementById('rowSStd');
+  var valSStd = document.getElementById('valSStd');
+  var rowSVrating = document.getElementById('rowSVrating');
+  var valSVrating = document.getElementById('valSVrating');
+  var subSVrating = document.getElementById('subSVrating');
+
+  function voltageRating(v) {
+    if (v < 140) return { rating: 250, note: '250 VAC for 115 V systems' };
+    if (v <= 250) return { rating: 370, note: '370 VAC for 208/230 V systems' };
+    if (v <= 300) return { rating: 440, note: '440 VAC for 277 V systems' };
+    return { rating: 660, note: '660 VAC for 460/480 V systems' };
+  }
+
+  function calcSize() {
+    var hp = parseFloat(inSHp.value);
+    var v = parseFloat(inSV.value);
+
+    if (!hp || hp <= 0 || !v || v <= 0) {
+      rowSRange.className = 'result-row dim';
+      valSRange.className = 'rr-val';
+      valSRange.textContent = '—';
+      rowSStd.className = 'result-row dim';
+      valSStd.className = 'rr-val';
+      valSStd.textContent = '— MFD';
+      rowSVrating.className = 'result-row dim';
+      valSVrating.className = 'rr-val';
+      valSVrating.textContent = '—';
+      subSVrating.textContent = 'Standard HVAC cap rating for line voltage';
+      return;
+    }
+
+    var scale = (230 / v) * (230 / v);
+    var lo = 12 * hp * scale;
+    var hi = 18 * hp * scale;
+    var mid = (lo + hi) / 2;
+
+    valSRange.textContent = lo.toFixed(1) + '–' + hi.toFixed(1) + ' MFD';
+    rowSRange.className = 'result-row live';
+    valSRange.className = 'rr-val live';
+
+    valSStd.textContent = nearestStd(mid) + ' MFD';
+    rowSStd.className = 'result-row live';
+    valSStd.className = 'rr-val live';
+
+    var vr = voltageRating(v);
+    valSVrating.textContent = vr.rating + ' VAC';
+    rowSVrating.className = 'result-row live';
+    valSVrating.className = 'rr-val live';
+    subSVrating.textContent = vr.note + ' — higher rating OK';
+  }
+
+  [inVv, inVa, inVnp].forEach(function(el) { el.addEventListener('input', calcVerify); });
+  [inSHp, inSV].forEach(function(el) { el.addEventListener('input', calcSize); });
+
+  /* Seed Size mode with default 230 V so the voltage rating shows even before HP is entered */
 }
 document.addEventListener('DOMContentLoaded', init);
 

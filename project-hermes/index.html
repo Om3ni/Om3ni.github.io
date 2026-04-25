@@ -6,6 +6,7 @@
 <title>Project Hermes
 </title>
 <link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="tools/_shared/capture.css">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#c85a00">
 <link rel="apple-touch-icon" href="icon-512.png">
@@ -642,10 +643,25 @@ This software is provided "as is" without warranty of any kind, express or impli
     <div class="hdr-title">Project Hermes</div>
     <div class="hdr-sub">HVAC Field Tools</div>
   </div>
+  <button class="hdr-cam" id="capCamBtn" title="Capture nameplate" aria-label="Capture nameplate">📷<span class="cam-badge" id="capBadge">0</span></button>
   <button class="owner-btn" id="themeBtn" onclick="toggleTheme()">light</button>
   <button class="owner-btn" id="ownerBtn" onclick="openOwnerModal()">owner</button>
   <div class="hdr-badge" id="hdrBadge">0</div>
 </header>
+
+<!-- ══ SCRATCHPAD (captured text from nameplates) ══ -->
+<div class="scratchpad-panel" id="capScratchpad">
+  <div class="scratchpad-hdr">
+    <div class="scratchpad-title">Captured Text</div>
+    <div class="scratchpad-actions">
+      <button class="scratchpad-clear" id="capScratchClear" type="button">Clear</button>
+      <button class="scratchpad-clear" id="capScratchClose" type="button">Close</button>
+    </div>
+  </div>
+  <div class="scratchpad-body" id="capScratchBody">
+    <div class="scratchpad-empty">No captured text yet. Tap 📷 in the header to scan a nameplate.</div>
+  </div>
+</div>
 
 <!-- ══ MENU BAR ══ -->
 <div class="menu-bar">
@@ -979,6 +995,12 @@ This software is provided "as is" without warranty of any kind, express or impli
           <div class="tool-btn-desc">PSC · 3-Phase · ECM · Compressor · Insulation</div>
         </div>
       </div>
+      <div class="tool-btn" onclick="openTool('psychrometric', 'Psychrometric')">
+        <div>
+          <div class="tool-btn-name">Psychrometric</div>
+          <div class="tool-btn-desc">Multi-state · Coil ADP · Mixed air · Comfort zone</div>
+        </div>
+      </div>
     </div>
 
     <div class="tool-sec-lbl calcs">Calculators</div>
@@ -1014,7 +1036,6 @@ This software is provided "as is" without warranty of any kind, express or impli
       <div class="calc-btn t2" onclick="openCalc('load-calc', 'Load Estimate')"><div class="calc-btn-name">Load Estimate</div></div>
       <div class="calc-btn t2" onclick="openCalc('belt-length', 'Belt Length')"><div class="calc-btn-name">Belt Length</div></div>
       <div class="calc-btn t2" onclick="openCalc('belt-deflection', 'Belt Deflection')"><div class="calc-btn-name">Belt Deflection</div></div>
-      <div class="calc-btn t2" onclick="openCalc('enthalpy', 'Enthalpy')"><div class="calc-btn-name">Enthalpy</div></div>
       <div class="calc-btn t3" onclick="openCalc('system-head', 'Pump Sizing')"><div class="calc-btn-name">Pump Sizing</div></div>
     </div>
 
@@ -2934,7 +2955,11 @@ function openTool(name, title, opts) {
     } catch(e) { /* cross-origin safety */ }
   };
 
-  frame.src = 'tools/' + name + '.html';
+  // Subfolder modules use tools/<name>/index.html; flat modules use tools/<name>.html.
+  const SUBFOLDER_MODULES = ['psychrometric'];
+  frame.src = SUBFOLDER_MODULES.includes(name)
+    ? 'tools/' + name + '/index.html'
+    : 'tools/' + name + '.html';
   document.getElementById('tool-frame-wrap').classList.add('open');
   if (opts.syncRoute !== false) setActiveRoute('tool', name);
   syncToolFavBtn();
@@ -3808,6 +3833,144 @@ if (!localStorage.getItem(TUT_KEY) && localStorage.getItem(LICENSE_KEY)) {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(function() {});
 }
+</script>
+
+<!-- ══ Capture / OCR — Phase 1 ══ -->
+<script type="module">
+  import { openCaptureModal, readScratchpad, clearScratchpad }
+    from './tools/_shared/capture.js';
+
+  const SCRATCH_KEY = 'hermes_scratchpad';
+  const camBtn      = document.getElementById('capCamBtn');
+  const camBadge    = document.getElementById('capBadge');
+  const panel       = document.getElementById('capScratchpad');
+  const panelBody   = document.getElementById('capScratchBody');
+  const clearBtn    = document.getElementById('capScratchClear');
+  const closeBtn    = document.getElementById('capScratchClose');
+
+  function refreshBadge() {
+    const lines = readScratchpad(SCRATCH_KEY);
+    if (lines.length > 0) {
+      camBadge.textContent = String(lines.length);
+      camBadge.classList.add('shown');
+    } else {
+      camBadge.classList.remove('shown');
+    }
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch {}
+      document.body.removeChild(ta);
+    }
+  }
+
+  function toast(msg) {
+    /* Reuse base.css toast pattern; create a one-off element. */
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => {
+      t.classList.remove('show');
+      setTimeout(() => t.remove(), 300);
+    }, 1500);
+  }
+
+  function renderPanel() {
+    const lines = readScratchpad(SCRATCH_KEY);
+    panelBody.innerHTML = '';
+    if (!lines.length) {
+      const empty = document.createElement('div');
+      empty.className = 'scratchpad-empty';
+      empty.textContent = 'No captured text yet. Tap 📷 in the header to scan a nameplate.';
+      panelBody.appendChild(empty);
+      return;
+    }
+    for (const line of lines) {
+      const row = document.createElement('div');
+      row.className = 'cap-line';
+      const text = document.createElement('span');
+      text.className = 'cap-line-text';
+      text.textContent = line;
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-ghost cap-line-btn';
+      btn.type = 'button';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', () => {
+        copyToClipboard(line);
+        toast('Copied');
+      });
+      row.appendChild(text);
+      row.appendChild(btn);
+      panelBody.appendChild(row);
+    }
+  }
+
+  function togglePanel(forceState) {
+    const willOpen = typeof forceState === 'boolean'
+      ? forceState
+      : !panel.classList.contains('open');
+    if (willOpen) {
+      renderPanel();
+      panel.classList.add('open');
+    } else {
+      panel.classList.remove('open');
+    }
+  }
+
+  /* Header 📷 click:
+       - If scratchpad has content and panel is closed, single tap opens panel.
+         Long-press (or panel already open) opens capture modal.
+       - For now, simplify: always open capture modal. Panel opens automatically
+         after capture so user sees results. */
+  camBtn.addEventListener('click', () => {
+    openCaptureModal({
+      mode: 'scratchpad',
+      scratchpadKey: SCRATCH_KEY,
+      title: 'Capture Nameplate',
+      onLines: () => {
+        refreshBadge();
+        /* Open panel so the user sees what was captured after closing modal.
+           They can keep capturing and accumulating lines. */
+      }
+    });
+  });
+
+  /* Tapping the badge alone (when present) opens the scratchpad panel without
+     starting a new capture. We approximate by detecting click-on-badge. */
+  camBadge.addEventListener('click', (e) => {
+    if (camBadge.classList.contains('shown')) {
+      e.stopPropagation();
+      togglePanel(true);
+    }
+  });
+
+  clearBtn.addEventListener('click', () => {
+    clearScratchpad(SCRATCH_KEY);
+    refreshBadge();
+    renderPanel();
+    toast('Cleared');
+  });
+
+  closeBtn.addEventListener('click', () => togglePanel(false));
+
+  /* Close panel when clicking outside */
+  document.addEventListener('click', (e) => {
+    if (!panel.classList.contains('open')) return;
+    if (panel.contains(e.target)) return;
+    if (camBtn.contains(e.target)) return;
+    togglePanel(false);
+  });
+
+  refreshBadge();
 </script>
 </body>
 </html>

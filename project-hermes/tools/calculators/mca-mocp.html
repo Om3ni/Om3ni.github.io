@@ -6,6 +6,7 @@
 <title>MCA / MOCP · HVAC Calculators</title>
 <link rel="stylesheet" href="../../base.css">
 <link rel="stylesheet" href="calc.css">
+<link rel="stylesheet" href="../_shared/capture.css">
 <style>
 </style>
 </head>
@@ -21,7 +22,10 @@
 </header>
 <main>
   <div class="sec sec-flush">
-    <div class="sec-lbl sec-lbl-flush">Motor Loads</div>
+    <div class="sec-lbl sec-lbl-flush" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Motor Loads</span>
+      <button class="cap-section-btn" id="capMcaMocp" type="button" title="Capture nameplate &amp; auto-fill">📷 Capture</button>
+    </div>
     <div class="input-pair">
       <div class="fg">
         <label class="fl">Compressor RLA</label>
@@ -51,27 +55,34 @@
     <div class="result-row dim" id="rowMCA">
       <div class="rr-left">
         <div class="rr-label">MCA</div>
-        <div class="rr-sub">Minimum Circuit Ampacity</div>
+        <div class="rr-sub">Largest × 125% + others (NEC 440.33)</div>
       </div>
       <div class="rr-val" id="valMCA">— A</div>
     </div>
     <div class="result-row dim" id="rowMOCP">
       <div class="rr-left">
-        <div class="rr-label">MOCP</div>
-        <div class="rr-sub">Max Overcurrent Protection</div>
+        <div class="rr-label">MOCP — Default</div>
+        <div class="rr-sub">Largest × 175% + others, next std size (NEC 440.22(A))</div>
       </div>
       <div class="rr-val" id="valMOCP">— A</div>
+    </div>
+    <div class="result-row dim" id="rowMOCPMax">
+      <div class="rr-left">
+        <div class="rr-label">MOCP — Maximum</div>
+        <div class="rr-sub">225% allowed only if 175% prevents motor starting</div>
+      </div>
+      <div class="rr-val" id="valMOCPMax">— A</div>
     </div>
     <div class="result-row dim" id="rowWire">
       <div class="rr-left">
         <div class="rr-label">Min Wire Gauge</div>
-        <div class="rr-sub">NEC 75°C copper</div>
+        <div class="rr-sub">NEC Table 310.16, 75°C copper</div>
       </div>
       <div class="rr-val" id="valWire">—</div>
     </div>
   </div>
 
-  <div class="hint">Per NEC 440.33 and 440.22. Verify against unit nameplate MCA/MOCP when available.</div>
+  <div class="hint">Per NEC 440.22(A) + 440.33. Default MOCP is 175%; bump to 225% only if 175% trips on starting inrush. Always verify against unit nameplate MCA/MOCP when available — the manufacturer's value is authoritative.</div>
 </main>
 <script>
 'use strict';
@@ -117,13 +128,15 @@ function init() {
     var fan = parseFloat(inFan.value) || 0;
     var extra = parseFloat(inExtra.value) || 0;
 
+    var rowIds = ['rowMCA','rowMOCP','rowMOCPMax','rowWire'];
+    var valIds = ['valMCA','valMOCP','valMOCPMax','valWire'];
+
     if (rla <= 0 && fan <= 0) {
-      ['rowMCA','rowMOCP','rowWire'].forEach(function(id) { document.getElementById(id).className = 'result-row dim'; });
-      document.getElementById('valMCA').className = 'rr-val';
-      document.getElementById('valMOCP').className = 'rr-val';
-      document.getElementById('valWire').className = 'rr-val';
+      rowIds.forEach(function(id) { document.getElementById(id).className = 'result-row dim'; });
+      valIds.forEach(function(id) { document.getElementById(id).className = 'rr-val'; });
       document.getElementById('valMCA').textContent = '— A';
       document.getElementById('valMOCP').textContent = '— A';
+      document.getElementById('valMOCPMax').textContent = '— A';
       document.getElementById('valWire').textContent = '—';
       return;
     }
@@ -136,17 +149,24 @@ function init() {
     loads.forEach(function(v) { sumOthers += v; });
     sumOthers = sumOthers - largest + extra;
 
+    /* MCA — NEC 440.33: largest motor at 125% + others at 100% */
     var mca = (largest * 1.25) + sumOthers;
-    var mocpRaw = (largest * 2.25) + sumOthers;
-    var mocp = nextBreaker(mocpRaw);
+    /* MOCP — NEC 440.22(A):
+         Default = 175% of largest motor RLA + sum of other loads, next std size up.
+         May be increased to (but not exceeding) 225% only if the 175% device prevents
+         starting. Most HVAC compressor nameplates spec one or the other; defer to
+         nameplate when known. */
+    var mocp175 = nextBreaker((largest * 1.75) + sumOthers);
+    var mocp225 = nextBreaker((largest * 2.25) + sumOthers);
     var wire = minWire(mca);
 
     document.getElementById('valMCA').textContent = mca.toFixed(1) + ' A';
-    document.getElementById('valMOCP').textContent = mocp + ' A';
+    document.getElementById('valMOCP').textContent = mocp175 + ' A';
+    document.getElementById('valMOCPMax').textContent = mocp225 + ' A';
     document.getElementById('valWire').textContent = wire;
 
-    ['rowMCA','rowMOCP','rowWire'].forEach(function(id) { document.getElementById(id).className = 'result-row live'; });
-    ['valMCA','valMOCP','valWire'].forEach(function(id) { document.getElementById(id).className = 'rr-val live'; });
+    rowIds.forEach(function(id) { document.getElementById(id).className = 'result-row live'; });
+    valIds.forEach(function(id) { document.getElementById(id).className = 'rr-val live'; });
   }
 
   inRLA.addEventListener('input', calc);
@@ -177,6 +197,30 @@ document.addEventListener('DOMContentLoaded', init);
   };
   sync();
 })();
+</script>
+
+<!-- ══ Capture / OCR — Phase 1 ══ -->
+<script type="module">
+  import { openCaptureModal } from '../_shared/capture.js';
+
+  window.HVAC_CAPTURE = {
+    fields: [
+      { id: 'inRLA',   label: 'Compressor RLA', type: 'number' },
+      { id: 'inFan',   label: 'Fan Motor FLA',  type: 'number' },
+      { id: 'inExtra', label: 'Additional',     type: 'number' }
+    ]
+  };
+
+  const btn = document.getElementById('capMcaMocp');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      openCaptureModal({
+        mode: 'scoped',
+        fields: window.HVAC_CAPTURE.fields,
+        title: 'Capture Nameplate'
+      });
+    });
+  }
 </script>
 </body>
 </html>
