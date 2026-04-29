@@ -183,7 +183,7 @@ export function buildHtmlReport(snap) {
   const sStatesTd  = `padding:5px 8px;color:#1a1a1a;border-bottom:1px solid #eee;`;
   const sChartBox  = `background:#fdfaf5;border:1px solid #e6dccb;border-radius:3px;padding:14px;margin:6px 0 6px;`;
   const sFooter    = `font-size:10px;color:#888;border-top:1px solid #eee;padding-top:8px;margin-top:20px;line-height:1.5;`;
-  const sColors    = { RA: '#c8553d', SA: '#2273c7', OA: '#3a9a44', MA: '#7a4fa0' };
+  const sColors    = { RA: '#c8553d', SA: '#2a8d7a', OA: '#3a9a44', MA: '#7a4fa0' };
 
   const H = [];
   H.push('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Psychrometric Report<\/title><\/head>');
@@ -203,7 +203,7 @@ export function buildHtmlReport(snap) {
     H.push(`<tr><td style="${sLbl}">Airflow</td><td style="${sVal}">${snap.cfm.toFixed(0)} CFM</td></tr>`);
   }
   if (Number.isFinite(snap.targetRh)) {
-    H.push(`<tr><td style="${sLbl}">Target RH</td><td style="${sVal};color:#2273c7;">${snap.targetRh.toFixed(1)} %</td></tr>`);
+    H.push(`<tr><td style="${sLbl}">Target RH</td><td style="${sVal};color:#c85a00;">${snap.targetRh.toFixed(1)} %</td></tr>`);
   }
   H.push(`</table>`);
 
@@ -261,7 +261,7 @@ export function buildHtmlReport(snap) {
         H.push(`<td style="${sStatesTd}">${s.rh.toFixed(1)}</td>`);
         H.push(`<td style="${sStatesTd}">${s.gr.toFixed(1)}</td>`);
         H.push(`<td style="${sStatesTd}">${s.h.toFixed(2)}</td>`);
-        H.push(`<td style="${sStatesTd}">${s.dp.toFixed(1)}</td>`);
+        H.push(`<td style="${sStatesTd}">${Number.isFinite(s.dp) ? s.dp.toFixed(1) : '—'}</td>`);
         H.push(`</tr>`);
       }
       H.push(`</table>`);

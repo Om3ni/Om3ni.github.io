@@ -22,11 +22,11 @@ const WB_LINES = [40, 50, 60, 70, 80];
 /* ─── State colors — dark + light pairs ────────────────────────────────── */
 const STATE_COLORS = {
   RA:  { dark: '#e8702f', light: '#c8553d' },     // orange
-  SA:  { dark: '#4a9de8', light: '#2273c7' },     // cyan-blue
+  SA:  { dark: '#4ec9b0', light: '#2a8d7a' },     // teal
   OA:  { dark: '#6fc876', light: '#3a9a44' },     // green
   MA:  { dark: '#b987d6', light: '#7a4fa0' },     // purple
   ADP: { dark: '#ffd166', light: '#b88a00' },     // amber
-  TGT: { dark: '#4a9de8', light: '#2273c7' }      // blue (target, matches SA visually)
+  TGT: { dark: '#e86d10', light: '#c85a00' }      // orange (matches project accent + RA)
 };
 
 /* ─── Shared helpers ───────────────────────────────────────────────────── */
@@ -117,13 +117,13 @@ const LIGHT_THEME = {
     rhLabel:    `fill:#777;font-family:${FONT};font-size:5.5px`,
     wbLine:     `stroke:#bbb;stroke-width:0.4;stroke-dasharray:1.5,1.5;fill:none;opacity:0.6`,
     wbLabel:    `fill:#999;font-family:${FONT};font-size:5px`,
-    comfortCool:`fill:#4a9de8;opacity:0.10;stroke:#4a9de8;stroke-width:0.4;stroke-dasharray:3,2`,
+    comfortCool:`fill:#c85a00;opacity:0.10;stroke:#c85a00;stroke-width:0.4;stroke-dasharray:3,2`,
     comfortHeat:`fill:#e8a04a;opacity:0.10;stroke:#e8a04a;stroke-width:0.4;stroke-dasharray:3,2`,
     comfortLabel:`fill:#666;font-family:${FONT};font-size:5.5px;font-weight:600`,
-    targetCurve:`stroke:#2273c7;stroke-width:1.0;stroke-dasharray:2,2;fill:none`,
-    targetLabel:`fill:#2273c7;font-family:${FONT};font-size:6px;font-weight:600`,
-    deltaLine:  `stroke:#2273c7;stroke-width:0.6;stroke-dasharray:1,2;fill:none;opacity:0.85`,
-    targetPt:   `fill:#2273c7;stroke:#fff;stroke-width:0.6`,
+    targetCurve:`stroke:#c85a00;stroke-width:1.0;stroke-dasharray:2,2;fill:none`,
+    targetLabel:`fill:#c85a00;font-family:${FONT};font-size:6px;font-weight:600`,
+    deltaLine:  `stroke:#c85a00;stroke-width:0.6;stroke-dasharray:1,2;fill:none;opacity:0.85`,
+    targetPt:   `fill:#c85a00;stroke:#fff;stroke-width:0.6`,
     adpLine:    `stroke:#b88a00;stroke-width:0.8;stroke-dasharray:3,2;fill:none;opacity:0.9`,
     adpPoint:   `fill:#b88a00;stroke:#fff;stroke-width:0.6`,
     adpLabel:   `fill:#b88a00;font-family:${FONT};font-size:6px;font-weight:600`,

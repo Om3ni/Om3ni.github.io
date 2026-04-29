@@ -71,7 +71,11 @@ export function humidityRatioFromTwb(tdb, twb, pAtm) {
   const wsWb = satHumidityRatio(twb, pAtm);
   const w = ((1093 - 0.556 * twb) * wsWb - 0.240 * (tdb - twb))
           / (1093 + 0.444 * tdb - twb);
-  return Math.max(0, w);
+  /* A negative result means the (tdb, twb) pair is below the physical
+     saturation asymptote — i.e. WB is too low for the given DB. Return
+     the raw value so callers can detect and reject the impossible state
+     instead of silently clamping to a fake zero-humidity state. */
+  return w;
 }
 
 /* ─── Enthalpy of moist air ─────────────────────────────────────────────────
@@ -134,10 +138,14 @@ export function computeState(input, pAtm) {
   } else {
     return null;
   }
+  /* Negative w from humidityRatioFromTwb means the (tdb, twb) pair is below
+     the saturation asymptote — physically impossible. Reject so the UI
+     surfaces an error instead of fabricating a zero-humidity state. */
+  if (!Number.isFinite(w) || w < 0) return null;
   const h = enthalpy(tdb, w);
   const rh = rhFromW(tdb, w, pAtm);
   const twb = Number.isFinite(input.twb) ? input.twb : wetBulbFromW(tdb, w, pAtm);
-  const dp = w > 0 ? dewPoint(w, pAtm) : tdb;
+  const dp = w > 0 ? dewPoint(w, pAtm) : null;
   return { tdb, twb, rh, w, h, dp, gr: w * 7000 };
 }
 
@@ -163,7 +171,7 @@ export function mixStates(stateOA, stateRA, oaFraction, pAtm) {
     rh:  rhFromW(tMix, wMix, pAtm),
     w:   wMix,
     h:   hMix,
-    dp:  wMix > 0 ? dewPoint(wMix, pAtm) : tMix,
+    dp:  wMix > 0 ? dewPoint(wMix, pAtm) : null,
     gr:  wMix * 7000
   };
 }

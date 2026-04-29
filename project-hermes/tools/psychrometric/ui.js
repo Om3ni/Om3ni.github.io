@@ -182,7 +182,7 @@ function renderResults() {
       setRowLive('Alt', s.twb.toFixed(1) + ' °F');
       $('sub-Alt').textContent = 'Computed from RH input';
     }
-    setRowLive('Dp', s.dp.toFixed(1) + ' °F');
+    setRowLive('Dp', Number.isFinite(s.dp) ? s.dp.toFixed(1) + ' °F' : '—');
   } else {
     /* Multi-state: state cards + coil process + ADP + economizer */
     renderStateCards();
@@ -214,7 +214,7 @@ function renderStateCards() {
   container.innerHTML = '';
   const keys = ['RA', 'SA', 'OA', 'MA'];
   const labels = { RA: 'Return Air', SA: 'Supply Air', OA: 'Outdoor Air', MA: 'Mixed Air' };
-  const colors = { RA: 'var(--orange-hi)', SA: '#4a9de8', OA: '#6fc876', MA: '#b987d6' };
+  const colors = { RA: 'var(--orange-hi)', SA: '#4ec9b0', OA: '#6fc876', MA: '#b987d6' };
   let anyEntered = false;
   for (const k of keys) {
     const s = APP.computed[k];
@@ -230,7 +230,7 @@ function renderStateCards() {
         <div><span class="sc-lbl">RH</span> ${s.rh.toFixed(1)} %</div>
         <div><span class="sc-lbl">gr/lb</span> ${s.gr.toFixed(1)}</div>
         <div><span class="sc-lbl">h</span> ${s.h.toFixed(2)} BTU/lb</div>
-        <div><span class="sc-lbl">Dp</span> ${s.dp.toFixed(1)} °F</div>
+        <div><span class="sc-lbl">Dp</span> ${Number.isFinite(s.dp) ? s.dp.toFixed(1) + ' °F' : '—'}</div>
       </div>`;
     container.appendChild(div);
   }
