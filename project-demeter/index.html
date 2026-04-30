@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Demeter" />
+  <title>Project Demeter</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <header class="status-bar" role="banner">
+    <div class="status-bar__brand">
+      <div class="status-bar__title">PROJECT DEMETER</div>
+      <div class="status-bar__subtitle">Vapor Pressure Deficit · Cannabis Cultivation · &copy; Michael Seth Aaron</div>
+    </div>
+    <div class="status-bar__readouts">
+      <span class="readout">VPD: <span class="readout__value" id="vpd-readout">--</span></span>
+      <span class="readout">VIABILITY: <span class="readout__value" id="viability-readout">--</span></span>
+    </div>
+  </header>
+
+  <nav class="tab-bar" role="tablist" aria-label="Main tabs">
+    <button class="tab-bar__tab is-active" role="tab" data-tab="survey" aria-selected="true" aria-controls="tab-survey">Survey</button>
+    <button class="tab-bar__tab" role="tab" data-tab="map" aria-selected="false" aria-controls="tab-map">Map</button>
+    <button class="tab-bar__tab" role="tab" data-tab="checklist" aria-selected="false" aria-controls="tab-checklist">Checklist</button>
+    <button class="tab-bar__tab" role="tab" data-tab="report" aria-selected="false" aria-controls="tab-report">Report</button>
+  </nav>
+
+  <main class="tab-panels">
+    <section id="tab-survey" class="tab-panel is-active" role="tabpanel" aria-labelledby="tab-survey">
+      <div class="placeholder">Survey tab — Phase 1</div>
+    </section>
+    <section id="tab-map" class="tab-panel" role="tabpanel" aria-labelledby="tab-map" hidden>
+      <div class="placeholder">Map tab — Phase 2 / 3 / 4</div>
+    </section>
+    <section id="tab-checklist" class="tab-panel" role="tabpanel" aria-labelledby="tab-checklist" hidden>
+      <div class="placeholder">Checklist tab — Phase 5</div>
+    </section>
+    <section id="tab-report" class="tab-panel" role="tabpanel" aria-labelledby="tab-report" hidden>
+      <div class="placeholder">Report tab — Phase 6 / 7</div>
+    </section>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
