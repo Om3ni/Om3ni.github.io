@@ -69,6 +69,14 @@
       ]
     },
     {
+      label: 'Project Demeter',
+      id: 'demeter',
+      open: false,
+      links: [
+        { text: 'Project Demeter',       href: '/project-demeter/' },
+      ]
+    },
+    {
       label: 'Samsung',
       id: 'samsung',
       open: false,
