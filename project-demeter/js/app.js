@@ -36,7 +36,9 @@ const APP = {
   customer: '',
   facility: '',
   room: '',
-  equipmentServing: '',
+  equipmentModel: '',
+  equipmentSerial: '',
+  equipmentNotes: '',
   tech: '',
   date: '',
   narrative: '',
@@ -68,7 +70,9 @@ const APP = {
 // patch should schedule an auto-save.
 const PERSISTED_FIELDS = new Set([
   'unitF', 'stage', 'lights',
-  'customer', 'facility', 'room', 'equipmentServing', 'tech', 'date', 'narrative',
+  'customer', 'facility', 'room',
+  'equipmentModel', 'equipmentSerial', 'equipmentNotes',
+  'tech', 'date', 'narrative',
   'mapMode', 'roomLen', 'roomWid', 'airflowConfidence', 'coverageNotes',
   'sensors', 'zones', 'equipmentModules', 'ducts', 'registers',
   'tierCount', 'lighting', 'tierSensors',
@@ -82,7 +86,9 @@ function appIntoRecord(rec) {
     customer: APP.customer,
     facility: APP.facility,
     room: APP.room,
-    equipmentServing: APP.equipmentServing,
+    equipmentModel: APP.equipmentModel,
+    equipmentSerial: APP.equipmentSerial,
+    equipmentNotes: APP.equipmentNotes,
     tech: APP.tech,
     date: APP.date,
     narrative: APP.narrative,
@@ -120,16 +126,18 @@ function recordToPatch(rec) {
     lastEditedDevice:  rec.lastEditedDevice,
     version:           rec.version,
 
-    customer:         m.customer         ?? '',
-    facility:         m.facility         ?? '',
-    room:             m.room             ?? '',
-    equipmentServing: m.equipmentServing ?? '',
-    tech:             m.tech             ?? '',
-    date:             m.date             ?? '',
-    narrative:        m.narrative        ?? '',
-    stage:            (typeof m.stage === 'number') ? m.stage : 0,
-    lights:           m.lights           ?? 'on',
-    unitF:            m.unitF !== false,
+    customer:        m.customer        ?? '',
+    facility:        m.facility        ?? '',
+    room:            m.room            ?? '',
+    equipmentModel:  m.equipmentModel  ?? '',
+    equipmentSerial: m.equipmentSerial ?? '',
+    equipmentNotes:  m.equipmentNotes  ?? '',
+    tech:            m.tech            ?? '',
+    date:            m.date            ?? '',
+    narrative:       m.narrative       ?? '',
+    stage:           (typeof m.stage === 'number') ? m.stage : 0,
+    lights:          m.lights          ?? 'on',
+    unitF:           m.unitF !== false,
 
     roomLen:           d.roomLen           ?? null,
     roomWid:           d.roomWid           ?? null,
@@ -278,6 +286,32 @@ async function actionArchive(id) {
   if (!ok) return;
   await archiveSurvey(id);
   refreshList();
+}
+
+// ---- Theme toggle ---------------------------------------------------------
+// Theme is a UI preference, not survey data — lives in localStorage,
+// not in APP. The pre-paint script in index.html sets the initial
+// data-theme on <html> before CSS applies. This module only handles
+// the button label and click toggling.
+
+const THEME_KEY = 'demeter_theme';
+
+function currentTheme() {
+  return document.documentElement.getAttribute('data-theme') || 'dark';
+}
+
+function syncThemeButtonLabel() {
+  const btn = document.getElementById('theme-btn');
+  if (!btn) return;
+  // Label shows the destination state — clicking goes to that.
+  btn.textContent = currentTheme() === 'dark' ? 'light' : 'dark';
+}
+
+function toggleTheme() {
+  const next = currentTheme() === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem(THEME_KEY, next); } catch (_) {}
+  syncThemeButtonLabel();
 }
 
 // Manual escape hatch when auto-update fails. Flushes pending edits, asks
@@ -554,6 +588,11 @@ function wireEditorView() {
 function init() {
   wireListView();
   wireEditorView();
+
+  const themeBtn = document.getElementById('theme-btn');
+  if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+  syncThemeButtonLabel();
+
   render();
   refreshList().catch((err) => console.error('List load failed:', err));
 }

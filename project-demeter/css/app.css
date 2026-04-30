@@ -16,10 +16,38 @@
   --return:     #4ec9b0;
 
   --bg:          #111111;
+  --grid-line:   rgba(255, 255, 255, 0.03);
+
   --font-ui:     'Rajdhani', system-ui, -apple-system, Segoe UI, sans-serif;
   --font-data:   'Share Tech Mono', ui-monospace, Menlo, Consolas, monospace;
   --safe-top:    env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Light theme override (toggled via <html data-theme="light">) ──
+   Keeps brand colors stable; flips canvas/surface/text and softens
+   --orange-dim/--orange-lo so active states stay readable. */
+[data-theme="light"] {
+  --bg:         #e8e6e1;
+  --surface:    #d4d2cd;
+  --surface2:   #dcdad5;
+  --border:     #b8b6b1;
+  --text:       #1c1a16;
+  --text-dim:   #4a4844;
+  --text-mute:  #7a7872;
+  --orange-lo:  #b8650a;
+  --orange-dim: #f5e0c8;
+  --grid-line:  rgba(0, 0, 0, 0.05);
+}
+
+/* In light mode, --orange-dim becomes cream — the bright --orange-hi
+   text used on dark backgrounds loses contrast. Swap those tints to
+   --orange-lo (now a darker orange) wherever they sit on the cream bg. */
+[data-theme="light"] .readout--badge,
+[data-theme="light"] .readout--badge .is-orange,
+[data-theme="light"] .toggle.is-active,
+[data-theme="light"] .toggle--warn.is-active {
+  color: var(--orange-lo);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -35,12 +63,18 @@ html, body {
   overscroll-behavior: none;
 }
 
+/* Subtle grid pattern beneath everything — breaks up void space.
+   Pattern color flips between dark and light themes for legibility. */
 body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   padding-top: var(--safe-top);
   padding-bottom: var(--safe-bottom);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 .status-bar {
@@ -101,6 +135,31 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 11px;
+}
+
+.theme-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-mute);
+  font-family: var(--font-data);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  cursor: pointer;
+  text-transform: lowercase;
+  transition: color 0.15s, border-color 0.15s;
+  min-height: 28px;
+}
+
+.theme-btn:hover {
+  color: var(--text-dim);
+  border-color: var(--orange-lo);
+}
+
+.theme-btn:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
 }
 
 .tab-bar {
@@ -487,6 +546,10 @@ body {
 .survey-form input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.7);
   cursor: pointer;
+}
+
+[data-theme="light"] .survey-form input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: none;
 }
 
 /* ==========================================================================

@@ -15,6 +15,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" />
   <link rel="stylesheet" href="css/app.css" />
+  <script>
+    // Pre-paint theme application to avoid FOUC. Mirrors hermes pattern.
+    try {
+      const t = localStorage.getItem('demeter_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (_) {}
+  </script>
 </head>
 <body data-view="list">
   <header class="status-bar" role="banner">
@@ -26,6 +33,7 @@
       <span class="readout">VPD: <span class="readout__value" id="vpd-readout">--</span></span>
       <span class="readout">VIABILITY: <span class="readout__value" id="viability-readout">--</span></span>
       <span class="readout readout--badge" id="state-badge" hidden>STATE: <span class="readout__value is-orange">TRANSITION</span></span>
+      <button type="button" class="theme-btn" id="theme-btn" aria-label="Toggle light/dark theme">light</button>
     </div>
   </header>
 
@@ -85,14 +93,24 @@
                 <input type="text" data-field="facility" />
               </label>
 
-              <label class="form-row">
+              <label class="form-row form-row--wide">
                 <span class="form-row__label">Room name / number</span>
                 <input type="text" data-field="room" />
               </label>
 
+              <label class="form-row">
+                <span class="form-row__label">Equipment Model</span>
+                <input type="text" data-field="equipmentModel" />
+              </label>
+
+              <label class="form-row">
+                <span class="form-row__label">Equipment Serial</span>
+                <input type="text" data-field="equipmentSerial" />
+              </label>
+
               <label class="form-row form-row--wide">
-                <span class="form-row__label">Equipment serving room <span class="form-row__hint">(free text — high-level summary)</span></span>
-                <textarea data-field="equipmentServing" rows="2"></textarea>
+                <span class="form-row__label">Equipment notes <span class="form-row__hint">(free text — at-a-glance summary; per-unit detail lives in Map tab)</span></span>
+                <textarea data-field="equipmentNotes" rows="2"></textarea>
               </label>
 
               <fieldset class="form-row form-row--wide">

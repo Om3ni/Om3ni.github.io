@@ -125,7 +125,11 @@ Job intake form. First thing completed on site before anything else.
 - Customer / Client name
 - Facility name
 - Room name / number
-- Equipment serving room (free text — high-level summary; structured per-unit data lives on placed equipment modules in Map tab)
+- Equipment serving room — three at-a-glance fields:
+  - **Equipment Model** — short text; the dominant unit serving the room (e.g. "Evolution 7-ton split")
+  - **Equipment Serial** — short text
+  - **Equipment Notes** — free-text textarea for anything else worth jotting before walking the room (counts, configuration summary, callouts)
+  - *Detailed per-unit fields for all equipment serving the room continue to live on placed equipment modules in the Map tab. The Survey-tab capture is the at-a-glance summary captured on entry, before the room layout is drawn.*
 - Growth stage selector: Prop / E-Veg / L-Veg / E-Flwr / L-Flwr
 - Lights cycle toggle: On / Off / **Transition**
 - Technician name
@@ -636,7 +640,9 @@ const APP = {
   customer: '',
   facility: '',
   room: '',
-  equipmentServing: '',  // free text — high-level summary
+  equipmentModel: '',    // at-a-glance: dominant unit model
+  equipmentSerial: '',   // at-a-glance: dominant unit serial
+  equipmentNotes: '',    // at-a-glance: free-text summary of equipment serving room
   tech: '',
   date: '',
   narrative: '',
@@ -703,7 +709,8 @@ const APP = {
   lastEditedDevice: string | null,
   metadata: {
     customer, facility, room,
-    equipmentServing, tech, date, narrative,
+    equipmentModel, equipmentSerial, equipmentNotes,
+    tech, date, narrative,
     stage, lights, unitF
   },
   mapData: {
@@ -725,6 +732,7 @@ On survey load, if `version === 1`:
 - For each `equipmentModules[i]`: add empty structured fields (model, serial, unitType, reheatType, commissioningPresent, internetConnected)
 - For each `tierSensors[t][i]`: add `position: 'mid'` as default
 - For each `checklistState[itemId]`: add `evidenceBasis: 'Not Verified'` if unset
+- Split `metadata.equipmentServing` (single free-text field) into three fields. The legacy single string lands in `equipmentNotes`; `equipmentModel` and `equipmentSerial` are seeded empty.
 - Set `version = 2`
 - Save
 

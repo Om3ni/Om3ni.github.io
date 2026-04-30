@@ -85,7 +85,9 @@ export function newSurveyRecord() {
       customer: '',
       facility: '',
       room: '',
-      equipmentServing: '',
+      equipmentModel: '',
+      equipmentSerial: '',
+      equipmentNotes: '',
       tech: '',
       date: todayISO(),
       narrative: '',
@@ -113,11 +115,31 @@ export function newSurveyRecord() {
   };
 }
 
-// Idempotent v1 → v2 migration. Applied on load.
-// THIS codebase only writes v2; migration exists to absorb records from
-// earlier deployments without crashing.
+// Idempotent migration applied on load.
+// Field-presence normalization runs on every record — this absorbs legacy
+// v2 records written before the equipmentServing → Model/Serial/Notes
+// split. The version-gated block below only runs for v1 records.
 function migrateToV2(rec) {
-  if (!rec || rec.version === SCHEMA_VERSION) return rec;
+  if (!rec) return rec;
+
+  // ── Always-run normalization (version-agnostic) ──
+  if (rec.metadata) {
+    // Split legacy single-field equipmentServing into Model/Serial/Notes.
+    // The legacy string carried free-text summary, so it lands in notes.
+    if (rec.metadata.equipmentServing != null && rec.metadata.equipmentNotes == null) {
+      rec.metadata.equipmentNotes  = rec.metadata.equipmentServing;
+      rec.metadata.equipmentModel  = '';
+      rec.metadata.equipmentSerial = '';
+      delete rec.metadata.equipmentServing;
+    } else {
+      if (rec.metadata.equipmentModel  == null) rec.metadata.equipmentModel  = '';
+      if (rec.metadata.equipmentSerial == null) rec.metadata.equipmentSerial = '';
+      if (rec.metadata.equipmentNotes  == null) rec.metadata.equipmentNotes  = '';
+    }
+  }
+
+  // ── Version-gated migration: v1 → v2 ──
+  if (rec.version === SCHEMA_VERSION) return rec;
 
   if (!rec.metadata) rec.metadata = {};
   if (!rec.mapData)  rec.mapData  = {};
