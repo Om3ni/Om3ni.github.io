@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" />
   <link rel="stylesheet" href="css/app.css" />
 </head>
-<body>
+<body data-view="list">
   <header class="status-bar" role="banner">
     <div class="status-bar__brand">
       <div class="status-bar__title">PROJECT DEMETER</div>
@@ -25,38 +25,198 @@
     <div class="status-bar__readouts">
       <span class="readout">VPD: <span class="readout__value" id="vpd-readout">--</span></span>
       <span class="readout">VIABILITY: <span class="readout__value" id="viability-readout">--</span></span>
+      <span class="readout readout--badge" id="state-badge" hidden>STATE: <span class="readout__value is-orange">TRANSITION</span></span>
     </div>
   </header>
 
-  <nav class="tab-bar" role="tablist" aria-label="Main tabs">
-    <button class="tab-bar__tab is-active" role="tab" data-tab="survey" aria-selected="true" aria-controls="tab-survey">Survey</button>
-    <button class="tab-bar__tab" role="tab" data-tab="map" aria-selected="false" aria-controls="tab-map">Map</button>
-    <button class="tab-bar__tab" role="tab" data-tab="checklist" aria-selected="false" aria-controls="tab-checklist">Checklist</button>
-    <button class="tab-bar__tab" role="tab" data-tab="report" aria-selected="false" aria-controls="tab-report">Report</button>
-  </nav>
+  <main class="app-views">
 
-  <main class="tab-panels">
-    <section id="tab-survey" class="tab-panel is-active" role="tabpanel" aria-labelledby="tab-survey">
-      <div class="placeholder">Survey tab — Phase 1</div>
+    <!-- Survey List view (landing) -->
+    <section class="list-view" id="list-view">
+      <div class="list-view__head">
+        <h1 class="list-view__title">SURVEYS</h1>
+        <div class="list-view__head-actions">
+          <button type="button" class="btn btn--ghost btn--quiet" id="btn-refresh-app" title="Check for updates and reload">&#8635; Update</button>
+          <button type="button" class="btn btn--primary" id="btn-new-survey">+ NEW SURVEY</button>
+        </div>
+      </div>
+
+      <nav class="list-tabs" role="tablist" aria-label="Survey sections">
+        <button type="button" class="list-tab is-active" data-section="active"   role="tab" aria-selected="true">Resume</button>
+        <button type="button" class="list-tab"           data-section="complete" role="tab" aria-selected="false">Completed</button>
+        <button type="button" class="list-tab"           data-section="archived" role="tab" aria-selected="false">Archived</button>
+      </nav>
+
+      <ul class="survey-list" id="survey-list" aria-live="polite">
+        <li class="survey-list__empty">Loading…</li>
+      </ul>
     </section>
-    <section id="tab-map" class="tab-panel" role="tabpanel" aria-labelledby="tab-map" hidden>
-      <div class="placeholder">Map tab — Phase 2 / 3 / 4</div>
+
+    <!-- Editor view -->
+    <section class="editor-view" id="editor-view" hidden>
+
+      <div class="editor-nav">
+        <button type="button" class="btn btn--ghost" id="btn-back-to-list" aria-label="Back to survey list">&larr; Surveys</button>
+        <div class="editor-nav__label" id="editor-label">Untitled Survey</div>
+        <div class="editor-nav__save" id="save-status" aria-live="polite"></div>
+      </div>
+
+      <nav class="tab-bar" role="tablist" aria-label="Main tabs">
+        <button class="tab-bar__tab is-active" role="tab" data-tab="survey"    aria-selected="true"  aria-controls="tab-survey">Survey</button>
+        <button class="tab-bar__tab"           role="tab" data-tab="map"       aria-selected="false" aria-controls="tab-map">Map</button>
+        <button class="tab-bar__tab"           role="tab" data-tab="checklist" aria-selected="false" aria-controls="tab-checklist">Checklist</button>
+        <button class="tab-bar__tab"           role="tab" data-tab="report"    aria-selected="false" aria-controls="tab-report">Report</button>
+      </nav>
+
+      <div class="tab-panels">
+
+        <!-- Survey tab — full form -->
+        <section id="tab-survey" class="tab-panel is-active" role="tabpanel">
+          <form class="survey-form" id="survey-form" autocomplete="off" novalidate>
+            <div class="form-grid">
+
+              <label class="form-row">
+                <span class="form-row__label">Customer / Client</span>
+                <input type="text" data-field="customer" />
+              </label>
+
+              <label class="form-row">
+                <span class="form-row__label">Facility</span>
+                <input type="text" data-field="facility" />
+              </label>
+
+              <label class="form-row">
+                <span class="form-row__label">Room name / number</span>
+                <input type="text" data-field="room" />
+              </label>
+
+              <label class="form-row form-row--wide">
+                <span class="form-row__label">Equipment serving room <span class="form-row__hint">(free text — high-level summary)</span></span>
+                <textarea data-field="equipmentServing" rows="2"></textarea>
+              </label>
+
+              <fieldset class="form-row form-row--wide">
+                <legend class="form-row__label">Growth Stage</legend>
+                <div class="toggle-group" id="stage-group" role="radiogroup" aria-label="Growth stage">
+                  <button type="button" class="toggle" data-stage="0" role="radio" aria-checked="false">Prop</button>
+                  <button type="button" class="toggle" data-stage="1" role="radio" aria-checked="false">E-Veg</button>
+                  <button type="button" class="toggle" data-stage="2" role="radio" aria-checked="false">L-Veg</button>
+                  <button type="button" class="toggle" data-stage="3" role="radio" aria-checked="false">E-Flwr</button>
+                  <button type="button" class="toggle" data-stage="4" role="radio" aria-checked="false">L-Flwr</button>
+                </div>
+              </fieldset>
+
+              <fieldset class="form-row form-row--wide">
+                <legend class="form-row__label">Lights cycle</legend>
+                <div class="toggle-group" id="lights-group" role="radiogroup" aria-label="Lights cycle">
+                  <button type="button" class="toggle" data-lights="on"         role="radio" aria-checked="false">On</button>
+                  <button type="button" class="toggle" data-lights="off"        role="radio" aria-checked="false">Off</button>
+                  <button type="button" class="toggle toggle--warn" data-lights="transition" role="radio" aria-checked="false">Transition</button>
+                </div>
+                <p class="form-row__hint" id="lights-hint" hidden>
+                  Lights are between operating conditions (sunrise/sunset, ~15&ndash;30 min). Readings reflect a non-steady-state period; report includes a transition caveat.
+                </p>
+              </fieldset>
+
+              <label class="form-row">
+                <span class="form-row__label">Technician</span>
+                <input type="text" data-field="tech" />
+              </label>
+
+              <label class="form-row">
+                <span class="form-row__label">Date</span>
+                <input type="date" data-field="date" />
+              </label>
+
+              <label class="form-row form-row--wide">
+                <span class="form-row__label">Field narrative / notes</span>
+                <textarea data-field="narrative" rows="6"></textarea>
+              </label>
+
+            </div>
+          </form>
+        </section>
+
+        <section id="tab-map" class="tab-panel" role="tabpanel" hidden>
+          <div class="placeholder">Map tab &mdash; Phase 2 / 3 / 4</div>
+        </section>
+
+        <section id="tab-checklist" class="tab-panel" role="tabpanel" hidden>
+          <div class="placeholder">Checklist tab &mdash; Phase 5</div>
+        </section>
+
+        <section id="tab-report" class="tab-panel" role="tabpanel" hidden>
+          <div class="placeholder">Report tab &mdash; Phase 6 / 7</div>
+        </section>
+
+      </div>
     </section>
-    <section id="tab-checklist" class="tab-panel" role="tabpanel" aria-labelledby="tab-checklist" hidden>
-      <div class="placeholder">Checklist tab — Phase 5</div>
-    </section>
-    <section id="tab-report" class="tab-panel" role="tabpanel" aria-labelledby="tab-report" hidden>
-      <div class="placeholder">Report tab — Phase 6 / 7</div>
-    </section>
+
   </main>
+
+  <!-- Update banner: shown by sw-register when a new SW has installed -->
+  <div class="update-banner" id="update-banner" role="status" aria-live="polite" hidden>
+    <span class="update-banner__text">New version available.</span>
+    <button type="button" class="update-banner__btn" id="update-banner-btn">Refresh</button>
+  </div>
 
   <script type="module" src="js/app.js"></script>
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    // PWA service-worker registration with reliable update flow.
+    // Key bits:
+    //  - updateViaCache: 'none' so the browser bypasses HTTP cache when
+    //    re-fetching service-worker.js. Without this, GitHub Pages' default
+    //    Cache-Control can hide updates for ~10 minutes.
+    //  - registration.update() on visibility/focus to actively poll.
+    //  - updatefound + statechange listener detects when a fresh SW finishes
+    //    installing while a controller is already active — that's "update
+    //    ready" — and reveals the banner.
+    //  - Banner click reloads. By then skipWaiting (in install) has activated
+    //    the new SW; the reload picks up new cache contents.
+    (function registerSW() {
+      if (!('serviceWorker' in navigator)) return;
+
+      const banner    = document.getElementById('update-banner');
+      const btn       = document.getElementById('update-banner-btn');
+      const showBanner = () => { if (banner) banner.hidden = false; };
+
+      if (btn) {
+        btn.addEventListener('click', async () => {
+          try {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          } catch (_) {}
+          location.reload();
+        });
+      }
+
+      window.addEventListener('load', async () => {
+        let reg;
+        try {
+          reg = await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
+        } catch (_) {
+          return; // offline first-load is fine
+        }
+
+        const watch = (sw) => {
+          if (!sw) return;
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+              showBanner();
+            }
+          });
+        };
+
+        watch(reg.installing);
+        if (reg.waiting && navigator.serviceWorker.controller) showBanner();
+        reg.addEventListener('updatefound', () => watch(reg.installing));
+
+        // Re-check when the page becomes visible (return from background).
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) reg.update().catch(() => {});
+        });
       });
-    }
+    })();
   </script>
 </body>
 </html>

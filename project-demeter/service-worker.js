@@ -1,4 +1,4 @@
-const CACHE_NAME = 'demeter-v1';
+const CACHE_NAME = 'demeter-v3';
 
 const ASSETS = [
   './',
@@ -6,6 +6,7 @@ const ASSETS = [
   './manifest.json',
   './css/app.css',
   './js/app.js',
+  './js/storage.js',
   './js/math.js',
   './js/map.js',
   './js/heatmap.js',
@@ -20,6 +21,13 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
   self.skipWaiting();
+});
+
+self.addEventListener('message', (event) => {
+  // Manual escape hatch for the in-app "update" banner.
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', (event) => {
