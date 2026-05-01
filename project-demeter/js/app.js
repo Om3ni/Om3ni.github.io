@@ -55,8 +55,6 @@ const APP = {
   mapMode: 'single',
   roomLen: null,
   roomWid: null,
-  // 'select' is the Phase 3 default — sensor placement lands in Phase 4 and
-  // will revert this to 'sensor' per spec at that point.
   activeTool: 'select',
   // Sub-mode for the equipment tool: which S/R variant a tap will drop.
   // UI-only (not persisted); placed modules carry .type independently.
