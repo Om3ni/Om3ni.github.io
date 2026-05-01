@@ -187,6 +187,7 @@
                 <span class="tool-sep" aria-hidden="true"></span>
                 <button type="button" class="tool-btn" data-map-tool="canopy" title="Draw canopy zone">Canopy</button>
                 <button type="button" class="tool-btn" data-map-tool="dead" title="Draw dead zone">Dead</button>
+                <button type="button" class="tool-btn" data-map-tool="sensor" title="Place sensor">Sensor</button>
               </div>
 
               <p class="map-tool-hint" id="map-tool-hint"></p>
@@ -209,6 +210,35 @@
               </div>
               <div class="map-edit-panel__body" id="edit-panel-body"></div>
             </aside>
+
+            <section class="sensor-table" id="sensor-table" aria-label="Sensor readings">
+              <header class="sensor-table__head">
+                <span>Point</span><span>Temp (&deg;F)</span><span>RH (%)</span><span>VPD (kPa)</span><span></span>
+              </header>
+              <div class="sensor-table__body" id="sensor-table-body"></div>
+            </section>
+
+            <section class="spatial-summary" id="spatial-summary" aria-label="Spatial summary">
+              <header class="spatial-summary__head">Spatial Summary</header>
+
+              <div class="spatial-summary__facts" id="spatial-facts" hidden></div>
+
+              <div class="spatial-summary__vpd" id="spatial-vpd" hidden></div>
+
+              <label class="spatial-summary__coverage">
+                <span>Sensor coverage notes</span>
+                <textarea id="coverage-notes" rows="3" placeholder="e.g. Sensors placed in NW quadrant only — east half of canopy unsensed"></textarea>
+              </label>
+
+              <fieldset class="spatial-summary__airflow">
+                <legend>Airflow Confidence</legend>
+                <div class="toggle-group" id="airflow-group" role="radiogroup">
+                  <button type="button" class="toggle" data-airflow="UNKNOWN" role="radio">Unknown</button>
+                  <button type="button" class="toggle" data-airflow="LOW"     role="radio">Low</button>
+                  <button type="button" class="toggle" data-airflow="ASSUMED" role="radio">Assumed</button>
+                </div>
+              </fieldset>
+            </section>
 
             <section class="decoder-bar" aria-label="VPD target decoder">
               <div class="decoder-bar__head">

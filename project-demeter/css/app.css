@@ -1657,3 +1657,312 @@ body {
   .cl-status { flex: 1 1 auto; }
   .cl-item__evidence { width: 100%; }
 }
+
+/* ==========================================================================
+   Sensors, heatmap, sensor table, spatial summary (Phase 4)
+   Sensor dots paint on top of equipment/registers; heatmap cells paint
+   between zones and ducts. Status colors mirror the decoder bar palette.
+   ========================================================================== */
+
+.map-sensor__dot {
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.4;
+  cursor: pointer;
+  fill: var(--text-mute);
+  stroke: var(--surface2);
+}
+
+.map-sensor--unread .map-sensor__dot { fill: var(--text-mute); }
+.map-sensor--low    .map-sensor__dot { fill: var(--teal); }
+.map-sensor--in     .map-sensor__dot { fill: var(--green); }
+.map-sensor--high   .map-sensor__dot { fill: var(--red); }
+
+.map-sensor.is-selected .map-sensor__dot {
+  stroke: var(--orange);
+  stroke-width: 2.2;
+  filter: drop-shadow(0 0 3px rgba(232, 130, 10, 0.8));
+}
+
+.map-sensor__label {
+  font-family: var(--font-data);
+  font-weight: 700;
+  fill: var(--text);
+  pointer-events: none;
+}
+
+.map-sensor__vpd {
+  font-family: var(--font-data);
+  fill: var(--text-dim);
+  pointer-events: none;
+}
+
+[data-theme="light"] .map-sensor__dot { stroke: var(--surface); }
+[data-theme="light"] .map-sensor__label { fill: var(--text); }
+[data-theme="light"] .map-sensor__vpd   { fill: var(--text-dim); }
+
+/* Heatmap cells — no stroke, partial opacity so the grid + canopy zones
+   read through. Dead-zone cells use a neutral overlay so the crosshatch
+   above them stays visible. */
+.map-heatmap rect {
+  stroke: none;
+  pointer-events: none;
+}
+
+.map-heatmap__cell--dead {
+  fill: rgba(255, 255, 255, 0.06);
+}
+[data-theme="light"] .map-heatmap__cell--dead {
+  fill: rgba(0, 0, 0, 0.05);
+}
+
+.map-heatmap__legend-bg {
+  fill: rgba(0, 0, 0, 0.65);
+  stroke: var(--border);
+  stroke-width: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+[data-theme="light"] .map-heatmap__legend-bg {
+  fill: rgba(255, 255, 255, 0.85);
+}
+
+.map-heatmap__legend-glyph,
+.map-heatmap__legend-text {
+  font-family: var(--font-data);
+  fill: var(--text);
+  pointer-events: none;
+}
+[data-theme="light"] .map-heatmap__legend-glyph,
+[data-theme="light"] .map-heatmap__legend-text {
+  fill: var(--text);
+}
+
+/* Sensor readings table */
+.sensor-table {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.sensor-table__head,
+.sensor-table__row {
+  display: grid;
+  grid-template-columns: 60px 1fr 1fr 110px 80px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px;
+}
+
+.sensor-table__head {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.sensor-table__row {
+  border-bottom: 1px solid var(--border);
+}
+.sensor-table__row:last-child { border-bottom: none; }
+
+.sensor-table__row.is-selected {
+  background: var(--orange-dim);
+}
+
+.sensor-table__label {
+  font-family: var(--font-data);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.sensor-table__row input {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-data);
+  font-size: 13px;
+  min-height: 40px;
+}
+
+.sensor-table__row input:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 1px var(--orange);
+}
+
+.sensor-table__vpd {
+  font-family: var(--font-data);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+}
+.sensor-table__vpd.is-low  { color: var(--teal); }
+.sensor-table__vpd.is-in   { color: var(--green); }
+.sensor-table__vpd.is-high { color: var(--red); }
+.sensor-table__vpd.is-unread { color: var(--text-mute); }
+
+.sensor-table__del {
+  min-height: 40px;
+  font-size: 11px;
+}
+
+.sensor-table__empty {
+  padding: 14px 12px;
+  text-align: center;
+  font-family: var(--font-data);
+  font-size: 12px;
+  color: var(--text-mute);
+}
+
+.edit-row__vpd {
+  font-family: var(--font-data);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  margin-left: 6px;
+}
+.edit-row__vpd.is-low  { color: var(--teal); }
+.edit-row__vpd.is-in   { color: var(--green); }
+.edit-row__vpd.is-high { color: var(--red); }
+.edit-row__vpd.is-unread { color: var(--text-mute); }
+
+/* Spatial summary */
+.spatial-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.spatial-summary__head {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.spatial-summary__facts,
+.spatial-vpd__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px 14px;
+}
+
+.spatial-summary__facts[hidden],
+.spatial-summary__vpd[hidden] { display: none; }
+
+.spatial-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.spatial-fact__label {
+  font-family: var(--font-data);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+
+.spatial-fact__value {
+  font-family: var(--font-data);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.spatial-vpd__flag {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  background: rgba(224, 96, 96, 0.12);
+  color: var(--red);
+  font-family: var(--font-data);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.spatial-summary__vpd.is-wide-range .spatial-fact__value {
+  /* The flag itself carries the warning color. Cell values stay readable. */
+}
+
+.spatial-summary__coverage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.spatial-summary__coverage > span {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.spatial-summary__coverage textarea {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--font-data);
+  font-size: 13px;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.spatial-summary__coverage textarea:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 1px var(--orange);
+}
+
+.spatial-summary__airflow {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.spatial-summary__airflow legend {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 0;
+}
+
+.spatial-summary__airflow .toggle {
+  min-height: 40px;
+}
+
+@media (max-width: 540px) {
+  .sensor-table__head,
+  .sensor-table__row {
+    grid-template-columns: 44px 1fr 1fr 80px 60px;
+    gap: 6px;
+    padding: 6px 8px;
+  }
+  .sensor-table__del { font-size: 10px; padding: 4px 6px; }
+}

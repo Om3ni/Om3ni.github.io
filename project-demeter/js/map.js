@@ -14,7 +14,10 @@
 // from those ducts; deleting a duct removes its auto-placed register.
 // Independently-placed registers (ductId === null) live on their own.
 
-import { stageBand } from './math.js';
+import {
+  stageBand, calcVPD, toC,
+  canopyArea, meanNearestNeighborDistance
+} from './math.js';
 import {
   SVG_NS,
   approxEq, clamp, snapValue, snapPoint, clampToBox,
@@ -23,6 +26,7 @@ import {
   createCanvasSVG, buildGridLayer, buildAxisLayer,
   buildRectHandles, buildPointHandle, buildBoundMarker
 } from './ciab.js';
+import { buildHeatmapLayer } from './heatmap.js';
 
 // ── Constants ─────────────────────────────────────────────────────────
 const DEFAULT_EQUIPMENT_W_FT = 3;
@@ -32,7 +36,10 @@ const VIEWBOX_MARGIN_TOP_FT  = 1.6;
 const HANDLE_RADIUS_FT       = 0.45;  // hit-test radius for resize handles
 const ZONE_MIN_DRAG_FT       = 0.5;   // zone gesture must drag this far to commit
 const REGISTER_RADIUS_FT     = 0.55;  // visual size of register symbol
+const SENSOR_RADIUS_FT       = 0.45;  // visual size of sensor dot
 const DECODER_VPD_MAX        = 2.0;   // full-scale of the decoder bar (kPa)
+const LEAF_OFFSET_C          = 2;     // leaf cooler than air (cultivation default)
+const RANGE_FLAG_KPA         = 0.3;   // wide-distribution threshold (spec §Spatial Summary)
 
 const UNIT_TYPES   = ['', 'Evolution split', 'Compressor Wall', 'Other'];
 const REHEAT_TYPES = ['', 'modulating', 'on-off', 'none'];
@@ -75,6 +82,19 @@ export function initMap(api) {
     wrap.addEventListener('pointerup',     onCanvasPointerUp);
     wrap.addEventListener('pointercancel', onCanvasPointerCancel);
   }
+
+  const coverage = document.getElementById('coverage-notes');
+  if (coverage) {
+    coverage.addEventListener('input', (e) => {
+      _api.setState({ coverageNotes: e.target.value });
+    });
+  }
+
+  document.querySelectorAll('#airflow-group [data-airflow]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      _api.setState({ airflowConfidence: btn.dataset.airflow });
+    });
+  });
 }
 
 // Dimension input → APP.roomLen / APP.roomWid. Empty or non-positive
@@ -121,6 +141,8 @@ export function renderMap() {
   renderHelpHint(APP);
   renderCanvas(APP);
   renderEditPanel(APP);
+  renderSensorTable(APP);
+  renderSpatialSummary(APP);
   renderDecoderBar(APP);
 }
 
@@ -181,6 +203,7 @@ function toolHint(APP) {
     case 'equipment':
       return `Tap on the canvas to drop a ${APP.equipmentPlacementType === 'return' ? 'Return' : 'Supply'} module.`;
     case 'register': return 'Tap on the canvas to drop a register.';
+    case 'sensor':   return 'Tap on the canvas to drop a sensor.';
     case 'canopy':   return 'Drag on the canvas to draw a canopy zone.';
     case 'dead':     return 'Drag on the canvas to draw a dead zone.';
     case 'duct':
@@ -252,9 +275,17 @@ function renderCanvas(APP) {
     labelClass: 'map-axis__label'
   }));
   svg.appendChild(buildZonesLayer(APP));
+  svg.appendChild(buildHeatmapLayer({
+    sensors: APP.sensors,
+    zones:   APP.zones,
+    len:     APP.roomLen,
+    wid:     APP.roomWid,
+    stage:   stageBand(APP.stage)
+  }));
   svg.appendChild(buildDuctsLayer(APP));
   svg.appendChild(buildEquipmentLayer(APP));
   svg.appendChild(buildRegistersLayer(APP));
+  svg.appendChild(buildSensorsLayer(APP));
   svg.appendChild(buildOverlayLayer(APP));
 
   wrap.innerHTML = '';
@@ -434,6 +465,49 @@ function buildRegistersLayer(APP) {
   return g;
 }
 
+function buildSensorsLayer(APP) {
+  const g = document.createElementNS(SVG_NS, 'g');
+  g.setAttribute('class', 'map-sensors');
+  const stage = stageBand(APP.stage);
+  const sensors = APP.sensors || [];
+
+  sensors.forEach((s, i) => {
+    const isSel = (APP.selectedType === 'sensor' && APP.selectedId === s.id);
+    const status = sensorStatus(s, stage);
+    const wrap = document.createElementNS(SVG_NS, 'g');
+    wrap.setAttribute('class', `map-sensor map-sensor--${status}${isSel ? ' is-selected' : ''}`);
+
+    const c = document.createElementNS(SVG_NS, 'circle');
+    c.setAttribute('class', 'map-sensor__dot');
+    c.setAttribute('cx', String(s.xFt));
+    c.setAttribute('cy', String(s.yFt));
+    c.setAttribute('r', String(SENSOR_RADIUS_FT));
+    c.dataset.hit = `sensor:${s.id}`;
+    wrap.appendChild(c);
+
+    const idx = document.createElementNS(SVG_NS, 'text');
+    idx.setAttribute('class', 'map-sensor__label');
+    idx.setAttribute('x', String(s.xFt + SENSOR_RADIUS_FT + 0.18));
+    idx.setAttribute('y', String(s.yFt - 0.05));
+    idx.setAttribute('font-size', '0.55');
+    idx.textContent = `S${i + 1}`;
+    wrap.appendChild(idx);
+
+    const v = sensorVPD(s);
+    if (Number.isFinite(v)) {
+      const t = document.createElementNS(SVG_NS, 'text');
+      t.setAttribute('class', 'map-sensor__vpd');
+      t.setAttribute('x', String(s.xFt + SENSOR_RADIUS_FT + 0.18));
+      t.setAttribute('y', String(s.yFt + 0.45));
+      t.setAttribute('font-size', '0.45');
+      t.textContent = `${v.toFixed(2)} kPa`;
+      wrap.appendChild(t);
+    }
+    g.appendChild(wrap);
+  });
+  return g;
+}
+
 function buildOverlayLayer(APP) {
   const g = document.createElementNS(SVG_NS, 'g');
   g.setAttribute('class', 'map-overlay');
@@ -465,6 +539,11 @@ function buildOverlayLayer(APP) {
       });
     } else if (sel.type === 'register') {
       buildPointHandle(g, 'register', sel.el.id, sel.el.xFt, sel.el.yFt, {
+        handleSize: HANDLE_RADIUS_FT,
+        handleClass: 'map-handle map-handle--point'
+      });
+    } else if (sel.type === 'sensor') {
+      buildPointHandle(g, 'sensor', sel.el.id, sel.el.xFt, sel.el.yFt, {
         handleSize: HANDLE_RADIUS_FT,
         handleClass: 'map-handle map-handle--point'
       });
@@ -546,6 +625,11 @@ function onCanvasPointerDown(e) {
       e.preventDefault();
       return;
     }
+    case 'sensor': {
+      placeSensor(snapped, APP);
+      e.preventDefault();
+      return;
+    }
     case 'duct': {
       // Tapping another equipment module while the Duct tool is active
       // re-targets the source instead of dropping a duct — saves the user
@@ -606,6 +690,9 @@ function onCanvasPointerMove(e) {
       break;
     case 'move-register':
       applyMoveRegister(_gesture, snapped);
+      break;
+    case 'move-sensor':
+      applyMoveSensor(_gesture, snapped);
       break;
     case 'move-duct':
       applyMoveDuct(_gesture, snapped);
@@ -706,6 +793,19 @@ function placeIndependentRegister(pt, APP) {
   });
 }
 
+function placeSensor(pt, APP) {
+  const s = {
+    id: newId('sn'),
+    xFt: pt.x, yFt: pt.y,
+    tdb: null, rh: null
+  };
+  _api.setState({
+    sensors: [...(APP.sensors || []), s],
+    selectedId: s.id, selectedType: 'sensor',
+    activeTool: 'select'
+  });
+}
+
 function placeDuctAndRegister(pt, APP) {
   // Source is the currently selected equipment module. The Duct tool's
   // hint tells the user to select one first; if they didn't, this is a
@@ -783,6 +883,18 @@ function selectAndStartMove(wrap, e, hit, pt, APP) {
       e.preventDefault();
       return;
     }
+    case 'sensor': {
+      const s = (APP.sensors || []).find((x) => x.id === hit.id);
+      if (!s) return;
+      _gesture = {
+        kind: 'move-sensor', pointerId: e.pointerId,
+        id: s.id,
+        offset: { x: pt.x - s.xFt, y: pt.y - s.yFt }
+      };
+      wrap.setPointerCapture?.(e.pointerId);
+      e.preventDefault();
+      return;
+    }
     case 'duct': {
       // Click on duct line selects it; movement happens via the B-end handle
       return;
@@ -825,6 +937,14 @@ function startHandleGesture(wrap, e, hit, pt, APP) {
     _gesture = {
       kind: 'move-register', pointerId: e.pointerId, id,
       offset: { x: pt.x - r.xFt, y: pt.y - r.yFt }
+    };
+  } else if (type === 'sensor' && knob === 'move') {
+    const s = (APP.sensors || []).find((x) => x.id === id);
+    if (!s) return;
+    _api.setUI({ selectedId: id, selectedType: 'sensor', activeTool: 'select' });
+    _gesture = {
+      kind: 'move-sensor', pointerId: e.pointerId, id,
+      offset: { x: pt.x - s.xFt, y: pt.y - s.yFt }
     };
   }
   wrap.setPointerCapture?.(e.pointerId);
@@ -909,6 +1029,20 @@ function applyMoveDuct(g, snapped) {
   void g; void snapped;
 }
 
+function applyMoveSensor(g, snapped) {
+  const APP = _api.getState();
+  const s = (APP.sensors || []).find((x) => x.id === g.id);
+  if (!s) return;
+  let nx = snapValue(snapped.x - g.offset.x, APP.nudgeStep);
+  let ny = snapValue(snapped.y - g.offset.y, APP.nudgeStep);
+  nx = clamp(nx, 0, APP.roomLen);
+  ny = clamp(ny, 0, APP.roomWid);
+  if (approxEq(nx, s.xFt) && approxEq(ny, s.yFt)) return;
+  _api.setState({
+    sensors: APP.sensors.map((x) => x.id === s.id ? { ...x, xFt: nx, yFt: ny } : x)
+  });
+}
+
 // ── Nudge dispatch ────────────────────────────────────────────────────
 // Single entry point for the on-screen D-pad. Each tap moves the current
 // selection by APP.nudgeStep in one cardinal direction. For ducts only
@@ -931,6 +1065,7 @@ function nudgeSelected(direction) {
     case 'zone':      nudgeZone(APP, sel.el, dx, dy); break;
     case 'duct':      nudgeDuctEnd(APP, sel.el, dx, dy); break;
     case 'register':  nudgeRegister(APP, sel.el, dx, dy); break;
+    case 'sensor':    nudgeSensor(APP, sel.el, dx, dy); break;
   }
 }
 
@@ -975,6 +1110,14 @@ function nudgeRegister(APP, r, dx, dy) {
     ducts = APP.ducts.map((d) => d.id === r.ductId ? { ...d, x2Ft: nx, y2Ft: ny } : d);
   }
   _api.setState({ registers, ducts });
+}
+
+function nudgeSensor(APP, s, dx, dy) {
+  const nx = clamp(s.xFt + dx, 0, APP.roomLen);
+  const ny = clamp(s.yFt + dy, 0, APP.roomWid);
+  if (approxEq(nx, s.xFt) && approxEq(ny, s.yFt)) return;
+  const sensors = APP.sensors.map((x) => x.id === s.id ? { ...x, xFt: nx, yFt: ny } : x);
+  _api.setState({ sensors });
 }
 
 function applyResizeEquipment(g, snapped, step) {
@@ -1084,8 +1227,15 @@ function panelTitle(sel) {
     case 'zone':      return sel.el.type === 'dead' ? 'Dead Zone' : 'Canopy Zone';
     case 'duct':      return 'Duct Run';
     case 'register':  return sel.el.ductId ? 'Register (auto)' : 'Register';
+    case 'sensor':    return sensorPanelTitle(sel.el);
     default:          return 'Element';
   }
+}
+
+function sensorPanelTitle(s) {
+  const APP = _api.getState();
+  const i = (APP.sensors || []).findIndex((x) => x.id === s.id);
+  return `Sensor ${i >= 0 ? `S${i + 1}` : ''}`.trim();
 }
 
 function buildPanelForm(sel) {
@@ -1096,6 +1246,7 @@ function buildPanelForm(sel) {
     case 'zone':      return buildZoneForm(wrap, sel.el);
     case 'duct':      return buildDuctForm(wrap, sel.el);
     case 'register':  return buildRegisterForm(wrap, sel.el);
+    case 'sensor':    return buildSensorForm(wrap, sel.el);
   }
   return wrap;
 }
@@ -1167,6 +1318,18 @@ function buildRegisterForm(wrap, r) {
   return wrap;
 }
 
+function buildSensorForm(wrap, s) {
+  wrap.innerHTML = `
+    <label class="edit-row"><span>X (ft)</span><input type="number" step="0.5" data-bind="xFt"></label>
+    <label class="edit-row"><span>Y (ft)</span><input type="number" step="0.5" data-bind="yFt"></label>
+    <label class="edit-row"><span>Temp (&deg;F)</span><input type="number" step="0.1" inputmode="decimal" data-bind="tdb"></label>
+    <label class="edit-row"><span>RH (%)</span><input type="number" step="0.1" min="0" max="100" inputmode="decimal" data-bind="rh"></label>
+    <div class="edit-row edit-row--wide edit-row--note">VPD <span class="edit-row__vpd" data-sensor-vpd>&mdash;</span></div>
+  `;
+  syncSensorInputs(wrap, s);
+  return wrap;
+}
+
 function wirePanelInputs(body, sel) {
   const inputs = body.querySelectorAll('[data-bind]');
   inputs.forEach((el) => {
@@ -1195,6 +1358,14 @@ function wirePanelInputs(body, sel) {
 function onPanelInput(sel, el) {
   const APP = _api.getState();
   const bind = el.dataset.bind;
+
+  // Sensor reading inputs accept blank → null so a user can clear a value.
+  // Position inputs (xFt/yFt) still treat blank as mid-edit.
+  if (sel.type === 'sensor' && (bind === 'tdb' || bind === 'rh')) {
+    onSensorReadingInput(APP, sel.el, bind, el.value);
+    return;
+  }
+
   let value;
   if (el.type === 'checkbox') {
     value = el.checked;
@@ -1279,6 +1450,37 @@ function onPanelInput(sel, el) {
     _api.setState({ registers, ducts });
     return;
   }
+
+  if (sel.type === 'sensor') {
+    const s = (APP.sensors || []).find((x) => x.id === sel.el.id);
+    if (!s) return;
+    let nx = s.xFt, ny = s.yFt;
+    if (bind === 'xFt') nx = clamp(value, 0, APP.roomLen);
+    if (bind === 'yFt') ny = clamp(value, 0, APP.roomWid);
+    if (approxEq(nx, s.xFt) && approxEq(ny, s.yFt)) return;
+    _api.setState({
+      sensors: APP.sensors.map((x) => x.id === s.id ? { ...x, xFt: nx, yFt: ny } : x)
+    });
+    return;
+  }
+}
+
+function onSensorReadingInput(APP, sensor, bind, raw) {
+  const s = (APP.sensors || []).find((x) => x.id === sensor.id);
+  if (!s) return;
+  const trimmed = String(raw ?? '').trim();
+  let value;
+  if (trimmed === '') {
+    value = null;
+  } else {
+    const n = Number(trimmed);
+    if (!Number.isFinite(n)) return;
+    value = (bind === 'rh') ? clamp(n, 0, 100) : n;
+  }
+  if (s[bind] === value) return;
+  _api.setState({
+    sensors: APP.sensors.map((x) => x.id === s.id ? { ...x, [bind]: value } : x)
+  });
 }
 
 function syncPanelInputs(body, sel) {
@@ -1287,6 +1489,7 @@ function syncPanelInputs(body, sel) {
     case 'zone':      syncZoneInputs(body, sel.el); break;
     case 'duct':      syncDuctInputs(body, sel.el); break;
     case 'register':  syncRegisterInputs(body, sel.el); break;
+    case 'sensor':    syncSensorInputs(body, sel.el); break;
   }
 }
 
@@ -1331,6 +1534,48 @@ function syncRegisterInputs(body, r) {
   setInputVal(body, 'label', r.label || '');
 }
 
+function syncSensorInputs(body, s) {
+  setInputVal(body, 'xFt', s.xFt);
+  setInputVal(body, 'yFt', s.yFt);
+  setSensorReadingInput(body, 'tdb', s.tdb);
+  setSensorReadingInput(body, 'rh',  s.rh);
+
+  const APP = _api.getState();
+  const stage = stageBand(APP.stage);
+  const status = sensorStatus(s, stage);
+  const vpdEl = body.querySelector('[data-sensor-vpd]');
+  if (vpdEl) {
+    const v = sensorVPD(s);
+    vpdEl.classList.remove('is-low', 'is-in', 'is-high', 'is-unread');
+    if (Number.isFinite(v)) {
+      const tag = (status === 'low')  ? 'LOW'
+                : (status === 'high') ? 'HIGH'
+                : (status === 'in')   ? 'IN RANGE' : '';
+      vpdEl.textContent = `${v.toFixed(2)} kPa  ${tag}`.trim();
+      vpdEl.classList.add(`is-${status}`);
+    } else {
+      vpdEl.textContent = '—';
+      vpdEl.classList.add('is-unread');
+    }
+  }
+}
+
+// Reading inputs allow blank — typing user shouldn't be reset to a stored
+// number while clearing the field. setInputVal writes '' when value is null,
+// which would clobber an in-progress edit. This variant skips writes when
+// the input is focused or when the stored value is null and the input is empty.
+function setSensorReadingInput(body, bind, value) {
+  const el = body.querySelector(`[data-bind="${bind}"]`);
+  if (!el) return;
+  if (document.activeElement === el) return;
+  if (value == null) {
+    if (el.value !== '') el.value = '';
+    return;
+  }
+  const v = roundForInput(value);
+  if (el.value !== v) el.value = v;
+}
+
 function setInputVal(body, bind, value) {
   const el = body.querySelector(`[data-bind="${bind}"]`);
   if (!el) return;
@@ -1356,6 +1601,7 @@ function deleteSelection(sel) {
     case 'duct':      return deleteDuct(APP, sel.el.id);
     case 'register':  return deleteRegister(APP, sel.el.id);
     case 'zone':      return deleteZone(APP, sel.el.id);
+    case 'sensor':    return deleteSensor(APP, sel.el.id);
   }
 }
 
@@ -1392,6 +1638,13 @@ function deleteZone(APP, id) {
   });
 }
 
+function deleteSensor(APP, id) {
+  _api.setState({
+    sensors: (APP.sensors || []).filter((s) => s.id !== id),
+    selectedId: null, selectedType: null
+  });
+}
+
 // ── Domain helpers ────────────────────────────────────────────────────
 // (Pure geometry / DOM helpers live in ciab.js. Items below depend on
 //  Demeter's state shape or domain rules and stay here.)
@@ -1420,6 +1673,204 @@ function byId(list) {
   return out;
 }
 
+// ── Sensor helpers ────────────────────────────────────────────────────
+function sensorVPD(s) {
+  if (!Number.isFinite(s?.tdb) || !Number.isFinite(s?.rh)) return null;
+  return calcVPD(toC(s.tdb), s.rh, LEAF_OFFSET_C);
+}
+
+function sensorStatus(s, stage) {
+  const v = sensorVPD(s);
+  if (!Number.isFinite(v)) return 'unread';
+  if (!stage) return 'in';
+  if (v < stage.vpdMin) return 'low';
+  if (v > stage.vpdMax) return 'high';
+  return 'in';
+}
+
+// ── Sensor readings table ─────────────────────────────────────────────
+function renderSensorTable(APP) {
+  const body = document.getElementById('sensor-table-body');
+  if (!body) return;
+  const sensors = APP.sensors || [];
+  const stage = stageBand(APP.stage);
+
+  if (sensors.length === 0) {
+    body.innerHTML = '<div class="sensor-table__empty">No sensors placed.</div>';
+    return;
+  }
+
+  const focused = document.activeElement;
+  const focusInfo = readSensorTableFocus(focused);
+
+  body.innerHTML = '';
+  sensors.forEach((s, i) => {
+    const isSel = (APP.selectedType === 'sensor' && APP.selectedId === s.id);
+    const status = sensorStatus(s, stage);
+    const v = sensorVPD(s);
+
+    const row = document.createElement('div');
+    row.className = `sensor-table__row${isSel ? ' is-selected' : ''}`;
+    row.dataset.sensorId = s.id;
+    row.innerHTML = `
+      <span class="sensor-table__label">S${i + 1}</span>
+      <input type="number" step="0.1" inputmode="decimal" data-sensor-bind="tdb" aria-label="Temperature (°F)">
+      <input type="number" step="0.1" min="0" max="100" inputmode="decimal" data-sensor-bind="rh" aria-label="Relative humidity (%)">
+      <span class="sensor-table__vpd is-${status}">${Number.isFinite(v) ? v.toFixed(2) : '—'}</span>
+      <button type="button" class="btn btn--ghost btn--quiet btn--danger sensor-table__del" data-sensor-del>Delete</button>
+    `;
+    const tdbEl = row.querySelector('[data-sensor-bind="tdb"]');
+    const rhEl  = row.querySelector('[data-sensor-bind="rh"]');
+    if (s.tdb != null && document.activeElement !== tdbEl) tdbEl.value = roundForInput(s.tdb);
+    if (s.rh  != null && document.activeElement !== rhEl)  rhEl.value  = roundForInput(s.rh);
+
+    tdbEl.addEventListener('input', (e) => {
+      onSensorReadingInput(_api.getState(), s, 'tdb', e.target.value);
+    });
+    rhEl.addEventListener('input', (e) => {
+      onSensorReadingInput(_api.getState(), s, 'rh', e.target.value);
+    });
+    row.addEventListener('pointerdown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.closest('[data-sensor-del]')) return;
+      _api.setUI({ selectedId: s.id, selectedType: 'sensor' });
+    });
+    row.querySelector('[data-sensor-del]').addEventListener('click', () => {
+      deleteSensor(_api.getState(), s.id);
+    });
+
+    body.appendChild(row);
+  });
+
+  restoreSensorTableFocus(body, focusInfo);
+}
+
+function readSensorTableFocus(el) {
+  if (!el || !el.dataset || !el.dataset.sensorBind) return null;
+  const row = el.closest('.sensor-table__row');
+  if (!row) return null;
+  return {
+    id: row.dataset.sensorId,
+    bind: el.dataset.sensorBind,
+    selStart: el.selectionStart,
+    selEnd:   el.selectionEnd
+  };
+}
+
+function restoreSensorTableFocus(body, info) {
+  if (!info) return;
+  const row = body.querySelector(`[data-sensor-id="${info.id}"]`);
+  if (!row) return;
+  const el = row.querySelector(`[data-sensor-bind="${info.bind}"]`);
+  if (!el) return;
+  el.focus();
+  try { el.setSelectionRange(info.selStart, info.selEnd); } catch (_) {}
+}
+
+// ── Spatial summary ───────────────────────────────────────────────────
+function renderSpatialSummary(APP) {
+  const facts  = document.getElementById('spatial-facts');
+  const vpdBox = document.getElementById('spatial-vpd');
+  const cov    = document.getElementById('coverage-notes');
+  const grp    = document.getElementById('airflow-group');
+
+  const sensors = APP.sensors || [];
+
+  if (facts) {
+    if (sensors.length === 0) {
+      facts.hidden = true;
+      facts.innerHTML = '';
+    } else {
+      facts.hidden = false;
+      const area = canopyArea(APP.zones);
+      const spacing = meanNearestNeighborDistance(sensors);
+      const perHundred = (area > 0) ? (sensors.length / area) * 100 : null;
+      facts.innerHTML = `
+        <div class="spatial-fact"><span class="spatial-fact__label">Sensors</span><span class="spatial-fact__value">${sensors.length}</span></div>
+        <div class="spatial-fact"><span class="spatial-fact__label">Canopy area</span><span class="spatial-fact__value">${area.toFixed(1)} sq ft</span></div>
+        <div class="spatial-fact"><span class="spatial-fact__label">Mean spacing</span><span class="spatial-fact__value">${spacing == null ? '—' : `${spacing.toFixed(1)} ft`}</span></div>
+        <div class="spatial-fact"><span class="spatial-fact__label">Per 100 sq ft</span><span class="spatial-fact__value">${perHundred == null ? '—' : perHundred.toFixed(1)}</span></div>
+      `;
+    }
+  }
+
+  if (vpdBox) {
+    const stats = getMeasuredVPDStats(APP);
+    if (!stats || stats.count < 2) {
+      vpdBox.hidden = true;
+      vpdBox.innerHTML = '';
+      vpdBox.classList.remove('is-wide-range');
+    } else {
+      vpdBox.hidden = false;
+      const pct = stats.count > 0 ? Math.round((stats.inRangeCount / stats.count) * 100) : 0;
+      const wide = stats.range > RANGE_FLAG_KPA;
+      vpdBox.classList.toggle('is-wide-range', wide);
+      const flag = wide
+        ? '<div class="spatial-vpd__flag">Wide distribution — investigate airflow balance.</div>'
+        : '';
+      vpdBox.innerHTML = `
+        <div class="spatial-vpd__row">
+          <div class="spatial-fact"><span class="spatial-fact__label">Min</span><span class="spatial-fact__value">${stats.min.toFixed(2)} kPa</span></div>
+          <div class="spatial-fact"><span class="spatial-fact__label">Mean</span><span class="spatial-fact__value">${stats.mean.toFixed(2)} kPa</span></div>
+          <div class="spatial-fact"><span class="spatial-fact__label">Max</span><span class="spatial-fact__value">${stats.max.toFixed(2)} kPa</span></div>
+          <div class="spatial-fact"><span class="spatial-fact__label">Range</span><span class="spatial-fact__value">${stats.range.toFixed(2)} kPa</span></div>
+          <div class="spatial-fact"><span class="spatial-fact__label">In range</span><span class="spatial-fact__value">${stats.inRangeCount} / ${stats.count} (${pct}%)</span></div>
+        </div>
+        ${flag}
+      `;
+    }
+  }
+
+  if (cov && document.activeElement !== cov) {
+    const v = APP.coverageNotes || '';
+    if (cov.value !== v) cov.value = v;
+  }
+
+  if (grp) {
+    grp.querySelectorAll('[data-airflow]').forEach((btn) => {
+      const active = (btn.dataset.airflow === APP.airflowConfidence);
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-checked', String(active));
+    });
+  }
+}
+
+// ── Public stats helpers (orchestrator wires header readout in Phase 6) ─
+export function getMeasuredVPDStats(APP) {
+  const stage = stageBand(APP.stage);
+  const values = [];
+  let inRange = 0;
+  for (const s of (APP.sensors || [])) {
+    const v = sensorVPD(s);
+    if (!Number.isFinite(v)) continue;
+    values.push(v);
+    if (stage && v >= stage.vpdMin && v <= stage.vpdMax) inRange++;
+  }
+  if (values.length === 0) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const sum = values.reduce((a, b) => a + b, 0);
+  const mean = sum / values.length;
+  return {
+    count: values.length,
+    total: (APP.sensors || []).length,
+    min, max, mean,
+    range: max - min,
+    inRangeCount: inRange,
+    stageBandLabel: stage ? stage.label : null
+  };
+}
+
+export function getMeasuredVPDLabel(APP) {
+  const stats = getMeasuredVPDStats(APP);
+  if (!stats) return '—';
+  const stage = stageBand(APP.stage);
+  const v = stats.mean;
+  if (!stage) return `${v.toFixed(2)} kPa`;
+  if (v < stage.vpdMin) return `${v.toFixed(2)} kPa  LOW`;
+  if (v > stage.vpdMax) return `${v.toFixed(2)} kPa  HIGH`;
+  return `${v.toFixed(2)} kPa  IN RANGE`;
+}
+
 function currentSelection(APP) {
   if (!APP.selectedType || !APP.selectedId) return null;
   let el = null;
@@ -1428,6 +1879,7 @@ function currentSelection(APP) {
     case 'duct':      el = (APP.ducts || []).find((x) => x.id === APP.selectedId); break;
     case 'register':  el = (APP.registers || []).find((x) => x.id === APP.selectedId); break;
     case 'zone':      el = (APP.zones || []).find((x) => x.id === APP.selectedId); break;
+    case 'sensor':    el = (APP.sensors || []).find((x) => x.id === APP.selectedId); break;
   }
   if (!el) return null;
   return { type: APP.selectedType, el };
