@@ -11,8 +11,14 @@ import {
   archiveSurvey,
   deleteSurvey
 } from './storage.js';
-import { initMap, renderMap } from './map.js';
+import { initMap, renderMap, getMeasuredVPDLabel } from './map.js';
 import { initChecklist, renderChecklist } from './checklist-view.js';
+import { c9Failed } from './checklist.js';
+import {
+  initReport,
+  renderReport,
+  computeViabilityLabel
+} from './report.js';
 
 // ---- State ----------------------------------------------------------------
 
@@ -71,7 +77,9 @@ const APP = {
   lighting: 'led',
   tierSensors: {},
 
-  checklistState: {}
+  checklistState: {},
+
+  reportSnapshot: null
 };
 
 // Fields that map into SurveyRecord. Used to decide whether a setState
@@ -84,7 +92,8 @@ const PERSISTED_FIELDS = new Set([
   'mapMode', 'roomLen', 'roomWid', 'airflowConfidence', 'coverageNotes',
   'sensors', 'zones', 'equipmentModules', 'ducts', 'registers',
   'tierCount', 'lighting', 'tierSensors',
-  'checklistState'
+  'checklistState',
+  'reportSnapshot', 'reportGeneratedAt'
 ]);
 
 // ---- Marshal APP <-> SurveyRecord -----------------------------------------
@@ -120,6 +129,8 @@ function appIntoRecord(rec) {
     tierSensors: APP.tierSensors
   };
   rec.checklistState = APP.checklistState;
+  rec.reportSnapshot = APP.reportSnapshot;
+  rec.reportGeneratedAt = APP.reportGeneratedAt;
   return rec;
 }
 
@@ -161,7 +172,8 @@ function recordToPatch(rec) {
     lighting:          d.lighting          ?? 'led',
     tierSensors:       d.tierSensors       ?? {},
 
-    checklistState:    rec.checklistState  ?? {}
+    checklistState:    rec.checklistState  ?? {},
+    reportSnapshot:    rec.reportSnapshot  ?? null
   };
 }
 
@@ -247,6 +259,20 @@ function clearActiveSurvey() {
     lastEditedDevice:  null,
     saveStatus:        'idle'
   });
+}
+
+// Generate-report handoff. Stores the frozen snapshot on APP and the
+// active record, then forces a flush so the snapshot is on disk before
+// the technician moves on. Persistence is via PERSISTED_FIELDS, so the
+// patch goes through the normal save scheduler — flushSave() collapses
+// any in-flight debounce.
+function commitReportSnapshot(snapshot) {
+  if (!snapshot) return;
+  setState({
+    reportSnapshot:    snapshot,
+    reportGeneratedAt: snapshot.generatedAt
+  });
+  flushSave().catch((err) => console.error('Snapshot save failed:', err));
 }
 
 // ---- Survey lifecycle actions --------------------------------------------
@@ -379,9 +405,17 @@ function renderHeader() {
   const via  = document.getElementById('viability-readout');
   const stateBadge = document.getElementById('state-badge');
 
-  // Phase 1 placeholders. Math (Phase 2) and checklist (Phase 5) fill these.
-  if (vpd) vpd.textContent = '--';
-  if (via) via.textContent = '--';
+  // C9 fail invalidates measured state per spec; VPD reads VOID even
+  // when sensor readings exist. This is the only condition under which
+  // one state overrides the other in the UI.
+  const c9Bad = c9Failed(APP.checklistState);
+  if (vpd) {
+    vpd.textContent = c9Bad ? 'VOID' : getMeasuredVPDLabel(APP);
+    vpd.dataset.status = c9Bad ? 'void' : 'live';
+  }
+  if (via) {
+    via.textContent = computeViabilityLabel({ checklistState: APP.checklistState });
+  }
 
   if (stateBadge) stateBadge.hidden = (APP.lights !== 'transition');
 }
@@ -516,6 +550,7 @@ function renderEditor() {
   renderSurveyTab();
   renderMap();
   renderChecklist();
+  renderReport();
   renderSaveStatus();
 }
 
@@ -629,6 +664,12 @@ function init() {
     getState: () => APP,
     setState,
     setUI
+  });
+  initReport({
+    getState: () => APP,
+    setState,
+    setUI,
+    commitReportSnapshot
   });
 
   const themeBtn = document.getElementById('theme-btn');

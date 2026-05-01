@@ -125,6 +125,11 @@ body {
 .readout__value.is-teal   { color: var(--teal); }
 .readout__value.is-red    { color: var(--red); }
 .readout__value.is-orange { color: var(--orange); }
+.readout__value[data-status="void"] {
+  color: var(--red);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
 
 .readout--badge {
   padding: 2px 8px;
@@ -1965,4 +1970,69 @@ body {
     padding: 6px 8px;
   }
   .sensor-table__del { font-size: 10px; padding: 4px 6px; }
+}
+
+/* ==========================================================================
+   Report tab (Phase 6)
+   ========================================================================== */
+
+.report-tab {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-tab__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.report-tab__status {
+  margin-left: auto;
+  font-family: var(--font-data);
+  font-size: 12px;
+  color: var(--text-mute);
+}
+
+.report-tab__status[data-status="generated"] {
+  color: var(--text-dim);
+}
+
+.report-tab__body {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre;
+  overflow-x: auto;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+[data-theme="light"] .report-tab__body {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+@media (max-width: 540px) {
+  .report-tab { padding: 8px; }
+  .report-tab__head { flex-direction: column; align-items: stretch; }
+  .report-tab__status { margin-left: 0; text-align: right; }
+  .report-tab__body {
+    font-size: 11px;
+    padding: 10px;
+    white-space: pre;
+    overflow-x: auto;
+    word-break: normal;
+  }
 }
