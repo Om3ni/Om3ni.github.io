@@ -280,6 +280,15 @@ body {
 }
 .btn--quiet:hover { color: var(--text-dim); border-color: var(--border); }
 
+.btn--danger {
+  color: var(--red);
+}
+.btn--danger:hover {
+  color: var(--red);
+  border-color: var(--red);
+  background: rgba(224, 96, 96, 0.08);
+}
+
 /* ==========================================================================
    Survey list view
    ========================================================================== */
@@ -595,6 +604,143 @@ body {
 .toggle:focus-visible {
   outline: 2px solid var(--orange);
   outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Map tab — decoder bar (Phase 2)
+   Visible above the room map (Phase 3 placeholder for now). Reads APP.stage
+   reactively from app.js render(); custom properties --band-min and
+   --band-max are set in JS from the active stage's VPD target band.
+   ========================================================================== */
+
+.map-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.map-canvas-placeholder {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.decoder-bar {
+  --band-min: 50%;
+  --band-max: 60%;
+  --decoder-teal:  var(--teal);
+  --decoder-green: var(--green);
+  --decoder-red:   var(--red);
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.decoder-bar__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-family: var(--font-data);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.decoder-bar__title {
+  color: var(--text-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+
+.decoder-bar__stage {
+  color: var(--orange-hi);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.decoder-bar__range {
+  color: var(--text-dim);
+  margin-left: auto;
+}
+
+.decoder-bar__track {
+  position: relative;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: linear-gradient(
+    to right,
+    var(--decoder-teal)  0%,
+    var(--decoder-teal)  calc(var(--band-min) - 1%),
+    var(--decoder-green) var(--band-min),
+    var(--decoder-green) var(--band-max),
+    var(--decoder-red)   calc(var(--band-max) + 1%),
+    var(--decoder-red)   100%
+  );
+}
+
+.decoder-bar__band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--band-min);
+  right: calc(100% - var(--band-max));
+  border-left:  2px solid var(--text);
+  border-right: 2px solid var(--text);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  pointer-events: none;
+}
+
+.decoder-bar__scale {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-data);
+  font-size: 10px;
+  color: var(--text-mute);
+  letter-spacing: 0.04em;
+}
+
+.decoder-bar__legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-mute);
+  letter-spacing: 0.02em;
+}
+
+.decoder-bar__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+}
+.legend-swatch--teal  { background: var(--teal); }
+.legend-swatch--green { background: var(--green); }
+.legend-swatch--red   { background: var(--red); }
+
+/* In light theme, the white band brackets blend into pale backgrounds.
+   Swap to a dark border so the active band remains legible. */
+[data-theme="light"] .decoder-bar__band {
+  border-left-color:  var(--text);
+  border-right-color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
 }
 
 /* ==========================================================================

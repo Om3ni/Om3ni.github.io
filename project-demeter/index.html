@@ -156,7 +156,32 @@
         </section>
 
         <section id="tab-map" class="tab-panel" role="tabpanel" hidden>
-          <div class="placeholder">Map tab &mdash; Phase 2 / 3 / 4</div>
+          <div class="map-tab">
+            <div class="placeholder map-canvas-placeholder">Room map &mdash; Phase 3</div>
+
+            <section class="decoder-bar" aria-label="VPD target decoder">
+              <div class="decoder-bar__head">
+                <span class="decoder-bar__title">VPD Target</span>
+                <span class="decoder-bar__stage" id="decoder-stage">&mdash;</span>
+                <span class="decoder-bar__range" id="decoder-range">&mdash;</span>
+              </div>
+              <div class="decoder-bar__track" id="decoder-track" role="img" aria-label="VPD scale">
+                <div class="decoder-bar__band" id="decoder-band" aria-hidden="true"></div>
+              </div>
+              <div class="decoder-bar__scale" aria-hidden="true">
+                <span>0</span>
+                <span>0.5</span>
+                <span>1.0</span>
+                <span>1.5</span>
+                <span>2.0&nbsp;kPa</span>
+              </div>
+              <div class="decoder-bar__legend" aria-hidden="true">
+                <span class="decoder-bar__legend-item"><i class="legend-swatch legend-swatch--teal"></i>too low</span>
+                <span class="decoder-bar__legend-item"><i class="legend-swatch legend-swatch--green"></i>in range</span>
+                <span class="decoder-bar__legend-item"><i class="legend-swatch legend-swatch--red"></i>too high</span>
+              </div>
+            </section>
+          </div>
         </section>
 
         <section id="tab-checklist" class="tab-panel" role="tabpanel" hidden>

@@ -8,8 +8,15 @@ import {
   loadSurvey,
   listSurveys,
   saveSurvey,
-  archiveSurvey
+  archiveSurvey,
+  deleteSurvey
 } from './storage.js';
+import { stageBand } from './math.js';
+
+// Full VPD scale on the decoder bar, in kPa. All current cultivation
+// stages (0.4 → 1.6 kPa) sit comfortably inside this range with margin
+// on each side. Single source of truth for the bar's domain.
+const DECODER_VPD_MAX = 2.0;
 
 // ---- State ----------------------------------------------------------------
 
@@ -288,6 +295,16 @@ async function actionArchive(id) {
   refreshList();
 }
 
+// Permanent delete — only offered on archived surveys, so an active or
+// completed survey must be archived first. Two-step path makes accidental
+// deletion of in-progress field work much harder.
+async function actionDelete(id) {
+  const ok = confirm('Permanently delete this archived survey? This cannot be undone.');
+  if (!ok) return;
+  await deleteSurvey(id);
+  refreshList();
+}
+
 // ---- Theme toggle ---------------------------------------------------------
 // Theme is a UI preference, not survey data — lives in localStorage,
 // not in APP. The pre-paint script in index.html sets the initial
@@ -446,6 +463,15 @@ function buildSurveyRow(rec) {
     actions.appendChild(archBtn);
   }
 
+  if (rec.status === 'archived') {
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn btn--ghost btn--quiet btn--danger';
+    delBtn.textContent = 'Delete';
+    delBtn.addEventListener('click', () => actionDelete(rec.id));
+    actions.appendChild(delBtn);
+  }
+
   li.appendChild(head);
   li.appendChild(actions);
   return li;
@@ -487,7 +513,36 @@ function renderEditor() {
   }
 
   renderSurveyTab();
+  renderMapTab();
   renderSaveStatus();
+}
+
+function renderMapTab() {
+  // Decoder bar — reads APP.stage and reflects the active VPD target band.
+  // Map (Phase 3) and heatmap (Phase 4) will render above this in the same
+  // panel; the bar always sits below them per spec.
+  const stage     = stageBand(APP.stage);
+  const stageEl   = document.getElementById('decoder-stage');
+  const rangeEl   = document.getElementById('decoder-range');
+  const trackEl   = document.getElementById('decoder-track');
+
+  if (!stageEl || !rangeEl || !trackEl) return;
+
+  if (!stage) {
+    stageEl.textContent = '—';
+    rangeEl.textContent = '—';
+    trackEl.style.removeProperty('--band-min');
+    trackEl.style.removeProperty('--band-max');
+    return;
+  }
+
+  const minPct = (stage.vpdMin / DECODER_VPD_MAX) * 100;
+  const maxPct = (stage.vpdMax / DECODER_VPD_MAX) * 100;
+
+  stageEl.textContent = stage.label;
+  rangeEl.textContent = `${stage.vpdMin.toFixed(2)} – ${stage.vpdMax.toFixed(2)} kPa`;
+  trackEl.style.setProperty('--band-min', `${minPct}%`);
+  trackEl.style.setProperty('--band-max', `${maxPct}%`);
 }
 
 function renderSurveyTab() {
