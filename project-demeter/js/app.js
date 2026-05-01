@@ -12,6 +12,7 @@ import {
   deleteSurvey
 } from './storage.js';
 import { initMap, renderMap } from './map.js';
+import { initChecklist, renderChecklist } from './checklist-view.js';
 
 // ---- State ----------------------------------------------------------------
 
@@ -514,6 +515,7 @@ function renderEditor() {
 
   renderSurveyTab();
   renderMap();
+  renderChecklist();
   renderSaveStatus();
 }
 
@@ -619,6 +621,11 @@ function init() {
   // Map module needs the same setState/setUI pipe so its mutations route
   // through the auto-save scheduler. getState returns the live APP object.
   initMap({
+    getState: () => APP,
+    setState,
+    setUI
+  });
+  initChecklist({
     getState: () => APP,
     setState,
     setUI
