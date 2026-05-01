@@ -242,7 +242,14 @@
         </section>
 
         <section id="tab-report" class="tab-panel" role="tabpanel" hidden>
-          <div class="placeholder">Report tab &mdash; Phase 6 / 7</div>
+          <div class="report-tab">
+            <header class="report-tab__head">
+              <button type="button" class="btn btn--primary" id="btn-generate-report">Generate Report</button>
+              <button type="button" class="btn btn--ghost" id="btn-copy-report" disabled>Copy</button>
+              <span class="report-tab__status" id="report-status">Not generated yet.</span>
+            </header>
+            <pre class="report-tab__body" id="report-body" aria-live="polite">No report yet - tap Generate Report to produce one.</pre>
+          </div>
         </section>
 
       </div>
