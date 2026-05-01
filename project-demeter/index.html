@@ -182,6 +182,7 @@
                 <span class="tool-sep" aria-hidden="true"></span>
                 <button type="button" class="tool-btn tool-btn--supply" data-map-tool="equipment" data-eq-place="supply" title="Place supply equipment">S</button>
                 <button type="button" class="tool-btn tool-btn--return" data-map-tool="equipment" data-eq-place="return" title="Place return equipment">R</button>
+                <button type="button" class="tool-btn" data-map-tool="duct" title="Run duct from selected equipment">Duct</button>
                 <button type="button" class="tool-btn" data-map-tool="register" title="Place register">Reg</button>
                 <span class="tool-sep" aria-hidden="true"></span>
                 <button type="button" class="tool-btn" data-map-tool="canopy" title="Draw canopy zone">Canopy</button>
@@ -199,6 +200,13 @@
                 <span class="map-edit-panel__title" id="edit-panel-title">Element</span>
                 <button type="button" class="btn btn--ghost btn--quiet btn--danger" id="edit-panel-delete">Delete</button>
               </header>
+              <div class="map-nudge" role="group" aria-label="Nudge selected element">
+                <button type="button" class="map-nudge__btn" data-nudge="n" aria-label="Move up">&#9650;</button>
+                <button type="button" class="map-nudge__btn" data-nudge="w" aria-label="Move left">&#9664;</button>
+                <span class="map-nudge__step" id="map-nudge-step">0.5 ft</span>
+                <button type="button" class="map-nudge__btn" data-nudge="e" aria-label="Move right">&#9654;</button>
+                <button type="button" class="map-nudge__btn" data-nudge="s" aria-label="Move down">&#9660;</button>
+              </div>
               <div class="map-edit-panel__body" id="edit-panel-body"></div>
             </aside>
 

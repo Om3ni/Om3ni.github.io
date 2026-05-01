@@ -1,4 +1,4 @@
-const CACHE_NAME = 'demeter-v7';
+const CACHE_NAME = 'demeter-v9';
 
 const ASSETS = [
   './',
@@ -8,6 +8,7 @@ const ASSETS = [
   './js/app.js',
   './js/storage.js',
   './js/math.js',
+  './js/ciab.js',
   './js/map.js',
   './js/heatmap.js',
   './js/checklist.js',

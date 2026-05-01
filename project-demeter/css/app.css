@@ -757,22 +757,21 @@ body {
   min-height: 16px;
 }
 
-/* Map canvas (SVG host) */
+/* Map canvas (SVG host) — block container so the SVG inside can compute its
+   own height from width × aspect-ratio. A flex container with stretch fights
+   the SVG's auto height and resolves to zero on some browsers. */
 .map-canvas-wrap {
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px;
-  min-height: 0;
-  display: flex;
-  align-items: stretch;
-  justify-content: stretch;
+  display: block;
   overflow: hidden;
 }
 
 .map-canvas-wrap:empty { display: none; }
 
-.map-canvas-empty {
+.map-canvas-empty:not([hidden]) {
   min-height: 200px;
   display: flex;
   align-items: center;
@@ -1010,6 +1009,54 @@ body {
 }
 
 .map-edit-panel__body { padding: 12px 14px; }
+
+/* Nudge pad — D-pad layout, lives between header and body. Drives the
+   currently-selected element by APP.nudgeStep on each tap. The step
+   center cell shows the current step so the user knows what they're
+   committing to before tapping. */
+.map-nudge {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  grid-template-rows: 44px 44px 44px;
+  gap: 4px;
+  width: 200px;
+  margin: 10px auto;
+  align-items: center;
+  justify-items: center;
+}
+.map-nudge [data-nudge="n"] { grid-column: 2; grid-row: 1; }
+.map-nudge [data-nudge="w"] { grid-column: 1; grid-row: 2; }
+.map-nudge__step             { grid-column: 2; grid-row: 2;
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  text-align: center;
+}
+.map-nudge [data-nudge="e"] { grid-column: 3; grid-row: 2; }
+.map-nudge [data-nudge="s"] { grid-column: 2; grid-row: 3; }
+
+.map-nudge__btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+}
+.map-nudge__btn:hover { color: var(--orange-hi); border-color: var(--orange); }
+.map-nudge__btn:active {
+  background: var(--orange-dim);
+  color: var(--orange-hi);
+  border-color: var(--orange);
+}
+.map-nudge__btn:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
 
 .edit-panel__grid {
   display: grid;

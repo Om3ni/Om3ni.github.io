@@ -3,6 +3,10 @@
 // canopy zones, dead zones. Pure render-from-state. All mutations route
 // back through the api.setState provided by app.js.
 //
+// The portable canvas chassis (geometry, SVG factories, hit-test, IDs)
+// lives in ciab.js — this module provides the Demeter-specific body kit
+// (S/R coloring, structured equipment fields, cascade rules, decoder bar).
+//
 // SVG uses a feet-based viewBox so all coordinates are stored in feet
 // and rendered without conversion. Stroke widths stay constant in pixels
 // via vector-effect="non-scaling-stroke". Cascade rules: deleting an
@@ -11,8 +15,14 @@
 // Independently-placed registers (ductId === null) live on their own.
 
 import { stageBand } from './math.js';
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
+import {
+  SVG_NS,
+  approxEq, clamp, snapValue, snapPoint, clampToBox,
+  rectFromCorners, resizeRect, viewBoxFor,
+  svgPointFromEvent, decodeHit, newId,
+  createCanvasSVG, buildGridLayer, buildAxisLayer,
+  buildRectHandles, buildPointHandle, buildBoundMarker
+} from './ciab.js';
 
 // ── Constants ─────────────────────────────────────────────────────────
 const DEFAULT_EQUIPMENT_W_FT = 3;
@@ -52,6 +62,11 @@ export function initMap(api) {
     btn.addEventListener('click', () => _api.setUI({ nudgeStep: Number(btn.dataset.snap) }));
   });
 
+  // Nudge pad — moves the current selection by APP.nudgeStep in N/S/E/W
+  document.querySelectorAll('[data-nudge]').forEach((btn) => {
+    btn.addEventListener('click', () => nudgeSelected(btn.dataset.nudge));
+  });
+
   // Canvas pointer events (registered on the wrapper, dispatched on the live <svg>)
   const wrap = document.getElementById('map-canvas-wrap');
   if (wrap) {
@@ -60,6 +75,39 @@ export function initMap(api) {
     wrap.addEventListener('pointerup',     onCanvasPointerUp);
     wrap.addEventListener('pointercancel', onCanvasPointerCancel);
   }
+}
+
+// Dimension input → APP.roomLen / APP.roomWid. Empty or non-positive
+// values clear the dimension (back to null) so the canvas hides.
+function commitDimension(field, raw) {
+  const trimmed = String(raw ?? '').trim();
+  if (trimmed === '') {
+    _api.setState({ [field]: null });
+    return;
+  }
+  const n = Number(trimmed);
+  if (!Number.isFinite(n) || n <= 0) {
+    _api.setState({ [field]: null });
+    return;
+  }
+  _api.setState({ [field]: n });
+}
+
+// Tool palette click. eqPlace is set on the S/R sub-buttons under the
+// equipment tool; for all other tools it's undefined and ignored. The
+// Duct tool intentionally preserves selection — it needs a source
+// equipment module to draw from, so clearing on tool-switch would force
+// the user to re-select before every duct run.
+function selectTool(name, eqPlace) {
+  if (!name) return;
+  const patch = { activeTool: name };
+  if (name !== 'duct') {
+    patch.selectedId = null;
+    patch.selectedType = null;
+  }
+  if (eqPlace) patch.equipmentPlacementType = eqPlace;
+  _api.setUI(patch);
+  _gesture = null;
 }
 
 // ── Public render entry point ─────────────────────────────────────────
@@ -135,7 +183,11 @@ function toolHint(APP) {
     case 'register': return 'Tap on the canvas to drop a register.';
     case 'canopy':   return 'Drag on the canvas to draw a canopy zone.';
     case 'dead':     return 'Drag on the canvas to draw a dead zone.';
-    case 'duct':     return 'Tap on the canvas to drop a register and run a duct from the selected equipment.';
+    case 'duct':
+      if (APP.selectedType === 'equipment' && APP.selectedId) {
+        return 'Tap on the canvas to run a duct from the selected equipment; tap another equipment module to re-target.';
+      }
+      return 'Select an equipment module first — taps in Duct mode draw from it.';
     case 'select':
     default:         return 'Tap an element to select; drag handles to resize.';
   }
@@ -179,26 +231,26 @@ function renderCanvas(APP) {
 
   const len = APP.roomLen;
   const wid = APP.roomWid;
-  const vbX = -VIEWBOX_MARGIN_LEFT_FT;
-  const vbY = -VIEWBOX_MARGIN_TOP_FT;
-  const vbW = len + VIEWBOX_MARGIN_LEFT_FT + 0.4;
-  const vbH = wid + VIEWBOX_MARGIN_TOP_FT + 0.4;
+  const vb  = viewBoxFor(len, wid, VIEWBOX_MARGIN_LEFT_FT, VIEWBOX_MARGIN_TOP_FT);
 
   // Single SVG rebuilt each render — element counts are small (tens, not
   // thousands), and a fresh innerHTML avoids the bookkeeping of patching.
-  const svg = document.createElementNS(SVG_NS, 'svg');
-  svg.setAttribute('id', 'map-svg');
-  svg.setAttribute('class', 'map-svg');
-  svg.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
-  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-  svg.style.aspectRatio = `${vbW} / ${vbH}`;
+  const svg = createCanvasSVG(vb, { id: 'map-svg', className: 'map-svg' });
 
-  // Defs — crosshatch pattern for dead zones
+  // Defs — crosshatch pattern for dead zones (Demeter-specific decoration)
   svg.appendChild(buildDefs());
 
-  // Layer order, bottom → top
-  svg.appendChild(buildGridLayer(len, wid));
-  svg.appendChild(buildAxisLayer(len, wid));
+  // Layer order, bottom → top. Grid + axis come from ciab; everything
+  // above is domain-specific (S/R coloring, structured fields, etc.).
+  svg.appendChild(buildGridLayer(len, wid, {
+    layerClass: 'map-grid',
+    roomClass:  'map-grid__room',
+    lineClass:  'map-grid__line'
+  }));
+  svg.appendChild(buildAxisLayer(len, wid, {
+    layerClass: 'map-axis',
+    labelClass: 'map-axis__label'
+  }));
   svg.appendChild(buildZonesLayer(APP));
   svg.appendChild(buildDuctsLayer(APP));
   svg.appendChild(buildEquipmentLayer(APP));
@@ -218,67 +270,6 @@ function buildDefs() {
     </pattern>
   `;
   return defs;
-}
-
-function buildGridLayer(len, wid) {
-  const g = document.createElementNS(SVG_NS, 'g');
-  g.setAttribute('class', 'map-grid');
-
-  // Room outline
-  const room = document.createElementNS(SVG_NS, 'rect');
-  room.setAttribute('class', 'map-grid__room');
-  room.setAttribute('x', '0');
-  room.setAttribute('y', '0');
-  room.setAttribute('width', String(len));
-  room.setAttribute('height', String(wid));
-  g.appendChild(room);
-
-  // Grid lines per spec: 5 ft if longest dim > 20 ft, else 2 ft
-  const step = Math.max(len, wid) > 20 ? 5 : 2;
-  for (let x = step; x < len; x += step) {
-    const line = document.createElementNS(SVG_NS, 'line');
-    line.setAttribute('class', 'map-grid__line');
-    line.setAttribute('x1', String(x)); line.setAttribute('x2', String(x));
-    line.setAttribute('y1', '0');       line.setAttribute('y2', String(wid));
-    g.appendChild(line);
-  }
-  for (let y = step; y < wid; y += step) {
-    const line = document.createElementNS(SVG_NS, 'line');
-    line.setAttribute('class', 'map-grid__line');
-    line.setAttribute('x1', '0');       line.setAttribute('x2', String(len));
-    line.setAttribute('y1', String(y)); line.setAttribute('y2', String(y));
-    g.appendChild(line);
-  }
-  return g;
-}
-
-function buildAxisLayer(len, wid) {
-  const g = document.createElementNS(SVG_NS, 'g');
-  g.setAttribute('class', 'map-axis');
-  const step = Math.max(len, wid) > 20 ? 5 : 2;
-
-  for (let x = 0; x <= len; x += step) {
-    const t = document.createElementNS(SVG_NS, 'text');
-    t.setAttribute('class', 'map-axis__label');
-    t.setAttribute('x', String(x));
-    t.setAttribute('y', '-0.4');
-    t.setAttribute('font-size', '0.7');
-    t.setAttribute('text-anchor', 'middle');
-    t.textContent = String(x);
-    g.appendChild(t);
-  }
-  for (let y = 0; y <= wid; y += step) {
-    const t = document.createElementNS(SVG_NS, 'text');
-    t.setAttribute('class', 'map-axis__label');
-    t.setAttribute('x', '-0.5');
-    t.setAttribute('y', String(y));
-    t.setAttribute('font-size', '0.7');
-    t.setAttribute('text-anchor', 'end');
-    t.setAttribute('dominant-baseline', 'middle');
-    t.textContent = String(y);
-    g.appendChild(t);
-  }
-  return g;
 }
 
 function buildZonesLayer(APP) {
@@ -447,20 +438,36 @@ function buildOverlayLayer(APP) {
   const g = document.createElementNS(SVG_NS, 'g');
   g.setAttribute('class', 'map-overlay');
 
-  // Selection handles for the currently selected element
+  // Selection handles for the currently selected element. Domain class
+  // names are passed through so the existing CSS rules (.map-handle,
+  // .map-handle--bound, .map-handle--point) keep applying.
   const sel = currentSelection(APP);
   if (sel) {
     if (sel.type === 'equipment' || sel.type === 'zone') {
       const r = (sel.type === 'equipment')
         ? { x: sel.el.xFt, y: sel.el.yFt, w: sel.el.wFt, h: sel.el.hFt }
         : rectFromCorners(sel.el);
-      addRectHandles(g, sel.type, sel.el.id, r);
+      buildRectHandles(g, sel.type, sel.el.id, r, {
+        handleSize: HANDLE_RADIUS_FT,
+        handleClass: 'map-handle'
+      });
     } else if (sel.type === 'duct') {
       const equipById = byId(APP.equipmentModules);
       const a = ductOriginPoint(sel.el, equipById);
-      addDuctHandles(g, sel.el.id, a, { x: sel.el.x2Ft, y: sel.el.y2Ft });
+      buildBoundMarker(g, a.x, a.y, {
+        size: HANDLE_RADIUS_FT / 2,
+        className: 'map-handle map-handle--bound'
+      });
+      buildPointHandle(g, 'duct', sel.el.id, sel.el.x2Ft, sel.el.y2Ft, {
+        knob: 'b',
+        handleSize: HANDLE_RADIUS_FT / 2 + 0.05,
+        handleClass: 'map-handle'
+      });
     } else if (sel.type === 'register') {
-      addPointHandle(g, 'register', sel.el.id, sel.el.xFt, sel.el.yFt);
+      buildPointHandle(g, 'register', sel.el.id, sel.el.xFt, sel.el.yFt, {
+        handleSize: HANDLE_RADIUS_FT,
+        handleClass: 'map-handle map-handle--point'
+      });
     }
   }
 
@@ -492,58 +499,6 @@ function buildOverlayLayer(APP) {
     g.appendChild(line);
   }
   return g;
-}
-
-function addRectHandles(layer, type, id, r) {
-  const points = [
-    { k: 'tl', x: r.x,         y: r.y         },
-    { k: 'tr', x: r.x + r.w,   y: r.y         },
-    { k: 'bl', x: r.x,         y: r.y + r.h   },
-    { k: 'br', x: r.x + r.w,   y: r.y + r.h   },
-    { k: 't',  x: r.x + r.w/2, y: r.y         },
-    { k: 'b',  x: r.x + r.w/2, y: r.y + r.h   },
-    { k: 'l',  x: r.x,         y: r.y + r.h/2 },
-    { k: 'r',  x: r.x + r.w,   y: r.y + r.h/2 }
-  ];
-  for (const p of points) {
-    const h = document.createElementNS(SVG_NS, 'rect');
-    h.setAttribute('class', 'map-handle');
-    h.setAttribute('x', String(p.x - HANDLE_RADIUS_FT/2));
-    h.setAttribute('y', String(p.y - HANDLE_RADIUS_FT/2));
-    h.setAttribute('width', String(HANDLE_RADIUS_FT));
-    h.setAttribute('height', String(HANDLE_RADIUS_FT));
-    h.dataset.hit = `handle:${type}:${id}:${p.k}`;
-    layer.appendChild(h);
-  }
-}
-
-function addDuctHandles(layer, id, a, b) {
-  // Endpoint A (equipment side) is bound and not draggable from here —
-  // moving it requires moving the parent equipment module. Visual marker only.
-  const aMark = document.createElementNS(SVG_NS, 'circle');
-  aMark.setAttribute('class', 'map-handle map-handle--bound');
-  aMark.setAttribute('cx', String(a.x));
-  aMark.setAttribute('cy', String(a.y));
-  aMark.setAttribute('r', String(HANDLE_RADIUS_FT/2));
-  layer.appendChild(aMark);
-
-  const bH = document.createElementNS(SVG_NS, 'circle');
-  bH.setAttribute('class', 'map-handle');
-  bH.setAttribute('cx', String(b.x));
-  bH.setAttribute('cy', String(b.y));
-  bH.setAttribute('r', String(HANDLE_RADIUS_FT/2 + 0.05));
-  bH.dataset.hit = `handle:duct:${id}:b`;
-  layer.appendChild(bH);
-}
-
-function addPointHandle(layer, type, id, x, y) {
-  const h = document.createElementNS(SVG_NS, 'circle');
-  h.setAttribute('class', 'map-handle map-handle--point');
-  h.setAttribute('cx', String(x));
-  h.setAttribute('cy', String(y));
-  h.setAttribute('r', String(HANDLE_RADIUS_FT));
-  h.dataset.hit = `handle:${type}:${id}:move`;
-  layer.appendChild(h);
 }
 
 // ── Pointer event handlers ────────────────────────────────────────────
@@ -592,6 +547,15 @@ function onCanvasPointerDown(e) {
       return;
     }
     case 'duct': {
+      // Tapping another equipment module while the Duct tool is active
+      // re-targets the source instead of dropping a duct — saves the user
+      // from leaving the tool, picking Select, switching equipment, and
+      // coming back. Handle hits already returned earlier.
+      if (hit && hit.kind !== 'handle' && hit.type === 'equipment') {
+        _api.setUI({ selectedId: hit.id, selectedType: 'equipment' });
+        e.preventDefault();
+        return;
+      }
       placeDuctAndRegister(snapped, APP);
       e.preventDefault();
       return;
@@ -743,17 +707,14 @@ function placeIndependentRegister(pt, APP) {
 }
 
 function placeDuctAndRegister(pt, APP) {
-  // Source must be a selected equipment module — set when user clicked "Add Duct Run"
-  const eq = (APP.selectedType === 'equipment')
+  // Source is the currently selected equipment module. The Duct tool's
+  // hint tells the user to select one first; if they didn't, this is a
+  // no-op so a stray tap doesn't drop a phantom duct from nowhere.
+  const source = (APP.selectedType === 'equipment')
     ? (APP.equipmentModules || []).find((m) => m.id === APP.selectedId)
     : null;
+  if (!source) return;
 
-  // If no equipment is selected, fall back to most recent module
-  const source = eq || (APP.equipmentModules || []).slice(-1)[0];
-  if (!source) {
-    _api.setUI({ activeTool: 'select' });
-    return;
-  }
   const a = equipmentCenter(source);
   const d = {
     id: newId('dt'),
@@ -767,11 +728,13 @@ function placeDuctAndRegister(pt, APP) {
     xFt: pt.x, yFt: pt.y,
     label: ''
   };
+  // Keep the source equipment selected and stay in Duct mode so the
+  // technician can drop multiple runs from the same module without
+  // re-selecting it each time.
   _api.setState({
     ducts:     [...(APP.ducts || []), d],
     registers: [...(APP.registers || []), r],
-    selectedId: source.id, selectedType: 'equipment',
-    activeTool: 'select'
+    selectedId: source.id, selectedType: 'equipment'
   });
 }
 
@@ -946,6 +909,74 @@ function applyMoveDuct(g, snapped) {
   void g; void snapped;
 }
 
+// ── Nudge dispatch ────────────────────────────────────────────────────
+// Single entry point for the on-screen D-pad. Each tap moves the current
+// selection by APP.nudgeStep in one cardinal direction. For ducts only
+// the B (terminal) endpoint moves — the A endpoint is bound to the
+// parent equipment. For zones/equipment/registers the whole element moves.
+function nudgeSelected(direction) {
+  const APP = _api.getState();
+  const sel = currentSelection(APP);
+  if (!sel) return;
+  const step = (Number.isFinite(APP.nudgeStep) && APP.nudgeStep > 0) ? APP.nudgeStep : 0.5;
+  let dx = 0, dy = 0;
+  if (direction === 'n') dy = -step;
+  if (direction === 's') dy =  step;
+  if (direction === 'w') dx = -step;
+  if (direction === 'e') dx =  step;
+  if (dx === 0 && dy === 0) return;
+
+  switch (sel.type) {
+    case 'equipment': nudgeEquipment(APP, sel.el, dx, dy); break;
+    case 'zone':      nudgeZone(APP, sel.el, dx, dy); break;
+    case 'duct':      nudgeDuctEnd(APP, sel.el, dx, dy); break;
+    case 'register':  nudgeRegister(APP, sel.el, dx, dy); break;
+  }
+}
+
+function nudgeEquipment(APP, m, dx, dy) {
+  const newX = clamp(m.xFt + dx, 0, APP.roomLen - m.wFt);
+  const newY = clamp(m.yFt + dy, 0, APP.roomWid - m.hFt);
+  if (approxEq(newX, m.xFt) && approxEq(newY, m.yFt)) return;
+  applyEquipmentDelta(APP, m.id, newX - m.xFt, newY - m.yFt);
+}
+
+function nudgeZone(APP, z, dx, dy) {
+  const r = rectFromCorners(z);
+  const newX = clamp(r.x + dx, 0, APP.roomLen - r.w);
+  const newY = clamp(r.y + dy, 0, APP.roomWid - r.h);
+  if (approxEq(newX, r.x) && approxEq(newY, r.y)) return;
+  const updated = {
+    ...z,
+    x1Ft: newX, y1Ft: newY,
+    x2Ft: newX + r.w, y2Ft: newY + r.h
+  };
+  _api.setState({ zones: APP.zones.map((x) => x.id === z.id ? updated : x) });
+}
+
+function nudgeDuctEnd(APP, d, dx, dy) {
+  const nx = clamp(d.x2Ft + dx, 0, APP.roomLen);
+  const ny = clamp(d.y2Ft + dy, 0, APP.roomWid);
+  if (approxEq(nx, d.x2Ft) && approxEq(ny, d.y2Ft)) return;
+  const ducts = APP.ducts.map((x) => x.id === d.id ? { ...x, x2Ft: nx, y2Ft: ny } : x);
+  const registers = APP.registers.map((r) =>
+    r.ductId === d.id ? { ...r, xFt: nx, yFt: ny } : r
+  );
+  _api.setState({ ducts, registers });
+}
+
+function nudgeRegister(APP, r, dx, dy) {
+  const nx = clamp(r.xFt + dx, 0, APP.roomLen);
+  const ny = clamp(r.yFt + dy, 0, APP.roomWid);
+  if (approxEq(nx, r.xFt) && approxEq(ny, r.yFt)) return;
+  const registers = APP.registers.map((x) => x.id === r.id ? { ...x, xFt: nx, yFt: ny } : x);
+  let ducts = APP.ducts;
+  if (r.ductId) {
+    ducts = APP.ducts.map((d) => d.id === r.ductId ? { ...d, x2Ft: nx, y2Ft: ny } : d);
+  }
+  _api.setState({ registers, ducts });
+}
+
 function applyResizeEquipment(g, snapped, step) {
   const APP = _api.getState();
   const m = (APP.equipmentModules || []).find((x) => x.id === g.id);
@@ -1015,27 +1046,13 @@ function applyDuctEndpoint(g, snapped) {
   _api.setState({ ducts, registers });
 }
 
-// Resize math: given the original rect and the dragged knob, compute new bounds.
-// Knobs: 'tl','tr','bl','br','t','b','l','r'.
-function resizeRect(init, knob, snapped, step, opts) {
-  let x = init.x, y = init.y, w = init.w, h = init.h;
-  const px = clamp(snapValue(snapped.x, step), 0, opts.maxX);
-  const py = clamp(snapValue(snapped.y, step), 0, opts.maxY);
-
-  if (knob.includes('l')) { const right = x + w; x = Math.min(px, right - opts.minW); w = right - x; }
-  if (knob.includes('r')) {                   w = Math.max(opts.minW, px - x); }
-  if (knob.includes('t')) { const bottom = y + h; y = Math.min(py, bottom - opts.minH); h = bottom - y; }
-  if (knob.includes('b')) {                   h = Math.max(opts.minH, py - y); }
-
-  return { x, y, w, h };
-}
-
 // ── Edit panel ────────────────────────────────────────────────────────
 function renderEditPanel(APP) {
   const panel = document.getElementById('map-edit-panel');
   const body  = document.getElementById('edit-panel-body');
   const title = document.getElementById('edit-panel-title');
   const delBtn = document.getElementById('edit-panel-delete');
+  const stepEl = document.getElementById('map-nudge-step');
   if (!panel || !body || !title || !delBtn) return;
 
   const sel = currentSelection(APP);
@@ -1046,6 +1063,7 @@ function renderEditPanel(APP) {
     return;
   }
   panel.hidden = false;
+  if (stepEl) stepEl.textContent = `${APP.nudgeStep} ft`;
 
   const key = `${sel.type}:${sel.el.id}`;
   if (key !== _renderedPanelKey) {
@@ -1106,9 +1124,6 @@ function buildEquipmentForm(wrap, m) {
     </label>
     <label class="edit-row edit-row--check"><input type="checkbox" data-bind="commissioningPresent"><span>Commissioning report present</span></label>
     <label class="edit-row edit-row--check"><input type="checkbox" data-bind="internetConnected"><span>Internet-connected</span></label>
-    <div class="edit-row edit-row--wide">
-      <button type="button" class="btn btn--ghost" data-action="add-duct">+ Add Duct Run</button>
-    </div>
   `;
   syncEquipmentInputs(wrap, m);
   return wrap;
@@ -1175,13 +1190,6 @@ function wirePanelInputs(body, sel) {
     });
   });
 
-  // Add Duct Run button
-  const addDuct = body.querySelector('[data-action="add-duct"]');
-  if (addDuct) {
-    addDuct.addEventListener('click', () => {
-      _api.setUI({ activeTool: 'duct' });
-    });
-  }
 }
 
 function onPanelInput(sel, el) {
@@ -1384,39 +1392,18 @@ function deleteZone(APP, id) {
   });
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────
+// ── Domain helpers ────────────────────────────────────────────────────
+// (Pure geometry / DOM helpers live in ciab.js. Items below depend on
+//  Demeter's state shape or domain rules and stay here.)
 function roomReady(APP) {
   return Number.isFinite(APP.roomLen) && APP.roomLen > 0
       && Number.isFinite(APP.roomWid) && APP.roomWid > 0;
 }
 
-function newId(prefix) {
-  const rand = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
-    ? crypto.randomUUID().slice(0, 8)
-    : Math.random().toString(36).slice(2, 10);
-  return `${prefix}-${Date.now().toString(36)}-${rand}`;
-}
-
-function approxEq(a, b, tol = 1e-6) { return Math.abs(a - b) <= tol; }
-function clamp(n, lo, hi) { return Math.min(Math.max(n, lo), hi); }
-function snapValue(n, step) {
-  if (!step || step <= 0) return n;
-  return Math.round(n / step) * step;
-}
-function snapPoint(p, step) { return { x: snapValue(p.x, step), y: snapValue(p.y, step) }; }
+// Clamp a point inside the current room. Thin wrapper over ciab.clampToBox
+// so callers don't have to assemble the box themselves on every call.
 function clampToRoom(p, APP) {
-  return {
-    x: clamp(p.x, 0, APP.roomLen),
-    y: clamp(p.y, 0, APP.roomWid)
-  };
-}
-
-function rectFromCorners(z) {
-  const x = Math.min(z.x1Ft ?? 0, z.x2Ft ?? 0);
-  const y = Math.min(z.y1Ft ?? 0, z.y2Ft ?? 0);
-  const w = Math.abs((z.x2Ft ?? 0) - (z.x1Ft ?? 0));
-  const h = Math.abs((z.y2Ft ?? 0) - (z.y1Ft ?? 0));
-  return { x, y, w, h };
+  return clampToBox(p, { maxX: APP.roomLen, maxY: APP.roomWid });
 }
 
 function equipmentCenter(m) { return { x: m.xFt + m.wFt/2, y: m.yFt + m.hFt/2 }; }
@@ -1431,25 +1418,6 @@ function byId(list) {
   const out = {};
   for (const x of (list || [])) out[x.id] = x;
   return out;
-}
-
-function decodeHit(target) {
-  let el = target;
-  while (el && el.dataset && !el.dataset.hit) el = el.parentNode;
-  if (!el || !el.dataset || !el.dataset.hit) return null;
-  const raw = el.dataset.hit;
-  const parts = raw.split(':');
-  if (parts[0] === 'handle') {
-    return { kind: 'handle', type: parts[1], id: parts[2], knob: parts[3], raw };
-  }
-  return { kind: parts[0], type: parts[0], id: parts[1], raw };
-}
-
-function svgPointFromEvent(svg, e) {
-  const ctm = svg.getScreenCTM();
-  if (!ctm) return { x: 0, y: 0 };
-  const local = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
-  return { x: local.x, y: local.y };
 }
 
 function currentSelection(APP) {
