@@ -1,4 +1,4 @@
-const CACHE_NAME = 'demeter-v5';
+const CACHE_NAME = 'demeter-v6';
 
 const ASSETS = [
   './',
@@ -17,8 +17,14 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+  // cache: 'reload' on each Request bypasses the browser HTTP cache so the
+  // SW does not bake stale assets into the new cache. GitHub Pages serves
+  // assets with Cache-Control: max-age=600, which otherwise lets the
+  // install fetch return yesterday's CSS even after a fresh deploy.
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll(ASSETS.map((url) => new Request(url, { cache: 'reload' })))
+    )
   );
   self.skipWaiting();
 });
