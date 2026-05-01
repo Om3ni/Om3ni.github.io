@@ -619,11 +619,482 @@ body {
   gap: 16px;
 }
 
-.map-canvas-placeholder {
+/* Map controls — dimensions row, tool palette, snap selector, hint */
+.map-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.map-dims {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.map-dims__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 110px;
+  flex: 0 1 auto;
+}
+
+.map-dims__field span {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.map-dims__field input {
+  padding: 8px 10px;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--font-data);
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  min-height: 40px;
+  width: 100%;
+}
+
+.map-dims__field input:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 1px var(--orange);
+}
+
+.map-snap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.map-snap__label,
+.map-snap__unit {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.toggle--sm {
+  min-width: 40px;
+  min-height: 36px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.map-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.tool-btn {
+  min-height: 40px;
+  min-width: 48px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.tool-btn:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.tool-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tool-btn.is-active {
+  background: var(--orange-dim);
+  border-color: var(--orange);
+  color: var(--orange-hi);
+}
+
+.tool-btn:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+.tool-btn--supply.is-active { border-color: var(--supply); color: var(--supply); }
+.tool-btn--return.is-active { border-color: var(--return); color: var(--return); }
+
+.tool-sep {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+.map-tool-hint {
+  margin: 0;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-mute);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  min-height: 16px;
+}
+
+/* Map canvas (SVG host) */
+.map-canvas-wrap {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  overflow: hidden;
+}
+
+.map-canvas-wrap:empty { display: none; }
+
+.map-canvas-empty {
   min-height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.map-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Grid */
+.map-grid__room {
+  fill: rgba(0, 0, 0, 0.18);
+  stroke: var(--border);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+[data-theme="light"] .map-grid__room {
+  fill: rgba(255, 255, 255, 0.4);
+}
+
+.map-grid__line {
+  stroke: rgba(255, 255, 255, 0.06);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+[data-theme="light"] .map-grid__line {
+  stroke: rgba(0, 0, 0, 0.08);
+}
+
+/* SVG <text> font-size is set as an attribute (no unit) on each element so
+   the value is interpreted as user-space (ft) and scales with the viewBox.
+   CSS here covers fill/family/letter-spacing only. */
+.map-axis__label {
+  font-family: var(--font-data);
+  fill: var(--text-mute);
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+/* Zones — canopy + dead */
+.map-zone {
+  vector-effect: non-scaling-stroke;
+  cursor: move;
+}
+.map-zone--canopy {
+  fill: rgba(111, 200, 118, 0.10);
+  stroke: var(--green);
+  stroke-width: 1.5;
+}
+.map-zone--dead {
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 1.5;
+}
+[data-theme="light"] .map-zone--dead {
+  stroke: rgba(0, 0, 0, 0.45);
+}
+.map-zone.is-selected {
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 4px rgba(232, 130, 10, 0.6));
+}
+
+.map-zone__label {
+  font-family: var(--font-data);
+  fill: var(--text-dim);
+  pointer-events: none;
+}
+
+.map-zone-preview {
+  fill: rgba(232, 130, 10, 0.05);
+  stroke: var(--orange);
+  stroke-width: 1.5;
+  stroke-dasharray: 0.3, 0.2;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.map-zone-preview--canopy {
+  fill: rgba(111, 200, 118, 0.10);
+  stroke: var(--green);
+}
+.map-zone-preview--dead {
+  fill: rgba(255, 255, 255, 0.04);
+}
+
+/* Ducts — visible line on top of an invisible fat hit zone (finger target) */
+.map-duct__hit {
+  stroke: transparent;
+  stroke-width: 14;
+  vector-effect: non-scaling-stroke;
+  pointer-events: stroke;
+  fill: none;
+  cursor: pointer;
+}
+.map-duct {
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;        /* hit zone above carries clicks */
+  stroke-linecap: round;
+}
+.map-duct--supply { stroke: var(--supply); }
+.map-duct--return { stroke: var(--return); }
+.map-duct.is-selected {
+  stroke-width: 3.5;
+  filter: drop-shadow(0 0 4px rgba(232, 130, 10, 0.7));
+}
+
+.map-duct-preview {
+  stroke-width: 2;
+  stroke-dasharray: 0.3, 0.2;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.map-duct-preview--supply { stroke: var(--supply); }
+.map-duct-preview--return { stroke: var(--return); }
+
+/* Equipment modules */
+.map-equip__body {
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.8;
+  cursor: move;
+}
+.map-equip--supply .map-equip__body {
+  fill: rgba(232, 130, 10, 0.18);
+  stroke: var(--supply);
+}
+.map-equip--return .map-equip__body {
+  fill: rgba(78, 201, 176, 0.16);
+  stroke: var(--return);
+}
+.map-equip.is-selected .map-equip__body {
+  stroke-width: 2.8;
+  filter: drop-shadow(0 0 4px rgba(232, 130, 10, 0.7));
+}
+
+.map-equip__glyph {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+.map-equip--supply .map-equip__glyph { fill: var(--supply); }
+.map-equip--return .map-equip__glyph { fill: var(--return); }
+
+.map-equip__label {
+  font-family: var(--font-data);
+  fill: var(--text);
+  pointer-events: none;
+}
+
+/* Registers */
+.map-register {
+  cursor: move;
+}
+.map-register__ring {
+  fill: rgba(0, 0, 0, 0.45);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.map-register--supply .map-register__ring { stroke: var(--supply); }
+.map-register--return .map-register__ring { stroke: var(--return); }
+.map-register__cross {
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+}
+.map-register--supply .map-register__cross { stroke: var(--supply); }
+.map-register--return .map-register__cross { stroke: var(--return); }
+
+.map-register.is-selected .map-register__ring {
+  stroke-width: 2.6;
+  filter: drop-shadow(0 0 3px rgba(232, 130, 10, 0.7));
+}
+
+.map-register__label {
+  font-family: var(--font-data);
+  fill: var(--text-dim);
+  pointer-events: none;
+}
+
+/* Selection / drag handles */
+.map-handle {
+  fill: var(--orange);
+  stroke: var(--surface2);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+}
+.map-handle--bound {
+  fill: rgba(232, 130, 10, 0.4);
+  cursor: default;
+}
+.map-handle--point {
+  fill: rgba(232, 130, 10, 0.18);
+  stroke: var(--orange);
+}
+
+/* Map edit panel */
+.map-edit-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-edit-panel[hidden] { display: none; }
+
+.map-edit-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  border-radius: 6px 6px 0 0;
+}
+
+.map-edit-panel__title {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  font-size: 13px;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
+.map-edit-panel__head .btn {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.map-edit-panel__body { padding: 12px 14px; }
+
+.edit-panel__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+}
+
+.edit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+.edit-row > span,
+.edit-row > legend {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 0;
+}
+
+.edit-row--wide  { grid-column: 1 / -1; }
+.edit-row--note {
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-mute);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  text-transform: none;
+}
+
+.edit-row--check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+.edit-row--check input { width: 18px; height: 18px; }
+.edit-row--check span {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+.edit-row input[type="text"],
+.edit-row input[type="number"],
+.edit-row select {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--font-data);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  min-height: 40px;
+}
+
+.edit-row input:focus,
+.edit-row select:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 1px var(--orange);
+}
+
+.edit-row input:disabled {
+  color: var(--text-mute);
+  background: var(--surface);
+  cursor: not-allowed;
+}
+
+@media (max-width: 540px) {
+  .edit-panel__grid { grid-template-columns: 1fr; }
+  .map-tools { gap: 4px; }
+  .tool-btn  { min-width: 44px; padding: 6px 8px; }
+  .map-snap  { margin-left: 0; flex-wrap: wrap; }
 }
 
 .decoder-bar {

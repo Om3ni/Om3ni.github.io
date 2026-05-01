@@ -11,12 +11,7 @@ import {
   archiveSurvey,
   deleteSurvey
 } from './storage.js';
-import { stageBand } from './math.js';
-
-// Full VPD scale on the decoder bar, in kPa. All current cultivation
-// stages (0.4 → 1.6 kPa) sit comfortably inside this range with margin
-// on each side. Single source of truth for the bar's domain.
-const DECODER_VPD_MAX = 2.0;
+import { initMap, renderMap } from './map.js';
 
 // ---- State ----------------------------------------------------------------
 
@@ -53,7 +48,12 @@ const APP = {
   mapMode: 'single',
   roomLen: null,
   roomWid: null,
-  activeTool: 'sensor',
+  // 'select' is the Phase 3 default — sensor placement lands in Phase 4 and
+  // will revert this to 'sensor' per spec at that point.
+  activeTool: 'select',
+  // Sub-mode for the equipment tool: which S/R variant a tap will drop.
+  // UI-only (not persisted); placed modules carry .type independently.
+  equipmentPlacementType: 'supply',
   nudgeStep: 0.5,
   selectedId: null,
   selectedType: null,
@@ -513,36 +513,8 @@ function renderEditor() {
   }
 
   renderSurveyTab();
-  renderMapTab();
+  renderMap();
   renderSaveStatus();
-}
-
-function renderMapTab() {
-  // Decoder bar — reads APP.stage and reflects the active VPD target band.
-  // Map (Phase 3) and heatmap (Phase 4) will render above this in the same
-  // panel; the bar always sits below them per spec.
-  const stage     = stageBand(APP.stage);
-  const stageEl   = document.getElementById('decoder-stage');
-  const rangeEl   = document.getElementById('decoder-range');
-  const trackEl   = document.getElementById('decoder-track');
-
-  if (!stageEl || !rangeEl || !trackEl) return;
-
-  if (!stage) {
-    stageEl.textContent = '—';
-    rangeEl.textContent = '—';
-    trackEl.style.removeProperty('--band-min');
-    trackEl.style.removeProperty('--band-max');
-    return;
-  }
-
-  const minPct = (stage.vpdMin / DECODER_VPD_MAX) * 100;
-  const maxPct = (stage.vpdMax / DECODER_VPD_MAX) * 100;
-
-  stageEl.textContent = stage.label;
-  rangeEl.textContent = `${stage.vpdMin.toFixed(2)} – ${stage.vpdMax.toFixed(2)} kPa`;
-  trackEl.style.setProperty('--band-min', `${minPct}%`);
-  trackEl.style.setProperty('--band-max', `${maxPct}%`);
 }
 
 function renderSurveyTab() {
@@ -643,6 +615,14 @@ function wireEditorView() {
 function init() {
   wireListView();
   wireEditorView();
+
+  // Map module needs the same setState/setUI pipe so its mutations route
+  // through the auto-save scheduler. getState returns the live APP object.
+  initMap({
+    getState: () => APP,
+    setState,
+    setUI
+  });
 
   const themeBtn = document.getElementById('theme-btn');
   if (themeBtn) themeBtn.addEventListener('click', toggleTheme);

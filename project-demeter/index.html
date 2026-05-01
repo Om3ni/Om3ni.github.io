@@ -157,7 +157,50 @@
 
         <section id="tab-map" class="tab-panel" role="tabpanel" hidden>
           <div class="map-tab">
-            <div class="placeholder map-canvas-placeholder">Room map &mdash; Phase 3</div>
+
+            <section class="map-controls" aria-label="Room layout controls">
+              <div class="map-dims">
+                <label class="map-dims__field">
+                  <span>Length (ft)</span>
+                  <input type="number" min="0" step="0.5" inputmode="decimal" data-map-dim="len" />
+                </label>
+                <label class="map-dims__field">
+                  <span>Width (ft)</span>
+                  <input type="number" min="0" step="0.5" inputmode="decimal" data-map-dim="wid" />
+                </label>
+                <div class="map-snap" role="group" aria-label="Snap step">
+                  <span class="map-snap__label">Snap</span>
+                  <button type="button" class="toggle toggle--sm" data-snap="0.5">0.5</button>
+                  <button type="button" class="toggle toggle--sm" data-snap="1">1</button>
+                  <button type="button" class="toggle toggle--sm" data-snap="2">2</button>
+                  <span class="map-snap__unit">ft</span>
+                </div>
+              </div>
+
+              <div class="map-tools" role="toolbar" aria-label="Map tools">
+                <button type="button" class="tool-btn" data-map-tool="select">Select</button>
+                <span class="tool-sep" aria-hidden="true"></span>
+                <button type="button" class="tool-btn tool-btn--supply" data-map-tool="equipment" data-eq-place="supply" title="Place supply equipment">S</button>
+                <button type="button" class="tool-btn tool-btn--return" data-map-tool="equipment" data-eq-place="return" title="Place return equipment">R</button>
+                <button type="button" class="tool-btn" data-map-tool="register" title="Place register">Reg</button>
+                <span class="tool-sep" aria-hidden="true"></span>
+                <button type="button" class="tool-btn" data-map-tool="canopy" title="Draw canopy zone">Canopy</button>
+                <button type="button" class="tool-btn" data-map-tool="dead" title="Draw dead zone">Dead</button>
+              </div>
+
+              <p class="map-tool-hint" id="map-tool-hint"></p>
+            </section>
+
+            <div class="map-canvas-wrap" id="map-canvas-wrap" aria-label="Room layout canvas"></div>
+            <div class="placeholder map-canvas-empty" id="map-empty">Enter room length and width to begin layout.</div>
+
+            <aside class="map-edit-panel" id="map-edit-panel" hidden>
+              <header class="map-edit-panel__head">
+                <span class="map-edit-panel__title" id="edit-panel-title">Element</span>
+                <button type="button" class="btn btn--ghost btn--quiet btn--danger" id="edit-panel-delete">Delete</button>
+              </header>
+              <div class="map-edit-panel__body" id="edit-panel-body"></div>
+            </aside>
 
             <section class="decoder-bar" aria-label="VPD target decoder">
               <div class="decoder-bar__head">

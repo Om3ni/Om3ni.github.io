@@ -1,4 +1,4 @@
-const CACHE_NAME = 'demeter-v6';
+const CACHE_NAME = 'demeter-v7';
 
 const ASSETS = [
   './',
