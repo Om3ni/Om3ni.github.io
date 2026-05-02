@@ -1,15 +1,23 @@
 // Project Demeter — Heatmap Module
 // Pure SVG <g> builder. No DOM access on import; only inside the exported
-// builder. Renders a 1ft × 1ft grid of cells colored by IDW-interpolated
-// VPD against the active stage band, plus an embedded legend that survives
-// SVG → PNG rasterization (Phase 7 print pipeline).
+// builder. Renders a half-foot grid of cells colored by IDW-interpolated
+// VPD against the active stage band, then runs a Gaussian blur over the
+// live cells so the cell-to-cell steps read as a continuous gradient.
+// Mathematically still IDW; the blur is presentation only. Dead-zone
+// cells render in a separate unblurred subgroup so their boundary stays
+// crisp. An embedded legend survives SVG → PNG rasterization (Phase 7).
 
 import { calcVPD, toC, idwInterpolate } from './math.js';
 import { SVG_NS } from './ciab.js';
 
-const CELL_FT = 1;
+const CELL_FT = 0.5;
 const CELL_OPACITY = 0.55;
 const LEAF_OFFSET_C = 2;
+// Blur stdDev in feet (filter primitiveUnits="userSpaceOnUse"). At 0.5
+// the effective blur radius (~3 sigma) covers ~3 cells at CELL_FT=0.5,
+// smoothing the grid into a continuous field without smearing past the
+// scale at which a technician reasons about VPD distribution.
+const BLUR_STDDEV_FT = 0.5;
 
 // Color stops (RGB tuples). Lerped piecewise based on how far the cell's
 // VPD sits below or above the stage band.
@@ -40,41 +48,91 @@ export function buildHeatmapLayer({ sensors, zones, len, wid, stage }) {
 
   const deadZones = (zones || []).filter((z) => z.type === 'dead').map(zoneRect);
 
-  const cols = Math.floor(len);
-  const rows = Math.floor(wid);
+  // Per-render unique ids so multiple instances on a page do not collide.
+  const uid = Math.random().toString(36).slice(2, 9);
+  const filterId = `hm-blur-${uid}`;
+  const clipId   = `hm-clip-${uid}`;
+  g.appendChild(buildDefs(filterId, clipId, len, wid));
+
+  const liveCells = document.createElementNS(SVG_NS, 'g');
+  liveCells.setAttribute('class', 'map-heatmap__cells');
+  liveCells.setAttribute('filter',    `url(#${filterId})`);
+  liveCells.setAttribute('clip-path', `url(#${clipId})`);
+
+  const deadCells = document.createElementNS(SVG_NS, 'g');
+  deadCells.setAttribute('class', 'map-heatmap__cells map-heatmap__cells--dead');
+  deadCells.setAttribute('clip-path', `url(#${clipId})`);
+
+  const cols = Math.ceil(len / CELL_FT);
+  const rows = Math.ceil(wid / CELL_FT);
 
   for (let cy = 0; cy < rows; cy++) {
     for (let cx = 0; cx < cols; cx++) {
-      const centerX = cx + CELL_FT / 2;
-      const centerY = cy + CELL_FT / 2;
+      const x = cx * CELL_FT;
+      const y = cy * CELL_FT;
+      const centerX = x + CELL_FT / 2;
+      const centerY = y + CELL_FT / 2;
 
       const cell = document.createElementNS(SVG_NS, 'rect');
-      cell.setAttribute('x', String(cx));
-      cell.setAttribute('y', String(cy));
+      cell.setAttribute('x', String(x));
+      cell.setAttribute('y', String(y));
       cell.setAttribute('width',  String(CELL_FT));
       cell.setAttribute('height', String(CELL_FT));
 
       if (pointInAnyRect(centerX, centerY, deadZones)) {
         cell.setAttribute('class', 'map-heatmap__cell map-heatmap__cell--dead');
-        g.appendChild(cell);
+        deadCells.appendChild(cell);
         continue;
       }
 
       const vpd = idwInterpolate(centerX, centerY, sensorValues, 2);
-      if (!Number.isFinite(vpd)) {
-        g.appendChild(cell);
-        continue;
-      }
+      if (!Number.isFinite(vpd)) continue;
       const rgb = colorForVpd(vpd, stage);
       cell.setAttribute('class', 'map-heatmap__cell');
       cell.setAttribute('fill', `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`);
       cell.setAttribute('fill-opacity', String(CELL_OPACITY));
-      g.appendChild(cell);
+      liveCells.appendChild(cell);
     }
   }
 
+  g.appendChild(liveCells);
+  g.appendChild(deadCells);
   g.appendChild(buildLegend(len, wid));
   return g;
+}
+
+function buildDefs(filterId, clipId, len, wid) {
+  const defs = document.createElementNS(SVG_NS, 'defs');
+
+  // Pad the filter region by ~3 stdDev so the blur of edge cells does
+  // not clip prematurely; the clip-path bounds the final visible result
+  // back to the room rectangle.
+  const pad = BLUR_STDDEV_FT * 3;
+  const filter = document.createElementNS(SVG_NS, 'filter');
+  filter.setAttribute('id', filterId);
+  filter.setAttribute('filterUnits',     'userSpaceOnUse');
+  filter.setAttribute('primitiveUnits',  'userSpaceOnUse');
+  filter.setAttribute('x',      String(-pad));
+  filter.setAttribute('y',      String(-pad));
+  filter.setAttribute('width',  String(len + pad * 2));
+  filter.setAttribute('height', String(wid + pad * 2));
+  const blur = document.createElementNS(SVG_NS, 'feGaussianBlur');
+  blur.setAttribute('stdDeviation', String(BLUR_STDDEV_FT));
+  filter.appendChild(blur);
+  defs.appendChild(filter);
+
+  const clip = document.createElementNS(SVG_NS, 'clipPath');
+  clip.setAttribute('id', clipId);
+  clip.setAttribute('clipPathUnits', 'userSpaceOnUse');
+  const rect = document.createElementNS(SVG_NS, 'rect');
+  rect.setAttribute('x', '0');
+  rect.setAttribute('y', '0');
+  rect.setAttribute('width',  String(len));
+  rect.setAttribute('height', String(wid));
+  clip.appendChild(rect);
+  defs.appendChild(clip);
+
+  return defs;
 }
 
 function colorForVpd(vpd, stage) {
