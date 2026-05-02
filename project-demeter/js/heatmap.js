@@ -37,9 +37,14 @@ const RED_DEEP   = [112, 10,  10 ];
 // without saturating instantly.
 const RAMP_SATURATION = 0.4;
 
-export function buildHeatmapLayer({ sensors, zones, len, wid, stage }) {
+export function buildHeatmapLayer({ sensors, zones, len, wid, stage, voided }) {
   const g = document.createElementNS(SVG_NS, 'g');
   g.setAttribute('class', 'map-heatmap');
+
+  if (voided) {
+    g.appendChild(buildVoidOverlay(len, wid));
+    return g;
+  }
 
   const sensorValues = [];
   for (const s of (sensors || [])) {
@@ -102,6 +107,36 @@ export function buildHeatmapLayer({ sensors, zones, len, wid, stage }) {
   g.appendChild(liveCells);
   g.appendChild(deadCells);
   g.appendChild(buildLegend(len, wid));
+  return g;
+}
+
+// C9 fail: paint a centered VOID notice instead of the heatmap cells.
+// The text spans the room so it's hard to mistake for "sensors not yet
+// placed"; the report still gets the formal VOID block in section 3.
+function buildVoidOverlay(len, wid) {
+  const g = document.createElementNS(SVG_NS, 'g');
+  g.setAttribute('class', 'map-heatmap__void');
+
+  const cx = len / 2;
+  const cy = wid / 2;
+
+  const head = document.createElementNS(SVG_NS, 'text');
+  head.setAttribute('class', 'map-heatmap__void-head');
+  head.setAttribute('x', String(cx));
+  head.setAttribute('y', String(cy - 0.4));
+  head.setAttribute('text-anchor', 'middle');
+  head.setAttribute('font-size', '1.6');
+  head.textContent = 'VOID';
+  g.appendChild(head);
+
+  const sub = document.createElementNS(SVG_NS, 'text');
+  sub.setAttribute('class', 'map-heatmap__void-sub');
+  sub.setAttribute('x', String(cx));
+  sub.setAttribute('y', String(cy + 0.9));
+  sub.setAttribute('text-anchor', 'middle');
+  sub.setAttribute('font-size', '0.55');
+  sub.textContent = 'sensor validity not established (C9 fail)';
+  g.appendChild(sub);
   return g;
 }
 

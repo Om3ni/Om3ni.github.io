@@ -27,6 +27,7 @@ import {
   buildRectHandles, buildPointHandle, buildBoundMarker
 } from './ciab.js';
 import { buildHeatmapLayer } from './heatmap.js';
+import { c9Failed } from './checklist.js';
 
 // ── Constants ─────────────────────────────────────────────────────────
 const DEFAULT_EQUIPMENT_W_FT = 3;
@@ -274,18 +275,25 @@ function renderCanvas(APP) {
     layerClass: 'map-axis',
     labelClass: 'map-axis__label'
   }));
+  // C9 fail invalidates measured environmental state per spec — heatmap
+  // and per-sensor VPD classifications are interpretations of that state,
+  // so they go gray on the Map tab too. Raw temp/RH stay visible: the
+  // technician needs them to do the C9 reference comparison.
+  const voided = c9Failed(APP.checklistState);
+
   svg.appendChild(buildZonesLayer(APP));
   svg.appendChild(buildHeatmapLayer({
     sensors: APP.sensors,
     zones:   APP.zones,
     len:     APP.roomLen,
     wid:     APP.roomWid,
-    stage:   stageBand(APP.stage)
+    stage:   stageBand(APP.stage),
+    voided
   }));
   svg.appendChild(buildDuctsLayer(APP));
   svg.appendChild(buildEquipmentLayer(APP));
   svg.appendChild(buildRegistersLayer(APP));
-  svg.appendChild(buildSensorsLayer(APP));
+  svg.appendChild(buildSensorsLayer(APP, voided));
   svg.appendChild(buildOverlayLayer(APP));
 
   wrap.innerHTML = '';
@@ -465,15 +473,15 @@ function buildRegistersLayer(APP) {
   return g;
 }
 
-function buildSensorsLayer(APP) {
+function buildSensorsLayer(APP, voided) {
   const g = document.createElementNS(SVG_NS, 'g');
-  g.setAttribute('class', 'map-sensors');
+  g.setAttribute('class', `map-sensors${voided ? ' is-voided' : ''}`);
   const stage = stageBand(APP.stage);
   const sensors = APP.sensors || [];
 
   sensors.forEach((s, i) => {
     const isSel = (APP.selectedType === 'sensor' && APP.selectedId === s.id);
-    const status = sensorStatus(s, stage);
+    const status = voided ? 'unread' : sensorStatus(s, stage);
     const wrap = document.createElementNS(SVG_NS, 'g');
     wrap.setAttribute('class', `map-sensor map-sensor--${status}${isSel ? ' is-selected' : ''}`);
 
@@ -1703,11 +1711,12 @@ function renderSensorTable(APP) {
 
   const focused = document.activeElement;
   const focusInfo = readSensorTableFocus(focused);
+  const voided = c9Failed(APP.checklistState);
 
   body.innerHTML = '';
   sensors.forEach((s, i) => {
     const isSel = (APP.selectedType === 'sensor' && APP.selectedId === s.id);
-    const status = sensorStatus(s, stage);
+    const status = voided ? 'unread' : sensorStatus(s, stage);
     const v = sensorVPD(s);
 
     const row = document.createElement('div');
@@ -1795,12 +1804,24 @@ function renderSpatialSummary(APP) {
   }
 
   if (vpdBox) {
+    const voided = c9Failed(APP.checklistState);
     const stats = getMeasuredVPDStats(APP);
-    if (!stats || stats.count < 2) {
+    if (voided) {
+      vpdBox.hidden = false;
+      vpdBox.classList.remove('is-wide-range');
+      vpdBox.classList.add('is-voided');
+      vpdBox.innerHTML = `
+        <div class="spatial-vpd__void">
+          <strong>VOID</strong>
+          <span>Sensor validity not established. Reported VPD values cannot be assumed to represent canopy conditions. See C9.</span>
+        </div>
+      `;
+    } else if (!stats || stats.count < 2) {
       vpdBox.hidden = true;
       vpdBox.innerHTML = '';
-      vpdBox.classList.remove('is-wide-range');
+      vpdBox.classList.remove('is-wide-range', 'is-voided');
     } else {
+      vpdBox.classList.remove('is-voided');
       vpdBox.hidden = false;
       const pct = stats.count > 0 ? Math.round((stats.inRangeCount / stats.count) * 100) : 0;
       const wide = stats.range > RANGE_FLAG_KPA;

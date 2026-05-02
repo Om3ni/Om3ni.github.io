@@ -1903,6 +1903,52 @@ body {
   letter-spacing: 0.02em;
 }
 
+/* C9 fail: VPD aggregate is invalidated. Same red treatment as the
+   header VPD: VOID readout, with an inline explanatory note. */
+.spatial-vpd__void {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  background: rgba(224, 96, 96, 0.12);
+  font-family: var(--font-data);
+  font-size: 12px;
+  color: var(--text);
+}
+.spatial-vpd__void strong {
+  color: var(--red);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-size: 16px;
+}
+
+/* SVG VOID overlay painted by heatmap.js when C9 fails. */
+.map-heatmap__void-head {
+  fill: var(--red);
+  font-family: var(--font-data);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  opacity: 0.85;
+}
+.map-heatmap__void-sub {
+  fill: var(--text-dim);
+  font-family: var(--font-data);
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
+/* Voided sensor dots: drop status color, keep label and VPD numerals
+   visible so the technician can still do C9 reference work. */
+.map-sensors.is-voided .map-sensor__dot {
+  fill: var(--text-mute);
+  stroke: var(--surface2);
+}
+.map-sensors.is-voided .map-sensor__vpd {
+  fill: var(--text-mute);
+}
+
 .spatial-summary__vpd.is-wide-range .spatial-fact__value {
   /* The flag itself carries the warning color. Cell values stay readable. */
 }
