@@ -401,6 +401,13 @@ body {
   flex: 1 1 auto;
 }
 
+.survey-row__title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .survey-row__title {
   font-family: var(--font-ui);
   font-weight: 600;
@@ -410,6 +417,37 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.survey-row__badge {
+  flex: 0 0 auto;
+  font-family: var(--font-data);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  background: var(--surface2);
+}
+
+.survey-row__badge[data-status="active"] {
+  color: var(--orange-hi);
+  border-color: var(--orange-lo);
+  background: var(--orange-dim);
+}
+.survey-row__badge[data-status="complete"] {
+  color: var(--green);
+  border-color: rgba(111, 200, 118, 0.35);
+  background: rgba(111, 200, 118, 0.1);
+}
+.survey-row__badge[data-status="archived"] {
+  color: var(--text-mute);
+  border-color: var(--border);
+  background: var(--surface2);
 }
 
 .survey-row__meta {
@@ -471,6 +509,56 @@ body {
 .editor-nav__save[data-status="saving"]  { color: var(--orange-hi); }
 .editor-nav__save[data-status="pending"] { color: var(--text-dim); }
 .editor-nav__save[data-status="error"]   { color: var(--red); }
+
+/* Lock banner — sits between editor-nav and tab-bar when the open survey
+   is soft-locked (complete/archived) and not yet unlocked for edit. The
+   unlock button stays clickable because the banner lives outside the
+   pointer-events:none readonly region applied to .tab-panels. */
+.lock-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--orange-dim);
+  border-bottom: 1px solid var(--orange-lo);
+  color: var(--orange-hi);
+  font-family: var(--font-data);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.lock-banner__icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.lock-banner__msg {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.lock-banner .btn {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+/* Read-only mode: visually dim and disable pointer interaction in the tab
+   content. The setState gate in app.js is the actual write-block; this is
+   the affordance so the tech sees why their taps don't land. The Report
+   tab toolbar is exempt — Copy and Print read the frozen snapshot and
+   are how the tech delivers a completed survey. Generate is disabled in
+   JS instead. */
+.tab-panels.is-readonly {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.tab-panels.is-readonly .report-tab__head {
+  opacity: 1;
+  pointer-events: auto;
+}
 
 /* The tab-panels container needs to scroll inside the editor view. */
 .editor-view .tab-panels {

@@ -29,9 +29,14 @@ const APP = {
   listSection: 'active',  // 'active' | 'complete' | 'archived'
   listItems: [],
   saveStatus: 'idle',     // 'idle' | 'pending' | 'saving' | 'saved' | 'error'
+  // Lifecycle lock for the editor. True when the open survey is 'complete'
+  // or 'archived' — soft-locks the form/map/checklist until the tech taps
+  // Unlock. Resets on each survey open. Not persisted.
+  editLocked: false,
 
   // SurveyRecord-derived state (persisted)
   surveyId: null,
+  status: 'active',       // 'active' | 'complete' | 'archived'
   createdAt: null,
   updatedAt: null,
   reportGeneratedAt: null,
@@ -91,12 +96,22 @@ const PERSISTED_FIELDS = new Set([
   'sensors', 'zones', 'equipmentModules', 'ducts', 'registers',
   'tierCount', 'lighting', 'tierSensors',
   'checklistState',
-  'reportSnapshot', 'reportGeneratedAt'
+  'reportSnapshot', 'reportGeneratedAt',
+  'status'
+]);
+
+// Subset of PERSISTED_FIELDS that the lifecycle lock allows to mutate even
+// when the survey is read-only. Lifecycle bookkeeping (status flip, snapshot
+// freeze on re-print) should still flow through; tech-entered survey data
+// must not.
+const LOCK_BYPASS_FIELDS = new Set([
+  'status', 'reportSnapshot', 'reportGeneratedAt'
 ]);
 
 // ---- Marshal APP <-> SurveyRecord -----------------------------------------
 
 function appIntoRecord(rec) {
+  rec.status = APP.status;
   rec.metadata = {
     customer: APP.customer,
     facility: APP.facility,
@@ -137,6 +152,7 @@ function recordToPatch(rec) {
   const d = rec.mapData  || {};
   return {
     surveyId:          rec.id,
+    status:            rec.status || 'active',
     createdAt:         rec.createdAt,
     updatedAt:         rec.updatedAt,
     reportGeneratedAt: rec.reportGeneratedAt,
@@ -226,7 +242,21 @@ function patchTouchesPersisted(patch) {
 }
 
 // All survey-data mutations route through here. Triggers debounced save.
+// When the open survey is editLocked (complete/archived, not yet unlocked),
+// persisted-field writes are dropped so a stray UI event can't quietly
+// mutate a delivered survey. Lifecycle bookkeeping (status, snapshot)
+// flows through regardless.
 function setState(patch) {
+  if (APP.editLocked) {
+    let dropped = false;
+    for (const k of Object.keys(patch)) {
+      if (PERSISTED_FIELDS.has(k) && !LOCK_BYPASS_FIELDS.has(k)) {
+        delete patch[k];
+        dropped = true;
+      }
+    }
+    if (dropped && !Object.keys(patch).length) return;
+  }
   Object.assign(APP, patch);
   render();
   if (patchTouchesPersisted(patch)) scheduleSave();
@@ -244,6 +274,7 @@ function hydrateFromRecord(rec) {
   _activeRec = rec;
   const patch = recordToPatch(rec);
   patch.saveStatus = 'idle';
+  patch.editLocked = (patch.status !== 'active');
   setUI(patch);
 }
 
@@ -251,11 +282,13 @@ function clearActiveSurvey() {
   _activeRec = null;
   setUI({
     surveyId:          null,
+    status:            'active',
     createdAt:         null,
     updatedAt:         null,
     reportGeneratedAt: null,
     lastEditedDevice:  null,
-    saveStatus:        'idle'
+    saveStatus:        'idle',
+    editLocked:        false
   });
 }
 
@@ -264,12 +297,27 @@ function clearActiveSurvey() {
 // the technician moves on. Persistence is via PERSISTED_FIELDS, so the
 // patch goes through the normal save scheduler — flushSave() collapses
 // any in-flight debounce.
+//
+// First-time generation flips status 'active' → 'complete' per spec
+// lifecycle (Edit → Generate Report → Freeze Snapshot → Complete) and
+// soft-locks the editor. Re-generating from an already-complete survey
+// just refreshes the snapshot — status stays 'complete'.
 function commitReportSnapshot(snapshot) {
   if (!snapshot) return;
-  setState({
+  const patch = {
     reportSnapshot:    snapshot,
     reportGeneratedAt: snapshot.generatedAt
-  });
+  };
+  // First-time generation flips status and re-locks in a single render —
+  // setting editLocked here piggybacks on the same setState pass so the
+  // Generate button doesn't visibly toggle to enabled-then-disabled.
+  // Re-generating an already-complete (and possibly unlocked) survey just
+  // refreshes the snapshot — status and lock state are left as-is.
+  if (APP.status === 'active') {
+    patch.status = 'complete';
+    patch.editLocked = true;
+  }
+  setState(patch);
   flushSave().catch((err) => console.error('Snapshot save failed:', err));
 }
 
@@ -285,6 +333,17 @@ async function actionNewSurvey() {
 async function actionResume(id) {
   const rec = await loadSurvey(id);
   if (!rec) return;
+
+  // Archived surveys require explicit confirmation per spec — they are
+  // locked after client delivery to prevent accidental post-delivery edits.
+  // Opening still lands in read-only; unlock is a separate confirmation.
+  if (rec.status === 'archived') {
+    const ok = confirm(
+      'This survey is archived. Open it for viewing?\n\n' +
+      'It will open in read-only mode. You can tap Unlock to make changes.'
+    );
+    if (!ok) return;
+  }
 
   // Device-collision warning: another device edited recently.
   const myDevice = getDeviceId();
@@ -304,6 +363,23 @@ async function actionResume(id) {
   await flushSave();
   hydrateFromRecord(rec);
   setUI({ view: 'editor', activeTab: 'survey' });
+}
+
+// Unlock a soft-locked (complete/archived) survey for editing. Status is
+// not reverted — 'complete' marks delivery, not immutability. The tech can
+// edit and re-generate the report; the snapshot refreshes in place.
+async function actionUnlock() {
+  if (!APP.editLocked) return;
+  const label = (APP.status === 'archived')
+    ? 'archived'
+    : 'completed';
+  const ok = confirm(
+    `Unlock this ${label} survey for editing?\n\n` +
+    `Edits will be saved over the existing record. ` +
+    `The report snapshot stays until you regenerate it.`
+  );
+  if (!ok) return;
+  setUI({ editLocked: false });
 }
 
 async function actionBackToList() {
@@ -452,21 +528,35 @@ function emptyMessage(section) {
   }
 }
 
+function statusBadgeLabel(status) {
+  switch (status) {
+    case 'complete': return 'Complete';
+    case 'archived': return 'Archived';
+    case 'active':   return 'Active';
+    default:         return String(status || 'Active');
+  }
+}
+
 function buildSurveyRow(rec) {
   const li = document.createElement('li');
   li.className = 'survey-row';
   li.dataset.id = rec.id;
+  li.dataset.status = rec.status || 'active';
 
   const m = rec.metadata || {};
   const headerParts = [m.customer, m.facility, m.room].filter(Boolean);
   const headerText  = headerParts.length ? headerParts.join(' · ') : 'Untitled survey';
   const dateText    = m.date || '—';
   const updatedText = formatRelative(rec.updatedAt);
+  const statusText  = statusBadgeLabel(rec.status);
 
   const head = document.createElement('div');
   head.className = 'survey-row__head';
   head.innerHTML = `
-    <div class="survey-row__title"></div>
+    <div class="survey-row__title-line">
+      <span class="survey-row__title"></span>
+      <span class="survey-row__badge"></span>
+    </div>
     <div class="survey-row__meta">
       <span class="survey-row__date"></span>
       <span class="survey-row__sep">·</span>
@@ -476,6 +566,9 @@ function buildSurveyRow(rec) {
   head.querySelector('.survey-row__title').textContent   = headerText;
   head.querySelector('.survey-row__date').textContent    = dateText;
   head.querySelector('.survey-row__updated').textContent = updatedText;
+  const badgeEl = head.querySelector('.survey-row__badge');
+  badgeEl.textContent = statusText;
+  badgeEl.dataset.status = rec.status || 'active';
 
   const actions = document.createElement('div');
   actions.className = 'survey-row__actions';
@@ -487,7 +580,9 @@ function buildSurveyRow(rec) {
   openBtn.addEventListener('click', () => actionResume(rec.id));
   actions.appendChild(openBtn);
 
-  if (rec.status === 'active') {
+  // Spec lifecycle is active → complete → archived, so both editable and
+  // delivered rows can move forward to archived from the list.
+  if (rec.status === 'active' || rec.status === 'complete') {
     const archBtn = document.createElement('button');
     archBtn.type = 'button';
     archBtn.className = 'btn btn--ghost btn--quiet';
@@ -550,6 +645,35 @@ function renderEditor() {
   renderChecklist();
   renderReport();
   renderSaveStatus();
+  renderLockState();
+}
+
+// Lock banner sits between the editor nav strip and the tab bar. The
+// is-readonly class on .tab-panels disables pointer interaction in the
+// content area; the unlock button stays clickable because it lives outside
+// .tab-panels. The setState gate is the actual write-block — this is the
+// visible affordance.
+function renderLockState() {
+  const editorEl = document.getElementById('editor-view');
+  const banner   = document.getElementById('lock-banner');
+  const panels   = editorEl ? editorEl.querySelector('.tab-panels') : null;
+  const genBtn   = document.getElementById('btn-generate-report');
+
+  const locked = !!APP.editLocked;
+
+  if (panels) panels.classList.toggle('is-readonly', locked);
+  if (banner) {
+    banner.hidden = !locked;
+    if (locked) {
+      const msg = banner.querySelector('.lock-banner__msg');
+      if (msg) msg.textContent = (APP.status === 'archived')
+        ? 'Archived survey — read-only.'
+        : 'Completed survey — read-only.';
+    }
+  }
+  // Generate Report writes the snapshot, so disable while locked. Copy
+  // and Print are read-only on the snapshot and stay enabled.
+  if (genBtn) genBtn.disabled = locked;
 }
 
 function renderSurveyTab() {
@@ -619,6 +743,13 @@ function wireEditorView() {
   document.getElementById('btn-back-to-list').addEventListener('click', () => {
     actionBackToList().catch((err) => console.error(err));
   });
+
+  const unlockBtn = document.getElementById('btn-unlock');
+  if (unlockBtn) {
+    unlockBtn.addEventListener('click', () => {
+      actionUnlock().catch((err) => console.error(err));
+    });
+  }
 
   document.querySelectorAll('.tab-bar__tab').forEach((btn) => {
     btn.addEventListener('click', () => setUI({ activeTab: btn.dataset.tab }));

@@ -69,6 +69,12 @@
         <div class="editor-nav__save" id="save-status" aria-live="polite"></div>
       </div>
 
+      <div class="lock-banner" id="lock-banner" role="status" hidden>
+        <span class="lock-banner__icon" aria-hidden="true">&#128274;</span>
+        <span class="lock-banner__msg">Read-only.</span>
+        <button type="button" class="btn btn--ghost btn--quiet" id="btn-unlock">Unlock to edit</button>
+      </div>
+
       <nav class="tab-bar" role="tablist" aria-label="Main tabs">
         <button class="tab-bar__tab is-active" role="tab" data-tab="survey"    aria-selected="true"  aria-controls="tab-survey">Survey</button>
         <button class="tab-bar__tab"           role="tab" data-tab="map"       aria-selected="false" aria-controls="tab-map">Map</button>
