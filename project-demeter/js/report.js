@@ -502,10 +502,11 @@ function renderSpatialSingle(snap) {
   lines.push('  Point  Pos (X, Y)     Temp     RH      VPD       Status     Basis');
   lines.push('  -----  -------------  -------  ------  --------  ---------  -----------');
 
-  const cs = snap.checklistState || {};
-  const cs9 = getItemState(cs, 'C9');
-  // Per-sensor evidence basis: prefer C9's basis if set, else 'Measured'
-  // when reading present, else 'Not Verified'.
+  // Per-sensor evidence basis comes off the sensor record itself
+  // (added in the post-Phase-8 schema fix). When a sensor has a reading
+  // but no basis recorded, default to 'Measured'; with no reading,
+  // surface 'Not Verified' regardless of stored basis since there's
+  // nothing to attest to.
   for (let i = 0; i < md.sensors.length; i++) {
     const s = md.sensors[i];
     const label = s.label || `S${i + 1}`;
@@ -516,7 +517,7 @@ function renderSpatialSingle(snap) {
     const vpdStr = Number.isFinite(vpd) ? `${fmtNum(vpd, 2)} kPa` : '--';
     const status = Number.isFinite(vpd) && band ? vpdStatusLabel(vpd, band) : '--';
     const basis = Number.isFinite(vpd)
-      ? (cs9.evidenceBasis || 'Measured')
+      ? (s.evidenceBasis || 'Measured')
       : 'Not Verified';
     lines.push(
       '  ' + pad(label, 5)
@@ -581,7 +582,9 @@ function renderSpatialMulti(snap) {
       if (Number.isFinite(vpd)) vpds.push(vpd);
       const vpdStr = Number.isFinite(vpd) ? `${fmtNum(vpd, 2)} kPa` : '--';
       const status = Number.isFinite(vpd) && band ? vpdStatusLabel(vpd, band) : '--';
-      const basis = Number.isFinite(vpd) ? 'Measured' : 'Not Verified';
+      const basis = Number.isFinite(vpd)
+        ? (s.evidenceBasis || 'Measured')
+        : 'Not Verified';
       lines.push(
         '  ' + pad(label, 5)
         + '  ' + pad(pos, 5)

@@ -138,6 +138,25 @@ function migrateToV2(rec) {
     }
   }
 
+  // Sensor evidenceBasis was missing from the original v2 schema even
+  // though Spec §Evidence Basis Enum lists sensor table among the things
+  // that carry it. Default to 'Measured' for legacy sensor records — the
+  // tech actually entered those readings, so 'Measured' is the honest
+  // default. Tech can downgrade in the edit panel if the reading was
+  // sourced indirectly.
+  if (rec.mapData) {
+    const sensors = rec.mapData.sensors || [];
+    for (const s of sensors) {
+      if (s && s.evidenceBasis == null) s.evidenceBasis = 'Measured';
+    }
+    const ts = rec.mapData.tierSensors || {};
+    for (const t of Object.keys(ts)) {
+      for (const s of (ts[t] || [])) {
+        if (s && s.evidenceBasis == null) s.evidenceBasis = 'Measured';
+      }
+    }
+  }
+
   // ── Version-gated migration: v1 → v2 ──
   if (rec.version === SCHEMA_VERSION) return rec;
 

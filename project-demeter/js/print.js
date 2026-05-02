@@ -14,7 +14,6 @@
 import {
   CHECKLIST_GROUPS,
   C9_DETAIL,
-  getItemState,
   defaultItemState
 } from './checklist.js';
 
@@ -923,6 +922,9 @@ function sectionRoomMapMulti(snap) {
       const pos   = (s.position || 'mid').toUpperCase();
       const vpd   = sensorVPD(s);
       const status = Number.isFinite(vpd) && band ? vpdStatusLabel(vpd, band) : '&mdash;';
+      const basis = Number.isFinite(vpd)
+        ? (s.evidenceBasis || 'Measured')
+        : 'Not Verified';
       return `<tr>
         <td>${esc(label)}</td>
         <td>${esc(pos)}</td>
@@ -930,7 +932,7 @@ function sectionRoomMapMulti(snap) {
         <td>${Number.isFinite(s.rh) ? `${num(s.rh, 0)}%` : '&mdash;'}</td>
         <td>${Number.isFinite(vpd) ? `${num(vpd, 2)} kPa` : '&mdash;'}</td>
         <td>${esc(status)}</td>
-        <td>${Number.isFinite(vpd) ? 'Measured' : 'Not Verified'}</td>
+        <td>${esc(basis)}</td>
       </tr>`;
     }).join('') || `<tr><td colspan="7" class="muted">(no sensors recorded for this tier)</td></tr>`;
 
@@ -978,8 +980,6 @@ function buildSensorTable(snap) {
   const sensors = md.sensors || [];
   const unitF = !!(snap.metadata && snap.metadata.unitF !== false);
   const stage = stageBand(snap.metadata && snap.metadata.stage);
-  const cs = snap.checklistState || {};
-  const c9State = getItemState(cs, 'C9');
 
   if (!sensors.length) {
     return `<p class="muted">No sensors recorded.</p>`;
@@ -991,7 +991,7 @@ function buildSensorTable(snap) {
     const v = sensorVPD(s);
     const status = Number.isFinite(v) && stage ? vpdStatusLabel(v, stage) : '&mdash;';
     const basis = Number.isFinite(v)
-      ? (c9State.evidenceBasis || 'Measured')
+      ? (s.evidenceBasis || 'Measured')
       : 'Not Verified';
     return `<tr>
       <td>${esc(label)}</td>

@@ -27,7 +27,7 @@ import {
   buildRectHandles, buildPointHandle, buildBoundMarker
 } from './ciab.js';
 import { buildHeatmapLayer } from './heatmap.js';
-import { c9Failed } from './checklist.js';
+import { c9Failed, EVIDENCE_BASIS_OPTIONS } from './checklist.js';
 
 // ── Constants ─────────────────────────────────────────────────────────
 const DEFAULT_EQUIPMENT_W_FT = 3;
@@ -884,10 +884,14 @@ function placeIndependentRegister(pt, APP) {
 }
 
 function placeSensor(pt, APP) {
+  // Default basis is 'Measured' since placing a sensor and entering a
+  // reading IS a measurement. Tech can downgrade to Inferred / Documented
+  // / etc. via the edit panel if the reading was sourced indirectly.
   const s = {
     id: newId('sn'),
     xFt: pt.x, yFt: pt.y,
-    tdb: null, rh: null
+    tdb: null, rh: null,
+    evidenceBasis: 'Measured'
   };
   _api.setState({
     sensors: [...(APP.sensors || []), s],
@@ -1410,11 +1414,14 @@ function buildRegisterForm(wrap, r) {
 }
 
 function buildSensorForm(wrap, s) {
+  const basisOpts = EVIDENCE_BASIS_OPTIONS
+    .map((v) => `<option value="${v}">${v}</option>`).join('');
   wrap.innerHTML = `
     <label class="edit-row"><span>X (ft)</span><input type="number" step="0.5" data-bind="xFt"></label>
     <label class="edit-row"><span>Y (ft)</span><input type="number" step="0.5" data-bind="yFt"></label>
     <label class="edit-row"><span>Temp (&deg;F)</span><input type="number" step="0.1" inputmode="decimal" data-bind="tdb"></label>
     <label class="edit-row"><span>RH (%)</span><input type="number" step="0.1" min="0" max="100" inputmode="decimal" data-bind="rh"></label>
+    <label class="edit-row edit-row--wide"><span>Basis</span><select data-bind="evidenceBasis">${basisOpts}</select></label>
     <div class="edit-row edit-row--wide edit-row--note">VPD <span class="edit-row__vpd" data-sensor-vpd>&mdash;</span></div>
   `;
   syncSensorInputs(wrap, s);
@@ -1545,13 +1552,23 @@ function onPanelInput(sel, el) {
   if (sel.type === 'sensor') {
     const s = (APP.sensors || []).find((x) => x.id === sel.el.id);
     if (!s) return;
-    let nx = s.xFt, ny = s.yFt;
-    if (bind === 'xFt') nx = clamp(value, 0, APP.roomLen);
-    if (bind === 'yFt') ny = clamp(value, 0, APP.roomWid);
-    if (approxEq(nx, s.xFt) && approxEq(ny, s.yFt)) return;
-    _api.setState({
-      sensors: APP.sensors.map((x) => x.id === s.id ? { ...x, xFt: nx, yFt: ny } : x)
-    });
+    if (bind === 'xFt' || bind === 'yFt') {
+      let nx = s.xFt, ny = s.yFt;
+      if (bind === 'xFt') nx = clamp(value, 0, APP.roomLen);
+      if (bind === 'yFt') ny = clamp(value, 0, APP.roomWid);
+      if (approxEq(nx, s.xFt) && approxEq(ny, s.yFt)) return;
+      _api.setState({
+        sensors: APP.sensors.map((x) => x.id === s.id ? { ...x, xFt: nx, yFt: ny } : x)
+      });
+      return;
+    }
+    if (bind === 'evidenceBasis') {
+      if (s.evidenceBasis === value) return;
+      _api.setState({
+        sensors: APP.sensors.map((x) => x.id === s.id ? { ...x, evidenceBasis: value } : x)
+      });
+      return;
+    }
     return;
   }
 }
@@ -1630,6 +1647,7 @@ function syncSensorInputs(body, s) {
   setInputVal(body, 'yFt', s.yFt);
   setSensorReadingInput(body, 'tdb', s.tdb);
   setSensorReadingInput(body, 'rh',  s.rh);
+  setInputVal(body, 'evidenceBasis', s.evidenceBasis || 'Measured');
 
   const APP = _api.getState();
   const stage = stageBand(APP.stage);
@@ -2033,6 +2051,7 @@ function buildTierGroup(t, count, list, stage, voided, openState) {
     <span>Temp (°F)</span>
     <span>RH (%)</span>
     <span>VPD (kPa)</span>
+    <span>Basis</span>
     <span></span>
   `;
   body.appendChild(head);
@@ -2106,6 +2125,8 @@ function buildTierSensorRow(t, i, s, stage, voided) {
 
   const v = sensorVPD(s);
   const status = voided ? 'unread' : sensorStatus(s, stage);
+  const basisOpts = EVIDENCE_BASIS_OPTIONS
+    .map((val) => `<option value="${val}">${val}</option>`).join('');
 
   row.innerHTML = `
     <span class="tier-row__label">T${t}&middot;S${i + 1}</span>
@@ -2117,12 +2138,17 @@ function buildTierSensorRow(t, i, s, stage, voided) {
     <input type="number" step="0.1" inputmode="decimal" data-tier-bind="tdb" aria-label="Temperature">
     <input type="number" step="0.1" min="0" max="100" inputmode="decimal" data-tier-bind="rh" aria-label="Relative humidity (%)">
     <span class="tier-row__vpd is-${status}">${Number.isFinite(v) ? v.toFixed(2) : '—'}</span>
+    <select class="tier-row__basis" data-tier-bind="evidenceBasis" aria-label="Evidence basis">${basisOpts}</select>
     <button type="button" class="btn btn--ghost btn--quiet btn--danger tier-row__del">Delete</button>
   `;
 
   const sel = row.querySelector('[data-tier-bind="position"]');
   sel.value = s.position || 'mid';
   sel.addEventListener('change', () => setTierSensorField(t, s.id, 'position', sel.value));
+
+  const basisEl = row.querySelector('[data-tier-bind="evidenceBasis"]');
+  basisEl.value = s.evidenceBasis || 'Measured';
+  basisEl.addEventListener('change', () => setTierSensorField(t, s.id, 'evidenceBasis', basisEl.value));
 
   const tdbEl = row.querySelector('[data-tier-bind="tdb"]');
   const rhEl  = row.querySelector('[data-tier-bind="rh"]');
@@ -2140,7 +2166,7 @@ function addTierSensor(t) {
   const APP = _api.getState();
   const all = { ...(APP.tierSensors || {}) };
   const list = Array.isArray(all[t]) ? all[t].slice() : [];
-  list.push({ id: newId(), position: 'mid', tdb: null, rh: null });
+  list.push({ id: newId(), position: 'mid', tdb: null, rh: null, evidenceBasis: 'Measured' });
   all[t] = list;
   _api.setState({ tierSensors: all });
 }

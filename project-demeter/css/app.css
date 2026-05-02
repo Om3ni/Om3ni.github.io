@@ -2245,9 +2245,13 @@ body {
 .tier-rows__head,
 .tier-row {
   display: grid;
-  grid-template-columns: 64px 110px 1fr 1fr 80px 80px;
-  gap: 10px;
+  grid-template-columns: 56px 96px 1fr 1fr 70px 110px 70px;
+  gap: 8px;
   align-items: center;
+}
+
+.tier-row select.tier-row__basis {
+  font-size: 12px;
 }
 
 .tier-rows__head {
