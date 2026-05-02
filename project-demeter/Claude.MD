@@ -15,7 +15,7 @@ This codebase is governed by two documents. Read both before any work.
 
 ## Current Phase
 
-**Phase 0 — Repo & Skeleton**
+**Phase 9 — Survey Lifecycle Polish** (next; Phases 0–8 complete)
 
 Read the "Working Principles" section of ROADMAP.md at the start of
 every session. Read the current phase section in full. Do not begin
