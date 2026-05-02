@@ -20,12 +20,16 @@ const LEAF_OFFSET_C = 2;
 const BLUR_STDDEV_FT = 0.5;
 
 // Color stops (RGB tuples). Lerped piecewise based on how far the cell's
-// VPD sits below or above the stage band.
-const TEAL_DEEP  = [40, 130, 140];
-const TEAL_EDGE  = [78, 201, 176];
+// VPD sits below or above the stage band. Edges sit pale at the band
+// boundary ("just barely out, recoverable"); deeps go dark at the
+// saturation distance ("significantly out, alarming"). Wide lightness
+// gap on each ramp encodes deviation magnitude visually within the
+// 3-band teal/green/red semantic the spec calls out.
+const TEAL_DEEP  = [10,  77,  68 ];
+const TEAL_EDGE  = [124, 220, 196];
 const GREEN_FILL = [111, 200, 118];
-const RED_EDGE   = [224, 96,  96];
-const RED_DEEP   = [180, 40,  40];
+const RED_EDGE   = [240, 168, 168];
+const RED_DEEP   = [112, 10,  10 ];
 
 // Saturation distance in kPa: cell VPD this far below band.vpdMin (or
 // above band.vpdMax) reaches the deep end of the ramp. Past that it stays
