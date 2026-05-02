@@ -1222,39 +1222,32 @@ body {
   pointer-events: none;
 }
 
-/* Live mean-VPD needle. Position via --needle-pct (0..100%). Solid
-   cream body (high-contrast against the colored bar gradient) with a
-   colored arrowhead on top — teal=low, green=in, red=high — so a
-   single glance gives both position and status. Hidden when no
-   readings or C9 fail. */
-.decoder-bar__needle {
-  position: absolute;
-  top: -4px;
-  bottom: -4px;
-  left: var(--needle-pct, 0%);
-  width: 6px;
-  margin-left: -3px;
-  background: var(--text);
-  border: 1px solid #000;
-  border-radius: 1px;
-  pointer-events: none;
+/* Live mean-VPD pointer: an upward arrow rendered below the bar,
+   pointing at the position on the scale. Keeps the bar itself clean
+   (gradient + band markers only) and gives the live indicator its own
+   uncluttered row. Color echoes the sensor-dot palette so a glance
+   gives both position and status. Hidden when no readings or C9 fail. */
+.decoder-bar__pointer-row {
+  position: relative;
+  height: 12px;
+  margin-top: 4px;
 }
-.decoder-bar__needle::before {
-  content: "";
+.decoder-bar__pointer {
   position: absolute;
-  top: -7px;
-  left: 50%;
+  left: var(--needle-pct, 0%);
+  top: 0;
   transform: translateX(-50%);
   width: 0; height: 0;
-  border-left:  6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top:   7px solid var(--text);
-  filter: drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000);
+  border-left:   7px solid transparent;
+  border-right:  7px solid transparent;
+  border-bottom: 10px solid var(--text);
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.7));
+  pointer-events: none;
 }
-.decoder-bar__needle[hidden] { display: none; }
-.decoder-bar__needle[data-status="low"]::before  { border-top-color: var(--teal);  }
-.decoder-bar__needle[data-status="in"]::before   { border-top-color: var(--green); }
-.decoder-bar__needle[data-status="high"]::before { border-top-color: var(--red);   }
+.decoder-bar__pointer[hidden] { display: none; }
+.decoder-bar__pointer[data-status="low"]  { border-bottom-color: var(--teal);  }
+.decoder-bar__pointer[data-status="in"]   { border-bottom-color: var(--green); }
+.decoder-bar__pointer[data-status="high"] { border-bottom-color: var(--red);   }
 
 .decoder-bar__scale {
   display: flex;
