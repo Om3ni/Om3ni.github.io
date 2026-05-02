@@ -828,13 +828,14 @@ function placeDuctAndRegister(pt, APP) {
     xFt: pt.x, yFt: pt.y,
     label: ''
   };
-  // Keep the source equipment selected and stay in Duct mode so the
-  // technician can drop multiple runs from the same module without
-  // re-selecting it each time.
+  // Drop back to Select after each placement so a stray double-tap
+  // can't bloom an accidental fan of ducts. Equipment stays selected,
+  // so adding another run is one tap on the Duct tool away.
   _api.setState({
     ducts:     [...(APP.ducts || []), d],
     registers: [...(APP.registers || []), r],
-    selectedId: source.id, selectedType: 'equipment'
+    selectedId: source.id, selectedType: 'equipment',
+    activeTool: 'select'
   });
 }
 
