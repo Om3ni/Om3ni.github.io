@@ -21,6 +21,8 @@ import {
   canopyArea
 } from './math.js';
 
+import { openPrintReport } from './print.js';
+
 const COL_WIDTH = 64;
 const RULE_1 = '================================================================';
 const RULE_2 = '----------------------------------------------------------------';
@@ -912,22 +914,39 @@ function renderFooter() {
 
 // ── Public generator ───────────────────────────────────────────────────────
 
-// Manufacturer-neutralization pass. The checklist source data carries
-// AGIQ references for the on-screen technician's reference, but the
-// report is the customer-facing artifact and must read as our own
-// document, not as a co-produced AGIQ piece. Specific phrases get
-// rephrased; any residual "AGIQ" tokens get stripped as a safety net.
-function manufacturerSanitize(s) {
+// Manufacturer-neutralization pass. AGIQ literature citations in the
+// checklist (e.g. "AGIQ Ch.6: …", "AGIQ Fig 11.05: …") are documentation
+// references and pass through verbatim. What this pass strips is anything
+// that implies the report was co-produced with the manufacturer or that
+// we're an agent of theirs: contact strings (AgronomicIQ.com, phone),
+// endorsement phrasings ("preferred by AGIQ", "Every AGIQ unit"), and
+// the "AGIQ Specific:" group label. Exported so the print/PDF report
+// (print.js) can apply the same pass before HTML-escaping.
+export function manufacturerSanitize(s) {
   return String(s)
     .replace(/AGIQ Specific:?\s*/g, '')
     .replace(/AGIQ remote monitoring/gi, 'remote monitoring')
     .replace(/AGIQ project file \(call 1-833-327-AGIQ\)/gi, 'project documentation')
     .replace(/AGIQ project file/gi, 'project documentation')
     .replace(/Cannot contact AGIQ for project file\.?/gi, 'Cannot retrieve project file.')
-    .replace(/\bAGIQ\s+(design guide|sizing inputs|Ch\.\s*\d+|Fig\s*\d+\.\d+|Brochure[^.]*)/gi, 'design specification')
+    .replace(/Request from AGIQ \(1-833-327-AGIQ\):?/gi, 'Required documentation:')
+    .replace(/Water-cooled systems preferred by AGIQ\.?/gi,
+             'Water-cooled systems preferred per design specification.')
+    .replace(/preferred by AGIQ\b/gi, 'preferred per design specification')
+    .replace(/AGIQ sizing input data retrievable/gi,
+             'Sizing input data retrievable per design specification')
+    .replace(/Every AGIQ unit/gi, 'Every unit')
+    // Contact strings — the affiliation-implying parts of the
+    // header/footer/method lines.
     .replace(/\bAgronomicIQ\.com\b/gi, '')
     .replace(/\b1-833-327-AGIQ\b/gi, '')
-    .replace(/\bAGIQ\b/g, '')
+    .replace(/\bAgronomicIQ\b/gi, '')
+    // Cleanup: collapse runs of whitespace, strip stray space before
+    // terminal punctuation ("by ." -> "by."), drop empty parens
+    // ("Document retrieval - ()" -> "Document retrieval -").
+    .replace(/  +/g, ' ')
+    .replace(/\s+([.,;:!?])/g, '$1')
+    .replace(/\(\s*\)/g, '')
     .replace(/  +/g, ' ');
 }
 
@@ -979,8 +998,10 @@ export function initReport(api) {
   _api = api;
   const gen = document.getElementById('btn-generate-report');
   const cpy = document.getElementById('btn-copy-report');
+  const prn = document.getElementById('btn-print-report');
   if (gen) gen.addEventListener('click', onGenerate);
   if (cpy) cpy.addEventListener('click', onCopy);
+  if (prn) prn.addEventListener('click', onPrint);
 }
 
 function onGenerate() {
@@ -1008,6 +1029,17 @@ function onCopy() {
   }
 }
 
+function onPrint() {
+  if (!_api) return;
+  const APP = _api.getState();
+  const snap = APP.reportSnapshot;
+  if (!snap) return;
+  // openPrintReport opens a popup synchronously to keep the user-gesture
+  // context, then async-loads the rasterized heatmap before swapping in
+  // the full report. Errors get logged in the popup's console.
+  openPrintReport(snap).catch((err) => console.error('Print failed:', err));
+}
+
 function localTimestamp(iso) {
   if (!iso) return '--';
   try {
@@ -1026,15 +1058,18 @@ export function renderReport() {
   const body = document.getElementById('report-body');
   const status = document.getElementById('report-status');
   const cpy = document.getElementById('btn-copy-report');
+  const prn = document.getElementById('btn-print-report');
   if (!body || !status) return;
 
   if (!snap) {
     body.textContent = 'No report yet - tap Generate Report to produce one.';
     status.textContent = 'Not generated yet.';
     if (cpy) cpy.disabled = true;
+    if (prn) prn.disabled = true;
     return;
   }
   body.textContent = snap.text;
   status.textContent = `Last generated: ${localTimestamp(snap.generatedAt)}`;
   if (cpy) cpy.disabled = false;
+  if (prn) prn.disabled = false;
 }
