@@ -860,7 +860,11 @@ function placeEquipment(pt, APP) {
     label: '',
     model: '', serial: '',
     unitType: '', reheatType: '',
-    commissioningPresent: false, internetConnected: false
+    commissioningPresent: false, internetConnected: false,
+    // Default basis is 'Observed' since placing equipment on the floor
+    // plan reflects on-site visual confirmation. Tech can switch to
+    // Documented when fields were sourced from a print/submittal.
+    evidenceBasis: 'Observed'
   };
   _api.setState({
     equipmentModules: [...(APP.equipmentModules || []), m],
@@ -1347,6 +1351,8 @@ function buildPanelForm(sel) {
 }
 
 function buildEquipmentForm(wrap, m) {
+  const basisOpts = EVIDENCE_BASIS_OPTIONS
+    .map((v) => `<option value="${v}">${v}</option>`).join('');
   wrap.innerHTML = `
     <label class="edit-row"><span>X (ft)</span><input type="number" step="0.5" data-bind="xFt"></label>
     <label class="edit-row"><span>Y (ft)</span><input type="number" step="0.5" data-bind="yFt"></label>
@@ -1370,6 +1376,7 @@ function buildEquipmentForm(wrap, m) {
     </label>
     <label class="edit-row edit-row--check"><input type="checkbox" data-bind="commissioningPresent"><span>Commissioning report present</span></label>
     <label class="edit-row edit-row--check"><input type="checkbox" data-bind="internetConnected"><span>Internet-connected</span></label>
+    <label class="edit-row edit-row--wide"><span>Basis</span><select data-bind="evidenceBasis">${basisOpts}</select></label>
   `;
   syncEquipmentInputs(wrap, m);
   return wrap;
@@ -1613,6 +1620,7 @@ function syncEquipmentInputs(body, m) {
   setInputVal(body, 'reheatType', m.reheatType || '');
   setInputVal(body, 'commissioningPresent', !!m.commissioningPresent);
   setInputVal(body, 'internetConnected', !!m.internetConnected);
+  setInputVal(body, 'evidenceBasis', m.evidenceBasis || 'Observed');
   body.querySelectorAll('[data-set-type]').forEach((btn) => {
     const active = (btn.dataset.setType === m.type);
     btn.classList.toggle('is-active', active);

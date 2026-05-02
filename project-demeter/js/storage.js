@@ -138,12 +138,17 @@ function migrateToV2(rec) {
     }
   }
 
-  // Sensor evidenceBasis was missing from the original v2 schema even
-  // though Spec §Evidence Basis Enum lists sensor table among the things
-  // that carry it. Default to 'Measured' for legacy sensor records — the
-  // tech actually entered those readings, so 'Measured' is the honest
-  // default. Tech can downgrade in the edit panel if the reading was
-  // sourced indirectly.
+  // Sensor and equipment evidenceBasis were missing from the original v2
+  // schema even though Spec §Evidence Basis Enum lists sensor table and
+  // equipment layout among the things that carry it.
+  //
+  // Sensors default to 'Measured' — the tech entered those readings, so
+  // 'Measured' is the honest default. Equipment defaults follow the
+  // pre-fix synthesis rule (Observed when any structured field is set,
+  // else Inferred) so legacy reports keep showing the same basis they
+  // showed before. New records placed after the schema fix default to
+  // 'Observed' (placement implies on-site visual confirmation).
+  // Either way the tech can adjust in the edit panel.
   if (rec.mapData) {
     const sensors = rec.mapData.sensors || [];
     for (const s of sensors) {
@@ -153,6 +158,13 @@ function migrateToV2(rec) {
     for (const t of Object.keys(ts)) {
       for (const s of (ts[t] || [])) {
         if (s && s.evidenceBasis == null) s.evidenceBasis = 'Measured';
+      }
+    }
+    const mods = rec.mapData.equipmentModules || [];
+    for (const m of mods) {
+      if (m && m.evidenceBasis == null) {
+        const hasFields = !!(m.model || m.serial || m.unitType || m.reheatType);
+        m.evidenceBasis = hasFields ? 'Observed' : 'Inferred';
       }
     }
   }

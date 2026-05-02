@@ -633,6 +633,10 @@ function renderSpatial(snap) {
 }
 
 function moduleEvidenceBasis(m) {
+  // Stored on the record post-schema-fix; the synthesis fallback below
+  // matches the pre-fix behavior so reports built from records that
+  // somehow skipped migration still produce a reasonable value.
+  if (m && m.evidenceBasis) return m.evidenceBasis;
   if (m.model || m.serial || m.unitType || m.reheatType) return 'Observed';
   return 'Inferred';
 }

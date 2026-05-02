@@ -1021,7 +1021,8 @@ function sectionEquipment(snap) {
     const type = (m.type === 'return') ? 'Return' : 'Supply';
     const pos  = `(${num(m.xFt, 1)}, ${num(m.yFt, 1)})`;
     const size = `${num(m.wFt, 1)} &times; ${num(m.hFt, 1)}`;
-    const basis = (m.model || m.serial || m.unitType || m.reheatType) ? 'Observed' : 'Inferred';
+    const basis = m.evidenceBasis
+      || ((m.model || m.serial || m.unitType || m.reheatType) ? 'Observed' : 'Inferred');
     return `<tr>
       <td>${esc(id)}</td>
       <td><span class="badge ${type === 'Supply' ? 'badge--supply' : 'badge--return'}">${type}</span></td>
