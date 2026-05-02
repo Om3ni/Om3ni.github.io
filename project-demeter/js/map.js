@@ -223,6 +223,7 @@ function renderDecoderBar(APP) {
   const stageEl = document.getElementById('decoder-stage');
   const rangeEl = document.getElementById('decoder-range');
   const trackEl = document.getElementById('decoder-track');
+  const needle  = document.getElementById('decoder-needle');
   if (!stageEl || !rangeEl || !trackEl) return;
 
   if (!stage) {
@@ -230,6 +231,7 @@ function renderDecoderBar(APP) {
     rangeEl.textContent = '—';
     trackEl.style.removeProperty('--band-min');
     trackEl.style.removeProperty('--band-max');
+    if (needle) needle.hidden = true;
     return;
   }
   const minPct = (stage.vpdMin / DECODER_VPD_MAX) * 100;
@@ -238,6 +240,24 @@ function renderDecoderBar(APP) {
   rangeEl.textContent = `${stage.vpdMin.toFixed(2)} – ${stage.vpdMax.toFixed(2)} kPa`;
   trackEl.style.setProperty('--band-min', `${minPct}%`);
   trackEl.style.setProperty('--band-max', `${maxPct}%`);
+
+  // Live needle: mean VPD across sensors with readings. Hidden when no
+  // readings exist or C9 fail invalidates measured state.
+  if (needle) {
+    const stats = c9Failed(APP.checklistState) ? null : getMeasuredVPDStats(APP);
+    if (!stats) {
+      needle.hidden = true;
+    } else {
+      const pct = clamp((stats.mean / DECODER_VPD_MAX) * 100, 0, 100);
+      const status =
+        stats.mean < stage.vpdMin ? 'low' :
+        stats.mean > stage.vpdMax ? 'high' : 'in';
+      needle.hidden = false;
+      needle.dataset.status = status;
+      needle.style.setProperty('--needle-pct', `${pct}%`);
+      needle.title = `Mean VPD ${stats.mean.toFixed(2)} kPa`;
+    }
+  }
 }
 
 // ── Canvas (SVG) ──────────────────────────────────────────────────────
