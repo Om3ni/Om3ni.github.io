@@ -168,6 +168,28 @@ header { border-bottom: none; }
 .owner-btn:active { border-color: var(--orange-lo); color: var(--text-dim); }
 .owner-btn.active { border-color: var(--green-hi); color: var(--green-hi); }
 
+/* ── Update banner (revealed by sw-register when a fresh SW installs) ── */
+.update-banner {
+  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
+  z-index: 400;
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface, #141414);
+  border: 1px solid var(--orange-lo, #7a4510);
+  border-radius: 6px;
+  font-family: var(--mono); font-size: .72rem;
+  color: var(--text, #e8e6e1);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+}
+.update-banner[hidden] { display: none; }
+.update-banner__btn {
+  background: none; border: 1px solid var(--orange-lo, #7a4510);
+  color: var(--orange, #e8820a);
+  font-family: var(--mono); font-size: .7rem;
+  padding: 4px 10px; border-radius: 3px; cursor: pointer;
+}
+.update-banner__btn:active { background: var(--orange-lo, #7a4510); color: var(--text, #e8e6e1); }
+
 /* ── Owner modal ── */
 .owner-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.9);
@@ -644,6 +666,7 @@ This software is provided "as is" without warranty of any kind, express or impli
     <div class="hdr-sub">HVAC Field Tools</div>
   </div>
   <button class="hdr-cam" id="capCamBtn" title="Capture nameplate" aria-label="Capture nameplate">📷<span class="cam-badge" id="capBadge">0</span></button>
+  <button class="owner-btn" id="updateBtn" title="Check for updates and reload" onclick="forceRefresh()">&#8635; update</button>
   <button class="owner-btn" id="themeBtn" onclick="toggleTheme()">light</button>
   <button class="owner-btn" id="ownerBtn" onclick="openOwnerModal()">owner</button>
   <div class="hdr-badge" id="hdrBadge">0</div>
@@ -3830,30 +3853,77 @@ if (!localStorage.getItem(TUT_KEY) && localStorage.getItem(LICENSE_KEY)) {
 }
 
 // ── Service Worker ──────────────────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  /* updateViaCache:'none' = always re-fetch sw.js from network, bypassing the
-     browser's HTTP cache. Without this, iOS Safari and some Android Chrome
-     configs serve the SW script from disk cache for up to 24h, so the PWA
-     never even discovers a new version. */
-  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
-    .then(function(reg) {
-      /* Force a check on every page load + once an hour while open. */
-      try { reg.update(); } catch(e) {}
-      setInterval(function() { try { reg.update(); } catch(e) {} }, 60 * 60 * 1000);
-    })
-    .catch(function() {});
+// Update flow:
+//  - updateViaCache:'none' so the browser bypasses HTTP cache on sw.js
+//    re-fetch (without it, iOS Safari + some Android Chrome serve sw.js
+//    from disk cache for up to 24h and never see a new deploy).
+//  - reg.update() on load, on visibility change, and hourly.
+//  - updatefound + statechange detects when a fresh SW finishes installing
+//    while a controller is already active — that's "update ready" — and
+//    reveals the banner.
+//  - Banner click sends SKIP_WAITING so the new SW activates and reloads.
+//  - The header "↻ update" button (forceRefresh below) is the manual
+//    escape hatch when auto-update misses.
+(function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
 
-  /* When a new SW takes control (after its skipWaiting + clients.claim),
-     auto-reload so the page picks up fresh HTML/CSS/JS. Guard so we don't
-     reload during the first-ever install when there was no prior controller. */
-  var __hermes_swRefreshing = false;
-  var __hermes_hadController = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.addEventListener('controllerchange', function() {
-    if (__hermes_swRefreshing) return;
-    if (!__hermes_hadController) { __hermes_hadController = true; return; }
-    __hermes_swRefreshing = true;
-    window.location.reload();
+  var banner = document.getElementById('updateBanner');
+  var btn    = document.getElementById('updateBannerBtn');
+  function showBanner() { if (banner) banner.hidden = false; }
+
+  if (btn) {
+    btn.addEventListener('click', function() {
+      navigator.serviceWorker.getRegistration().then(function(reg) {
+        if (reg && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      }).catch(function(){}).then(function() {
+        window.location.reload();
+      });
+    });
+  }
+
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+      .then(function(reg) {
+        function watch(sw) {
+          if (!sw) return;
+          sw.addEventListener('statechange', function() {
+            if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+              showBanner();
+            }
+          });
+        }
+        watch(reg.installing);
+        if (reg.waiting && navigator.serviceWorker.controller) showBanner();
+        reg.addEventListener('updatefound', function() { watch(reg.installing); });
+
+        // Re-check when the page becomes visible (return from background).
+        document.addEventListener('visibilitychange', function() {
+          if (!document.hidden) { try { reg.update(); } catch(e) {} }
+        });
+
+        // Hourly poll while the page stays open.
+        setInterval(function() { try { reg.update(); } catch(e) {} }, 60 * 60 * 1000);
+      })
+      .catch(function() { /* offline first-load is fine */ });
   });
+})();
+
+// Manual escape hatch for the header "↻ update" button. Asks the SW to
+// check for a new version, drops all caches, and reloads.
+function forceRefresh() {
+  function go() {
+    var p = ('caches' in window)
+      ? caches.keys().then(function(keys) {
+          return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+        }).catch(function(){})
+      : Promise.resolve();
+    p.then(function() { window.location.reload(); });
+  }
+  if (!('serviceWorker' in navigator)) { go(); return; }
+  navigator.serviceWorker.getRegistration()
+    .then(function(reg) { if (reg) return reg.update(); })
+    .catch(function(){})
+    .then(go);
 }
 </script>
 
@@ -4034,5 +4104,11 @@ if ('serviceWorker' in navigator) {
     f.addEventListener('input', resetNameplateOcrIfEmpty);
   });
 </script>
+
+<!-- Update banner: revealed by the SW registration when a fresh worker installs -->
+<div class="update-banner" id="updateBanner" role="status" aria-live="polite" hidden>
+  <span>New version available.</span>
+  <button type="button" class="update-banner__btn" id="updateBannerBtn">Refresh</button>
+</div>
 </body>
 </html>

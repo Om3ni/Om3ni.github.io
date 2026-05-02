@@ -3,7 +3,7 @@
   Strategy: cache-first for app shell, network-first for external resources.
   Bump CACHE_VERSION to force update after deploy.
 */
-var CACHE_VERSION = 'hermes-v15';
+var CACHE_VERSION = 'hermes-v16';
 
 var APP_SHELL = [
   './',
@@ -69,15 +69,30 @@ var APP_SHELL = [
   './refrigerants/data/r513a.js'
 ];
 
-/* Install — pre-cache the app shell */
+/* Install — pre-cache the app shell.
+   cache:'reload' on each Request bypasses the browser HTTP cache so the
+   SW does not bake stale assets into the new cache. GitHub Pages serves
+   assets with Cache-Control: max-age=600, which otherwise lets the
+   install fetch return yesterday's CSS even after a fresh deploy. */
 self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE_VERSION).then(function(cache) {
-      return cache.addAll(APP_SHELL);
+      return cache.addAll(APP_SHELL.map(function(url) {
+        return new Request(url, { cache: 'reload' });
+      }));
     }).then(function() {
       return self.skipWaiting();
     })
   );
+});
+
+/* Banner click in index.html posts SKIP_WAITING so a waiting SW can
+   activate immediately on user demand instead of waiting for natural
+   conditions (close + reopen). */
+self.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 /* Activate — clean old caches */
