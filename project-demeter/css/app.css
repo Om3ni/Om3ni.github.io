@@ -2109,3 +2109,292 @@ body {
     word-break: normal;
   }
 }
+
+/* ==========================================================================
+   Multi-tier mode (Phase 8)
+   ========================================================================== */
+
+.map-mode {
+  padding: 8px 12px 0;
+}
+
+.map-single[hidden],
+.map-multi[hidden] { display: none; }
+
+.tier-config {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.tier-config__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.tier-config__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 160px;
+}
+
+.tier-config__label {
+  font-family: var(--font-data);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+
+.tier-config select#tier-count {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-family: var(--font-data);
+  font-size: 13px;
+  min-height: 40px;
+}
+
+.tier-config__note {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--green, #6fcf6f);
+  border-radius: 4px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+.tier-config__note strong { color: var(--text); }
+
+/* Per-tier groups */
+.tier-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tier-group {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tier-group[open] .tier-group__head {
+  border-bottom: 1px solid var(--border);
+}
+
+.tier-group__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-ui);
+  user-select: none;
+}
+.tier-group__head::-webkit-details-marker { display: none; }
+.tier-group__head::marker { display: none; }
+
+.tier-group__title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+  letter-spacing: 0.04em;
+}
+.tier-group__sub {
+  color: var(--text-mute);
+  font-weight: 400;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.tier-group__count {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.tier-group__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px 14px;
+}
+
+.tier-rows__head,
+.tier-row {
+  display: grid;
+  grid-template-columns: 64px 110px 1fr 1fr 80px 80px;
+  gap: 10px;
+  align-items: center;
+}
+
+.tier-rows__head {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  padding: 4px 0;
+}
+
+.tier-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tier-row {
+  padding: 4px 0;
+}
+
+.tier-row__label {
+  font-family: var(--font-data);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.tier-row select.tier-row__pos,
+.tier-row input {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-data);
+  font-size: 13px;
+  min-height: 40px;
+}
+
+.tier-row select.tier-row__pos:focus,
+.tier-row input:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 1px var(--orange);
+}
+
+.tier-row__vpd {
+  font-family: var(--font-data);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  text-align: right;
+}
+.tier-row__vpd.is-low    { color: var(--teal); }
+.tier-row__vpd.is-in     { color: var(--green); }
+.tier-row__vpd.is-high   { color: var(--red); }
+.tier-row__vpd.is-unread { color: var(--text-mute); }
+
+.tier-row__del {
+  min-height: 40px;
+  font-size: 11px;
+}
+
+.tier-rows__empty {
+  padding: 10px 0;
+  text-align: center;
+  font-family: var(--font-data);
+  font-size: 12px;
+  color: var(--text-mute);
+}
+
+.tier-add {
+  align-self: flex-start;
+  font-size: 12px;
+}
+
+.tier-summary {
+  margin-top: 4px;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.tier-summary.is-wide-range {
+  border-color: var(--red);
+  background: rgba(224, 96, 96, 0.10);
+}
+
+.tier-summary__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-family: var(--font-data);
+  font-size: 12px;
+  color: var(--text);
+}
+
+.tier-summary__cell b { color: var(--text); }
+
+.tier-summary__flag {
+  margin: 6px 0 0;
+  font-family: var(--font-data);
+  font-size: 12px;
+  color: var(--red);
+}
+
+.tier-limit-note {
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text-mute);
+  border-radius: 4px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.tier-limit-note p { margin: 0 0 6px; }
+.tier-limit-note p:last-child { margin-bottom: 0; }
+.tier-limit-note strong { color: var(--text); }
+
+@media (max-width: 720px) {
+  .tier-rows__head,
+  .tier-row {
+    grid-template-columns: 56px 100px 1fr 1fr 70px 64px;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 540px) {
+  .tier-rows__head { display: none; }
+  .tier-row {
+    grid-template-columns: 56px 1fr 1fr;
+    grid-template-areas:
+      "label pos pos"
+      "label tdb rh"
+      "vpd  vpd del";
+    row-gap: 6px;
+  }
+  .tier-row__label { grid-area: label; }
+  .tier-row .tier-row__pos { grid-area: pos; }
+  .tier-row [data-tier-bind="tdb"] { grid-area: tdb; }
+  .tier-row [data-tier-bind="rh"]  { grid-area: rh; }
+  .tier-row__vpd { grid-area: vpd; text-align: left; }
+  .tier-row__del { grid-area: del; }
+  .tier-config__row { flex-direction: column; align-items: stretch; }
+}

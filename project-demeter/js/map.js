@@ -45,6 +45,10 @@ const RANGE_FLAG_KPA         = 0.3;   // wide-distribution threshold (spec §Spa
 const UNIT_TYPES   = ['', 'Evolution split', 'Compressor Wall', 'Other'];
 const REHEAT_TYPES = ['', 'modulating', 'on-off', 'none'];
 
+const MIN_TIERS = 2;
+const MAX_TIERS = 6;
+const POSITION_LABEL = { head: 'Head', mid: 'Middle', tail: 'Tail' };
+
 // ── Module-level state ────────────────────────────────────────────────
 let _api = null;             // { getState, setState, setUI } injected from app.js
 let _gesture = null;         // active drag/draw gesture
@@ -96,6 +100,37 @@ export function initMap(api) {
       _api.setState({ airflowConfidence: btn.dataset.airflow });
     });
   });
+
+  // Mode toggle (Single Tier / Multi Tier).
+  document.querySelectorAll('[data-map-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const next = btn.dataset.mapMode;
+      if (!next || (_api.getState().mapMode === next)) return;
+      // Drop any active selection on switch — single-tier selectedId is
+      // meaningless in multi-tier and vice versa.
+      _api.setState({
+        mapMode: next,
+        selectedId: null,
+        selectedType: null
+      });
+    });
+  });
+
+  // Tier count (multi-tier).
+  const tierCountSel = document.getElementById('tier-count');
+  if (tierCountSel) {
+    tierCountSel.addEventListener('change', () => {
+      const n = clamp(Number(tierCountSel.value) || MIN_TIERS, MIN_TIERS, MAX_TIERS);
+      _api.setState({ tierCount: n });
+    });
+  }
+
+  // Lighting type (multi-tier).
+  document.querySelectorAll('[data-lighting]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      _api.setState({ lighting: btn.dataset.lighting });
+    });
+  });
 }
 
 // Dimension input → APP.roomLen / APP.roomWid. Empty or non-positive
@@ -136,15 +171,42 @@ export function renderMap() {
   if (!_api) return;
   const APP = _api.getState();
 
-  renderDimensions(APP);
-  renderToolPalette(APP);
-  renderSnapSelector(APP);
-  renderHelpHint(APP);
-  renderCanvas(APP);
-  renderEditPanel(APP);
-  renderSensorTable(APP);
-  renderSpatialSummary(APP);
+  renderModeToggle(APP);
+  renderModeWrappers(APP);
+
+  if (APP.mapMode === 'multi') {
+    renderTierConfig(APP);
+    renderTierGroups(APP);
+  } else {
+    renderDimensions(APP);
+    renderToolPalette(APP);
+    renderSnapSelector(APP);
+    renderHelpHint(APP);
+    renderCanvas(APP);
+    renderEditPanel(APP);
+    renderSensorTable(APP);
+    renderSpatialSummary(APP);
+  }
+
   renderDecoderBar(APP);
+}
+
+// ── Mode toggle / wrapper visibility ──────────────────────────────────
+function renderModeToggle(APP) {
+  const mode = APP.mapMode || 'single';
+  document.querySelectorAll('[data-map-mode]').forEach((btn) => {
+    const active = btn.dataset.mapMode === mode;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-checked', String(active));
+  });
+}
+
+function renderModeWrappers(APP) {
+  const single = document.getElementById('map-single');
+  const multi  = document.getElementById('map-multi');
+  const isMulti = APP.mapMode === 'multi';
+  if (single) single.hidden = isMulti;
+  if (multi)  multi.hidden  = !isMulti;
 }
 
 // ── Dimensions row ────────────────────────────────────────────────────
@@ -1876,12 +1938,284 @@ function renderSpatialSummary(APP) {
   }
 }
 
+// ── Multi-tier UI ─────────────────────────────────────────────────────
+function tierLabel(t, count) {
+  if (count === 2) return t === 1 ? 'Top' : 'Bottom';
+  if (count === 3) {
+    if (t === 1) return 'Top';
+    if (t === 2) return 'Middle';
+    return 'Bottom';
+  }
+  return `T${t}`;
+}
+
+function activeTierSensors(APP) {
+  const ts = APP.tierSensors || {};
+  const count = clamp(Number(APP.tierCount) || MIN_TIERS, MIN_TIERS, MAX_TIERS);
+  const out = [];
+  for (let t = 1; t <= count; t++) {
+    const arr = Array.isArray(ts[t]) ? ts[t] : [];
+    for (const s of arr) out.push(s);
+  }
+  return out;
+}
+
+function renderTierConfig(APP) {
+  const sel = document.getElementById('tier-count');
+  if (sel) {
+    const want = String(clamp(Number(APP.tierCount) || MIN_TIERS, MIN_TIERS, MAX_TIERS));
+    if (sel.value !== want && document.activeElement !== sel) sel.value = want;
+  }
+  const lighting = APP.lighting || 'led';
+  document.querySelectorAll('[data-lighting]').forEach((btn) => {
+    const active = btn.dataset.lighting === lighting;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-checked', String(active));
+  });
+}
+
+function renderTierGroups(APP) {
+  const root = document.getElementById('tier-groups');
+  if (!root) return;
+
+  const focusInfo = readTierFocus(document.activeElement);
+  const tierCount = clamp(Number(APP.tierCount) || MIN_TIERS, MIN_TIERS, MAX_TIERS);
+  const stage = stageBand(APP.stage);
+  const voided = c9Failed(APP.checklistState);
+  const ts = APP.tierSensors || {};
+  // Preserve open/closed state across renders so a typing user doesn't
+  // see the active group collapse mid-keystroke.
+  const openState = readTierOpenState(root);
+
+  root.innerHTML = '';
+  for (let t = 1; t <= tierCount; t++) {
+    const list = Array.isArray(ts[t]) ? ts[t] : [];
+    root.appendChild(buildTierGroup(t, tierCount, list, stage, voided, openState));
+  }
+  restoreTierFocus(root, focusInfo);
+}
+
+function readTierOpenState(root) {
+  const map = {};
+  for (const det of root.querySelectorAll('details.tier-group')) {
+    map[det.dataset.tier] = det.open;
+  }
+  return map;
+}
+
+function buildTierGroup(t, count, list, stage, voided, openState) {
+  const det = document.createElement('details');
+  det.className = 'tier-group';
+  det.dataset.tier = String(t);
+  // Default open on first render; preserve user's prior open/closed choice.
+  det.open = (openState && (String(t) in openState)) ? openState[String(t)] : true;
+
+  const summary = document.createElement('summary');
+  summary.className = 'tier-group__head';
+  const countLabel = list.length === 1 ? '1 sensor' : `${list.length} sensors`;
+  const subLabel = (count <= 3) ? `T${t}` : '';
+  summary.innerHTML = `
+    <span class="tier-group__title">${tierLabel(t, count)}${
+      subLabel ? ` <span class="tier-group__sub">(${subLabel})</span>` : ''
+    }</span>
+    <span class="tier-group__count">${countLabel}</span>
+  `;
+  det.appendChild(summary);
+
+  const body = document.createElement('div');
+  body.className = 'tier-group__body';
+
+  const head = document.createElement('div');
+  head.className = 'tier-rows__head';
+  head.innerHTML = `
+    <span>Point</span>
+    <span>Position</span>
+    <span>Temp (°F)</span>
+    <span>RH (%)</span>
+    <span>VPD (kPa)</span>
+    <span></span>
+  `;
+  body.appendChild(head);
+
+  if (list.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'tier-rows__empty';
+    empty.textContent = 'No sensors yet — tap + Sensor to add.';
+    body.appendChild(empty);
+  } else {
+    const rows = document.createElement('div');
+    rows.className = 'tier-rows';
+    for (let i = 0; i < list.length; i++) {
+      rows.appendChild(buildTierSensorRow(t, i, list[i], stage, voided));
+    }
+    body.appendChild(rows);
+  }
+
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'btn btn--ghost tier-add';
+  add.textContent = '+ Sensor';
+  add.dataset.tier = String(t);
+  add.addEventListener('click', () => addTierSensor(t));
+  body.appendChild(add);
+
+  // Per-tier summary: in-range / mean / min / max / range, with
+  // within-tier-gradient flag when range exceeds the spec threshold.
+  // Under C9 fail the measured state is VOID — per-tier VPD aggregates
+  // are still part of measured state, so they're suppressed here. The
+  // header bar carries the VOID statement; per-row VPD is already
+  // greyed by the voided flag in buildTierSensorRow.
+  const vpds = [];
+  let inR = 0;
+  for (const s of list) {
+    const v = sensorVPD(s);
+    if (!Number.isFinite(v)) continue;
+    vpds.push(v);
+    if (stage && v >= stage.vpdMin && v <= stage.vpdMax) inR++;
+  }
+  if (!voided && vpds.length >= 1) {
+    const min  = Math.min(...vpds);
+    const max  = Math.max(...vpds);
+    const mean = vpds.reduce((a, b) => a + b, 0) / vpds.length;
+    const range = max - min;
+    const wide = range > RANGE_FLAG_KPA;
+    const sumDiv = document.createElement('div');
+    sumDiv.className = 'tier-summary' + (wide ? ' is-wide-range' : '');
+    sumDiv.innerHTML = `
+      <div class="tier-summary__row">
+        <span class="tier-summary__cell"><b>${inR}</b>/${vpds.length} in range</span>
+        <span class="tier-summary__cell">min ${min.toFixed(2)}</span>
+        <span class="tier-summary__cell">mean ${mean.toFixed(2)}</span>
+        <span class="tier-summary__cell">max ${max.toFixed(2)}</span>
+        <span class="tier-summary__cell">range ${range.toFixed(2)} kPa</span>
+      </div>
+      ${wide ? '<p class="tier-summary__flag">Within-tier gradient — supply-end vs return-end imbalance suspected.</p>' : ''}
+    `;
+    body.appendChild(sumDiv);
+  }
+
+  det.appendChild(body);
+  return det;
+}
+
+function buildTierSensorRow(t, i, s, stage, voided) {
+  const row = document.createElement('div');
+  row.className = 'tier-row';
+  row.dataset.tier = String(t);
+  row.dataset.sensorId = s.id;
+
+  const v = sensorVPD(s);
+  const status = voided ? 'unread' : sensorStatus(s, stage);
+
+  row.innerHTML = `
+    <span class="tier-row__label">T${t}&middot;S${i + 1}</span>
+    <select class="tier-row__pos" data-tier-bind="position" aria-label="Position on tier">
+      <option value="head">Head</option>
+      <option value="mid">Middle</option>
+      <option value="tail">Tail</option>
+    </select>
+    <input type="number" step="0.1" inputmode="decimal" data-tier-bind="tdb" aria-label="Temperature">
+    <input type="number" step="0.1" min="0" max="100" inputmode="decimal" data-tier-bind="rh" aria-label="Relative humidity (%)">
+    <span class="tier-row__vpd is-${status}">${Number.isFinite(v) ? v.toFixed(2) : '—'}</span>
+    <button type="button" class="btn btn--ghost btn--quiet btn--danger tier-row__del">Delete</button>
+  `;
+
+  const sel = row.querySelector('[data-tier-bind="position"]');
+  sel.value = s.position || 'mid';
+  sel.addEventListener('change', () => setTierSensorField(t, s.id, 'position', sel.value));
+
+  const tdbEl = row.querySelector('[data-tier-bind="tdb"]');
+  const rhEl  = row.querySelector('[data-tier-bind="rh"]');
+  if (Number.isFinite(s.tdb) && document.activeElement !== tdbEl) tdbEl.value = roundForInput(s.tdb);
+  if (Number.isFinite(s.rh)  && document.activeElement !== rhEl)  rhEl.value  = roundForInput(s.rh);
+
+  tdbEl.addEventListener('input', (e) => onTierReadingInput(t, s.id, 'tdb', e.target.value));
+  rhEl.addEventListener('input',  (e) => onTierReadingInput(t, s.id, 'rh',  e.target.value));
+
+  row.querySelector('.tier-row__del').addEventListener('click', () => deleteTierSensor(t, s.id));
+  return row;
+}
+
+function addTierSensor(t) {
+  const APP = _api.getState();
+  const all = { ...(APP.tierSensors || {}) };
+  const list = Array.isArray(all[t]) ? all[t].slice() : [];
+  list.push({ id: newId(), position: 'mid', tdb: null, rh: null });
+  all[t] = list;
+  _api.setState({ tierSensors: all });
+}
+
+function deleteTierSensor(t, id) {
+  const APP = _api.getState();
+  const all = { ...(APP.tierSensors || {}) };
+  const list = (Array.isArray(all[t]) ? all[t] : []).filter((s) => s.id !== id);
+  all[t] = list;
+  _api.setState({ tierSensors: all });
+}
+
+function setTierSensorField(t, id, field, value) {
+  const APP = _api.getState();
+  const all = { ...(APP.tierSensors || {}) };
+  const list = (Array.isArray(all[t]) ? all[t] : []).map((s) =>
+    s.id === id ? { ...s, [field]: value } : s
+  );
+  if (list === all[t]) return;
+  all[t] = list;
+  _api.setState({ tierSensors: all });
+}
+
+function onTierReadingInput(t, id, field, raw) {
+  const trimmed = String(raw ?? '').trim();
+  let value;
+  if (trimmed === '') {
+    value = null;
+  } else {
+    const n = Number(trimmed);
+    if (!Number.isFinite(n)) return;
+    value = (field === 'rh') ? clamp(n, 0, 100) : n;
+  }
+  setTierSensorField(t, id, field, value);
+}
+
+function readTierFocus(el) {
+  if (!el || !el.dataset || !el.dataset.tierBind) return null;
+  const row = el.closest('.tier-row');
+  if (!row) return null;
+  return {
+    tier: row.dataset.tier,
+    id:   row.dataset.sensorId,
+    bind: el.dataset.tierBind,
+    selStart: el.selectionStart,
+    selEnd:   el.selectionEnd
+  };
+}
+
+function restoreTierFocus(root, info) {
+  if (!info) return;
+  const row = root.querySelector(`.tier-row[data-tier="${info.tier}"][data-sensor-id="${info.id}"]`);
+  if (!row) return;
+  const el = row.querySelector(`[data-tier-bind="${info.bind}"]`);
+  if (!el) return;
+  el.focus();
+  // Selects don't support setSelectionRange; only attempt on inputs.
+  if (typeof el.setSelectionRange === 'function') {
+    try { el.setSelectionRange(info.selStart, info.selEnd); } catch (_) {}
+  }
+}
+
 // ── Public stats helpers (orchestrator wires header readout in Phase 6) ─
+// In multi-tier mode the header VPD readout aggregates over every tier's
+// sensors; per-tier roll-ups stay in renderTierGroups. Single-tier reads
+// the floor-plan sensors as before.
 export function getMeasuredVPDStats(APP) {
   const stage = stageBand(APP.stage);
+  const sourceList = (APP.mapMode === 'multi')
+    ? activeTierSensors(APP)
+    : (APP.sensors || []);
+
   const values = [];
   let inRange = 0;
-  for (const s of (APP.sensors || [])) {
+  for (const s of sourceList) {
     const v = sensorVPD(s);
     if (!Number.isFinite(v)) continue;
     values.push(v);
@@ -1894,7 +2228,7 @@ export function getMeasuredVPDStats(APP) {
   const mean = sum / values.length;
   return {
     count: values.length,
-    total: (APP.sensors || []).length,
+    total: sourceList.length,
     min, max, mean,
     range: max - min,
     inRangeCount: inRange,

@@ -158,6 +158,15 @@
         <section id="tab-map" class="tab-panel" role="tabpanel" hidden>
           <div class="map-tab">
 
+            <section class="map-mode" aria-label="Map mode">
+              <div class="toggle-group" id="map-mode-group" role="radiogroup" aria-label="Tier mode">
+                <button type="button" class="toggle" data-map-mode="single" role="radio" aria-checked="false">Single Tier</button>
+                <button type="button" class="toggle" data-map-mode="multi"  role="radio" aria-checked="false">Multi Tier</button>
+              </div>
+            </section>
+
+            <div class="map-single" id="map-single">
+
             <section class="map-controls" aria-label="Room layout controls">
               <div class="map-dims">
                 <label class="map-dims__field">
@@ -239,6 +248,54 @@
                 </div>
               </fieldset>
             </section>
+
+            </div><!-- /.map-single -->
+
+            <div class="map-multi" id="map-multi" hidden>
+
+              <section class="tier-config" aria-label="Multi-tier configuration">
+                <div class="tier-config__row">
+                  <label class="tier-config__field">
+                    <span class="tier-config__label">Tier Count</span>
+                    <select id="tier-count">
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
+                      <option value="6">6</option>
+                    </select>
+                  </label>
+                  <fieldset class="tier-config__field">
+                    <legend class="tier-config__label">Lighting Type</legend>
+                    <div class="toggle-group" id="lighting-group" role="radiogroup" aria-label="Lighting type">
+                      <button type="button" class="toggle" data-lighting="led"   role="radio" aria-checked="false">LED</button>
+                      <button type="button" class="toggle" data-lighting="hps"   role="radio" aria-checked="false">HPS / CMH</button>
+                      <button type="button" class="toggle" data-lighting="mixed" role="radio" aria-checked="false">Mixed</button>
+                    </div>
+                  </fieldset>
+                </div>
+                <p class="tier-config__note">
+                  <strong>AGIQ:</strong> LED rooms require higher air temp setpoint than HPS.
+                  HPS produces ~40% more heat for equivalent light output. Multi-tier rooms
+                  almost always use LED.
+                </p>
+              </section>
+
+              <section class="tier-groups" id="tier-groups" aria-label="Per-tier sensor groups"></section>
+
+              <aside class="tier-limit-note" aria-label="Multi-tier limitation note">
+                <p>
+                  Spatial distribution within tiers is partially evaluated via head/middle/tail
+                  position tagging but no floor-plan map is rendered. Each tier is treated as
+                  an independent environmental zone.
+                </p>
+                <p>
+                  <strong>AGIQ:</strong> Multi-tier rooms must be sensed independently per tier &mdash;
+                  tiers are supplied by different equipment and may experience different conditions.
+                </p>
+              </aside>
+
+            </div><!-- /.map-multi -->
 
             <section class="decoder-bar" aria-label="VPD target decoder">
               <div class="decoder-bar__head">

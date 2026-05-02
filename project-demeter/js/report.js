@@ -578,6 +578,19 @@ function renderSpatialMulti(snap) {
     }
     lines.push('');
   }
+
+  // Multi-tier limitation note (per Spec §Multi-Tier Limitation Note).
+  // The technician needs the AGIQ rationale in the report so the report
+  // reader knows why no floor-plan map appears for multi-tier rooms.
+  lines.push('Multi-Tier Limitation:');
+  lines.push(wrap(
+    'Spatial distribution within tiers is partially evaluated via head/middle/tail position tagging but no floor-plan map is rendered. Each tier is treated as an independent environmental zone.',
+    COL_WIDTH, ''));
+  lines.push('');
+  lines.push(wrap(
+    'AGIQ: Multi-tier rooms must be sensed independently per tier - tiers are supplied by different equipment and may experience different conditions.',
+    COL_WIDTH, ''));
+
   return lines.join('\n').trimEnd();
 }
 
