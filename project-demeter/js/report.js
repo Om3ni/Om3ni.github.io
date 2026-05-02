@@ -230,6 +230,30 @@ export function computeViabilityLabel(snapshot) {
   return VIABILITY_LABEL[computeViability(snapshot)] || 'NOT VERIFIED';
 }
 
+// Distinguish "checklist exercised, no failures found" from "checklist
+// not yet exercised at all". Empty failure arrays alone can't tell the
+// two apart, which is why the report sections below consult this before
+// emitting "No failures recorded." A null or missing item.status counts
+// as open (not evaluated) — matches the implicit state model where null
+// means OPEN, and pass/fail/na are the three evaluated outcomes.
+function evaluationStats(checklistState) {
+  let evaluated = 0;
+  let open = 0;
+  let total = 0;
+
+  for (const it of flatItems()) {
+    total++;
+    const st = getItemState(checklistState, it.id);
+    if (!st || st.status == null) {
+      open++;
+    } else {
+      evaluated++;
+    }
+  }
+
+  return { evaluated, open, total };
+}
+
 export function reportC9Failed(snapshotOrChecklistState) {
   if (!snapshotOrChecklistState) return false;
   if (snapshotOrChecklistState.checklistState) {
@@ -419,6 +443,12 @@ function renderViability(snap) {
   const lines = [sectionHeader('SYSTEM VIABILITY')];
   const v = snap.computed.viability;
   lines.push(`Status: ${VIABILITY_LABEL[v] || v}`);
+
+  const evals = evaluationStats(snap.checklistState);
+  if (v === 'NOT VERIFIED' && evals.open > 0) {
+    lines.push(`Open Checklist Items: ${evals.open}/${evals.total}`);
+  }
+
   lines.push('');
 
   let vpdState = 'not characterized';
@@ -720,6 +750,13 @@ function renderChecklistSection(snap) {
 function renderFailureSummary(snap) {
   const lines = [sectionHeader('FAILURE MODE SUMMARY')];
   const fails = snap.computed.failedItems || [];
+
+  const evals = evaluationStats(snap.checklistState);
+  if (!evals.evaluated) {
+    lines.push('No evaluations performed.');
+    return lines.join('\n');
+  }
+
   if (!fails.length) {
     lines.push('No failures recorded.');
     return lines.join('\n');
@@ -757,6 +794,13 @@ function renderFailureSummary(snap) {
 function renderRetests(snap) {
   const lines = [sectionHeader('RETEST REQUIREMENTS')];
   const fails = snap.computed.failedItems || [];
+
+  const evals = evaluationStats(snap.checklistState);
+  if (!evals.evaluated) {
+    lines.push('No evaluations performed. Retest requirements cannot be determined.');
+    return lines.join('\n');
+  }
+
   if (!fails.length) {
     lines.push('No failures recorded. No retests required.');
     return lines.join('\n');
@@ -888,7 +932,12 @@ function renderFinalAssessment(snap) {
       const words = groups.map((k) => FAIL_DOMAIN_WORD[k]).filter(Boolean);
       para += ` Measured conditions cannot be assumed stable due to ${words.join(', ')}.`;
     } else {
-      para += ' No failure modes recorded.';
+      const evals = evaluationStats(snap.checklistState);
+      if (!evals.evaluated) {
+        para += ' System has not been evaluated.';
+      } else {
+        para += ' No failure modes recorded.';
+      }
     }
     lines.push(wrap(para, COL_WIDTH, ''));
     lines.push('');
