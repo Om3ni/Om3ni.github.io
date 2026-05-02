@@ -340,7 +340,7 @@ function sectionHeader(title) {
 function renderHeader(snap) {
   const m = snap.metadata;
   const lines = [];
-  lines.push('PROJECT DEMETER');
+  lines.push('Grow Room Assessment Report');
   lines.push(RULE_1);
   lines.push(`Generated:        ${formatTimestamp(snap.generatedAt)}`);
   lines.push(`Technician:       ${m.tech || '--'}`);

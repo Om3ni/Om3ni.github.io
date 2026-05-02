@@ -520,7 +520,7 @@ function buildLoadingHtml() {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Project Demeter - Report</title>
+  <title>Grow Room Assessment Report</title>
   <style>
     body { font-family: ui-monospace, Menlo, Consolas, monospace;
            background: #f4f3ef; color: #1c1c1c;
@@ -533,7 +533,7 @@ function buildLoadingHtml() {
 </head>
 <body>
   <div class="loading">
-    <h1>PROJECT DEMETER</h1>
+    <h1>GROW ROOM ASSESSMENT REPORT</h1>
     <p>Preparing print report&hellip;</p>
   </div>
 </body>
@@ -616,7 +616,7 @@ function sectionTitle(snap) {
   return `
   <header class="title-block">
     <div class="title-block__brand">
-      <h1 class="title-block__title">PROJECT DEMETER</h1>
+      <h1 class="title-block__title">GROW ROOM ASSESSMENT REPORT</h1>
       <div class="title-block__sub">VPD Survey Report</div>
     </div>
     <div class="title-block__meta">
