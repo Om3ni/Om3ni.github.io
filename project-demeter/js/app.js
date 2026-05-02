@@ -396,11 +396,23 @@ async function actionArchive(id) {
   refreshList();
 }
 
-// Permanent delete — only offered on archived surveys, so an active or
-// completed survey must be archived first. Two-step path makes accidental
-// deletion of in-progress field work much harder.
-async function actionDelete(id) {
-  const ok = confirm('Permanently delete this archived survey? This cannot be undone.');
+// Permanent delete — available on any row. Confirmation copy escalates
+// when the survey isn't archived yet, since deleting active or completed
+// field work is the dangerous path; archived-row delete is the routine
+// post-delivery cleanup.
+async function actionDelete(id, status) {
+  let prompt;
+  if (status === 'active') {
+    prompt = 'Permanently delete this in-progress survey?\n\n' +
+            'It has not been archived. All field data will be lost. ' +
+            'This cannot be undone.';
+  } else if (status === 'complete') {
+    prompt = 'Permanently delete this completed survey?\n\n' +
+            'The report snapshot will be lost. This cannot be undone.';
+  } else {
+    prompt = 'Permanently delete this archived survey? This cannot be undone.';
+  }
+  const ok = confirm(prompt);
   if (!ok) return;
   await deleteSurvey(id);
   refreshList();
@@ -591,14 +603,15 @@ function buildSurveyRow(rec) {
     actions.appendChild(archBtn);
   }
 
-  if (rec.status === 'archived') {
-    const delBtn = document.createElement('button');
-    delBtn.type = 'button';
-    delBtn.className = 'btn btn--ghost btn--quiet btn--danger';
-    delBtn.textContent = 'Delete';
-    delBtn.addEventListener('click', () => actionDelete(rec.id));
-    actions.appendChild(delBtn);
-  }
+  // Delete is offered on every row. Confirmation copy in actionDelete
+  // escalates for non-archived rows so a stray tap on an in-progress
+  // survey doesn't quietly nuke field data.
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.className = 'btn btn--ghost btn--quiet btn--danger';
+  delBtn.textContent = 'Delete';
+  delBtn.addEventListener('click', () => actionDelete(rec.id, rec.status));
+  actions.appendChild(delBtn);
 
   li.appendChild(head);
   li.appendChild(actions);
