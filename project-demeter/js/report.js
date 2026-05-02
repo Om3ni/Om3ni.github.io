@@ -685,9 +685,10 @@ function renderChecklistSection(snap) {
       } else {
         lines.push('    (no field note)');
       }
-      // C9 gets the extended detail block in lieu of the single AGIQ line
-      // (per spec §Tab 3 → Group C9 detail). Other items get the standard
-      // AGIQ citation when present.
+      // C9 gets the extended detail block (per spec §Tab 3 → Group C9
+      // detail), trimmed of the AGIQ citation. The on-screen checklist
+      // still shows AGIQ refs as technician documentation; the report
+      // is the customer-facing artifact and stays manufacturer-neutral.
       if (it.id === 'C9') {
         lines.push('    Failure mode:');
         lines.push(wrapBlock(C9_DETAIL.failureMode, COL_WIDTH, '      '));
@@ -695,11 +696,6 @@ function renderChecklistSection(snap) {
         lines.push(wrapBlock(C9_DETAIL.method, COL_WIDTH, '      '));
         lines.push('    Field note required on fail:');
         lines.push(wrapBlock(C9_DETAIL.fieldNoteOnFail, COL_WIDTH, '      '));
-        lines.push('    AGIQ ref:');
-        lines.push(wrapBlock(C9_DETAIL.agiqRef, COL_WIDTH, '      '));
-      } else if (it.agiq && it.agiq.trim()) {
-        lines.push('    AGIQ:');
-        lines.push(wrapBlock(it.agiq, COL_WIDTH, '      '));
       }
     }
   }
@@ -808,7 +804,7 @@ function renderRetests(snap) {
   if (groups.has('G')) {
     items.push([
       'Design / commissioning (Group G) failures:',
-      'Confirm AGIQ design inputs and unit-per-room redundancy.',
+      'Confirm original sizing inputs and unit-per-room redundancy.',
       'Min basis: Documented.'
     ]);
   }
@@ -910,11 +906,30 @@ function renderNarrative(snap) {
 function renderFooter() {
   return [
     RULE_1,
-    '(c) Michael Seth Aaron - Project Demeter - AgronomicIQ.com - 1-833-327-AGIQ'
+    '(c) Michael Seth Aaron - Project Demeter'
   ].join('\n');
 }
 
 // ── Public generator ───────────────────────────────────────────────────────
+
+// Manufacturer-neutralization pass. The checklist source data carries
+// AGIQ references for the on-screen technician's reference, but the
+// report is the customer-facing artifact and must read as our own
+// document, not as a co-produced AGIQ piece. Specific phrases get
+// rephrased; any residual "AGIQ" tokens get stripped as a safety net.
+function manufacturerSanitize(s) {
+  return String(s)
+    .replace(/AGIQ Specific:?\s*/g, '')
+    .replace(/AGIQ remote monitoring/gi, 'remote monitoring')
+    .replace(/AGIQ project file \(call 1-833-327-AGIQ\)/gi, 'project documentation')
+    .replace(/AGIQ project file/gi, 'project documentation')
+    .replace(/Cannot contact AGIQ for project file\.?/gi, 'Cannot retrieve project file.')
+    .replace(/\bAGIQ\s+(design guide|sizing inputs|Ch\.\s*\d+|Fig\s*\d+\.\d+|Brochure[^.]*)/gi, 'design specification')
+    .replace(/\bAgronomicIQ\.com\b/gi, '')
+    .replace(/\b1-833-327-AGIQ\b/gi, '')
+    .replace(/\bAGIQ\b/g, '')
+    .replace(/  +/g, ' ');
+}
 
 // Final pass: strip non-ASCII glyphs so the report stays XOI-pasteable
 // across every terminal/editor. The checklist source data and field-narrative
@@ -953,7 +968,7 @@ export function generateTextReport(snapshot) {
     renderNarrative(snapshot),
     renderFooter()
   ];
-  return asciiSanitize(sections.join('\n\n')) + '\n';
+  return asciiSanitize(manufacturerSanitize(sections.join('\n\n'))) + '\n';
 }
 
 // ── DOM-touching layer ─────────────────────────────────────────────────────
