@@ -30,7 +30,7 @@ h2.lbl { margin: 22px 2px 8px; font-family: var(--ui); font-size: .82rem; font-w
 .filter[open] > summary::before { content: '−'; }
 .fbody { padding: 2px 14px 14px; }
 .frow { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
-.frow .fl { width: 92px; flex-shrink: 0; font-size: .9rem; font-weight: 600; color: var(--text-dim); }
+.frow .flbl { width: 92px; flex-shrink: 0; font-size: .9rem; font-weight: 600; color: var(--text-dim); }
 .frow .seg { flex: 1; }
 .frow .seg button { min-height: 38px; font-size: .9rem; padding: 0 4px; }
 .fnote { margin: 10px 0 0; font-size: .85rem; color: var(--text-mute); line-height: 1.4; }
@@ -40,7 +40,18 @@ h2.lbl { margin: 22px 2px 8px; font-family: var(--ui); font-size: .82rem; font-w
 .key { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 14px 2px 8px; font-size: .85rem; color: var(--text-dim); }
 .key b { font-family: var(--mono); font-weight: 400; }
 .list { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-.prob { padding: 10px 12px 12px; border-top: 1px solid var(--line); transition: opacity .15s; }
+.prob { border-top: 1px solid var(--line); transition: opacity .15s; scroll-margin-top: 8px; }
+.prob > summary { list-style: none; cursor: pointer; padding: 10px 12px 12px; }
+.prob > summary::-webkit-details-marker { display: none; }
+.prob > summary .pname::after { content: '+'; float: right; font-family: var(--mono); font-weight: 400; color: var(--orange-hi); }
+.prob[open] > summary .pname::after { content: '−'; }
+.prob[open] { opacity: 1; }
+.lesson { padding: 0 12px 14px; font-size: .95rem; line-height: 1.5; color: var(--text-dim); }
+.lesson .lp { margin-top: 10px; }
+.lesson .ll { display: block; font-size: .72rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--text-mute); }
+.lesson p { margin: 2px 0 0; }
+.lesson a { color: var(--orange-hi); font-weight: 700; text-decoration: none; }
+[data-theme="light"] .lesson a { color: #9a4000; }
 .prob:first-child { border-top: 0; }
 .prob.dim { opacity: .32; }
 .prob.hit { box-shadow: inset 3px 0 0 var(--orange-hi); }
@@ -85,7 +96,7 @@ details.ref[open] > summary::after { content: '−'; }
 </header>
 
 <main class="wrap">
-  <p class="intro">How each problem typically moves your readings, compared with what the system should read at design conditions. Check airflow and cleanliness first (see <em>Before you test</em> below).</p>
+  <p class="intro">How each problem typically moves your readings, compared with what the system should read at design conditions. Tap a problem for why it happens, what it gets confused with, and how to confirm it. Check airflow and cleanliness first (see <em>Before you test</em> below).</p>
 
   <div class="seg" role="group" aria-label="Metering device" style="margin-top:14px">
     <button type="button" data-meter="fixed" aria-pressed="true">Fixed orifice</button>
@@ -191,126 +202,117 @@ details.ref[open] > summary::after { content: '−'; }
   <p class="disc">Typical patterns only. Problems can overlap or occur together, and several share the same arrows. Use the chart to decide what to check next, confirm with tests, and follow the manufacturer's data.</p>
 </main>
 
-<script>
-(function () {
-  // Cell codes: u = high, d = low, n = normal; "n/d" = normal or low. [code, note]
-  var COLS = [
-    { k: 'sp', h: 'SUCT', name: 'Suction pressure' },
-    { k: 'lp', h: 'LIQ', name: 'Liquid pressure' },
-    { k: 'sh', h: 'SH', name: 'Superheat' },
-    { k: 'sc', h: 'SC', name: 'Subcooling' },
-    { k: 'a', h: 'AMPS', name: 'Amps' }
-  ];
-  function r(name, note, sp, lp, sh, sc, a, rh) { return { name: name, note: note, sp: sp, lp: lp, sh: sh, sc: sc, a: a, rh: rh }; }
-  var DATA = {
-    fixed: [
-      r('Refrigerant overcharge', 0, 'u', 'u', 'd', 'u', 'u', 'Poor'),
-      r('Refrigerant undercharge', 0, 'd', 'd', 'u', 'd', 'd', 'Ice / poor'),
-      r('Liquid restriction (drier)', 0, 'd', 'd', 'u', 'u', 'd', 'Ice / poor'),
-      r('Low evaporator airflow (low load)', 0, 'd', 'd', 'd', 'u', 'd', 'Ice / normal'),
-      r('Dirty condenser', 0, 'u', 'u', 'd', 'd', 'u', 'Poor'),
-      r('Low outdoor ambient', 0, 'd', 'd', 'u', 'u', 'd', 'Ice / normal'),
-      r('Inefficient compressor', 3, 'u', 'd', 'u', 'u', 'd', 'Poor'),
-      r('Non-condensables', 0, 'u', 'u', 'd', ['n', 6], 'u', 'Poor')
-    ],
-    txv: [
-      r('Refrigerant overcharge', 0, 'n', 'u', 'n', 'u', 'u', 'Normal'),
-      r('Refrigerant undercharge', 0, ['n/d', 2], 'd', ['n/u', 2], 'd', 'd', 'Ice / normal'),
-      r('Liquid restriction (drier)', 0, 'd', 'd', 'u', 'u', 'd', 'Ice / poor'),
-      r('Low evaporator airflow (low load)', 0, 'd', 'd', ['n', 4], 'n', 'd', 'Ice / normal'),
-      r('Dirty condenser', 0, 'n', 'u', 'n', 'n', 'u', 'Normal'),
-      r('Low outdoor ambient', 0, ['n', 4], 'd', ['n', 4], 'n', 'd', 'Normal'),
-      r('Inefficient compressor', 3, 'u', 'd', 'u', 'u', 'd', 'Poor'),
-      r('TXV bulb loose', 0, 'u', 'u', 'd', ['d', 5], 'u', 'Poor'),
-      r('TXV bulb lost its charge', 0, 'd', 'd', 'u', 'u', 'd', 'Ice / poor'),
-      r('TXV bulb poorly insulated', 0, 'u', 'u', 'd', 'd', 'u', 'Poor'),
-      r('Non-condensables', 0, 'n', 'u', ['n', 4], ['n', 6], 'u', 'Poor / normal')
-    ]
-  };
-  var NOTES = {
-    2: 'At part load, superheat and suction pressure can look normal. A coil that is very short of charge may frost.',
-    3: 'Pressures equalize very quickly after the compressor stops.',
-    4: 'The valve may hunt trying to control a low load, or because flash gas is reaching it.',
-    5: 'Can look normal if the system is also overcharged.',
-    6: 'Gauges can show subcooling that isn’t really there, because the non-condensable gas adds pressure in the condenser. A sight glass may still show bubbles.'
-  };
-  var SYM = { u: ['↑', 'up', 'high'], d: ['↓', 'down', 'low'], n: ['N', 'norm', 'normal'] };
-  var meter = 'fixed';
-  var want = {}; // col key → 'u' | 'n' | 'd'
-  try { var saved = JSON.parse(sessionStorage.getItem('chargeChart') || 'null'); if (saved) { meter = saved.meter || meter; want = saved.want || {}; } } catch (e) {}
+<script type="module">
+import { NOTES, ORDER, PROBLEMS, READINGS, codes, noteOf, whyFor, looksLikeFor, match } from './troubleshooting-data.js';
 
-  function codes(cell) { return (Array.isArray(cell) ? cell[0] : cell).split('/'); }
-  function note(cell) { return Array.isArray(cell) ? cell[1] : 0; }
-  function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+const SYM = { u: ['↑', 'up', 'high'], d: ['↓', 'down', 'low'], n: ['N', 'norm', 'normal'] };
+let meter = 'fixed';
+let want = {};            // reading key → 'u' | 'n' | 'd'
+let openId = null;
 
-  function cellEl(col, cell) {
-    var c = el('div', 'cell'), list = codes(cell);
-    c.appendChild(el('span', 'h', col.h));
-    var v = el('span', 'v');
-    list.forEach(function (code, i) {
-      if (i) v.appendChild(el('span', 'norm', '/'));
-      v.appendChild(el('span', SYM[code][1], SYM[code][0]));
+// State: URL (from Refrigeration Analysis) wins over the last session.
+const q = new URLSearchParams(location.search);
+if (q.has('meter') || READINGS.some((r) => q.has(r.k))) {
+  meter = q.get('meter') === 'txv' ? 'txv' : 'fixed';
+  READINGS.forEach((r) => { const v = q.get(r.k); if (v && SYM[v]) want[r.k] = v; });
+  openId = q.get('open');
+} else {
+  try { const s = JSON.parse(sessionStorage.getItem('chargeChart') || 'null'); if (s) { meter = s.meter || meter; want = s.want || {}; } } catch (e) {}
+}
+
+function el(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+
+function cellEl(r, cell) {
+  const c = el('div', 'cell'), list = codes(cell);
+  c.appendChild(el('span', 'h', r.h));
+  const v = el('span', 'v');
+  list.forEach((code, i) => { if (i) v.appendChild(el('span', 'norm', '/')); v.appendChild(el('span', SYM[code][1], SYM[code][0])); });
+  if (noteOf(cell)) v.appendChild(el('sup', null, String(noteOf(cell))));
+  c.appendChild(v);
+  c.setAttribute('aria-label', r.name + ' ' + list.map((x) => SYM[x][2]).join(' or ') + (noteOf(cell) ? ', see note ' + noteOf(cell) : ''));
+  return c;
+}
+
+function lesson(id) {
+  const prob = PROBLEMS[id], body = el('div', 'lesson');
+  const add = (label, text) => { const d = el('div', 'lp'); d.appendChild(el('span', 'll', label)); d.appendChild(el('p', null, text)); body.appendChild(d); };
+  add('Why', whyFor(prob, meter));
+  const looks = looksLikeFor(prob, meter);
+  if (looks.length) {
+    const d = el('div', 'lp'); d.appendChild(el('span', 'll', 'Looks like'));
+    looks.forEach((l) => {
+      const pp = el('p');
+      const a = el('a', null, l.name); a.href = '#p-' + l.id;
+      a.addEventListener('click', (e) => { e.preventDefault(); openAndScroll(l.id); });
+      pp.appendChild(a); pp.appendChild(document.createTextNode(' — ' + l.tell));
+      d.appendChild(pp);
     });
-    if (note(cell)) v.appendChild(el('sup', null, String(note(cell))));
-    c.appendChild(v);
-    c.setAttribute('aria-label', col.name + ' ' + list.map(function (x) { return SYM[x][2]; }).join(' or ') + (note(cell) ? ', see note ' + note(cell) : ''));
-    return c;
+    body.appendChild(d);
   }
+  add('Confirm', prob.confirm);
+  return body;
+}
 
-  function render() {
-    document.querySelectorAll('[data-meter]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.meter === meter)); });
-    var host = document.getElementById('chart'); host.innerHTML = '';
-    var active = Object.keys(want).filter(function (k) { return want[k]; });
-    var used = {}, hits = 0, rows = DATA[meter];
-    rows.forEach(function (row) {
-      var match = active.every(function (k) { return codes(row[k]).indexOf(want[k]) !== -1; });
-      if (match) hits++;
-      var p = el('div', 'prob' + (active.length ? (match ? ' hit' : ' dim') : ''));
-      var n = el('div', 'pname', row.name);
-      if (row.note) { n.appendChild(el('sup', null, String(row.note))); used[row.note] = 1; }
-      p.appendChild(n);
-      var cells = el('div', 'cells');
-      COLS.forEach(function (col) { cells.appendChild(cellEl(col, row[col.k])); if (note(row[col.k])) used[note(row[col.k])] = 1; });
-      var rh = el('div', 'cell'); rh.appendChild(el('span', 'h', 'RH')); rh.appendChild(el('span', 'v rh', row.rh));
-      rh.setAttribute('aria-label', 'Humidity control ' + row.rh);
-      cells.appendChild(rh);
-      p.appendChild(cells);
-      host.appendChild(p);
-    });
-    document.getElementById('matchCount').textContent = active.length ? hits + ' of ' + rows.length + ' match' : '';
-    var foot = document.getElementById('foot'); foot.innerHTML = '';
-    Object.keys(used).sort().forEach(function (k) {
-      var li = el('li'); li.appendChild(el('b', null, k)); li.appendChild(document.createTextNode(NOTES[k])); foot.appendChild(li);
-    });
-    renderFilter();
-    try { sessionStorage.setItem('chargeChart', JSON.stringify({ meter: meter, want: want })); } catch (e) {}
-  }
+function openAndScroll(id) {
+  const d = document.getElementById('p-' + id); if (!d) return;
+  d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
-  function renderFilter() {
-    var body = document.getElementById('filterBody'); body.innerHTML = '';
-    COLS.forEach(function (col) {
-      var row = el('div', 'frow'); row.appendChild(el('span', 'fl', col.name));
-      var seg = el('div', 'seg'); seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', col.name);
-      [['', 'Any'], ['d', 'Low'], ['n', 'Normal'], ['u', 'High']].forEach(function (o) {
-        var b = el('button', null, o[1]); b.type = 'button';
-        b.setAttribute('aria-pressed', String((want[col.k] || '') === o[0]));
-        b.addEventListener('click', function () { want[col.k] = o[0]; render(); });
-        seg.appendChild(b);
-      });
-      row.appendChild(seg); body.appendChild(row);
-    });
-    var c = el('button', 'clear', 'Clear filter'); c.type = 'button';
-    c.addEventListener('click', function () { want = {}; render(); });
-    body.appendChild(c);
-    body.appendChild(el('p', 'fnote', 'Matching rows are marked; the rest stay visible, dimmed. Several problems share the same pattern, so a match tells you what to check, not what is wrong.'));
-  }
-
-  document.querySelectorAll('[data-meter]').forEach(function (b) {
-    b.addEventListener('click', function () { meter = b.dataset.meter; render(); });
+function render() {
+  document.querySelectorAll('[data-meter]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.meter === meter)));
+  const host = document.getElementById('chart'); host.innerHTML = '';
+  const active = Object.keys(want).filter((k) => want[k]);
+  const hits = new Set(match(meter, want));
+  const used = {};
+  ORDER[meter].forEach((id) => {
+    const prob = PROBLEMS[id], row = prob.pattern[meter];
+    const d = el('details', 'prob' + (active.length ? (hits.has(id) ? ' hit' : ' dim') : ''));
+    d.id = 'p-' + id;
+    if (id === openId) d.open = true;
+    const s = el('summary');
+    const n = el('div', 'pname', prob.name);
+    if (prob.note) { n.appendChild(el('sup', null, String(prob.note))); used[prob.note] = 1; }
+    s.appendChild(n);
+    const cells = el('div', 'cells');
+    READINGS.forEach((r) => { cells.appendChild(cellEl(r, row[r.k])); if (noteOf(row[r.k])) used[noteOf(row[r.k])] = 1; });
+    const rh = el('div', 'cell'); rh.appendChild(el('span', 'h', 'RH')); rh.appendChild(el('span', 'v rh', row.rh));
+    rh.setAttribute('aria-label', 'Humidity control ' + row.rh);
+    cells.appendChild(rh);
+    s.appendChild(cells);
+    d.appendChild(s);
+    d.appendChild(lesson(id));
+    host.appendChild(d);
   });
-  if (Object.keys(want).some(function (k) { return want[k]; })) document.getElementById('filter').open = true;
-  render();
-})();
+  document.getElementById('matchCount').textContent = active.length ? hits.size + ' of ' + ORDER[meter].length + ' match' : '';
+  const foot = document.getElementById('foot'); foot.innerHTML = '';
+  Object.keys(used).sort().forEach((k) => { const li = el('li'); li.appendChild(el('b', null, k)); li.appendChild(document.createTextNode(NOTES[k])); foot.appendChild(li); });
+  renderFilter();
+  try { sessionStorage.setItem('chargeChart', JSON.stringify({ meter, want })); } catch (e) {}
+}
+
+function renderFilter() {
+  const body = document.getElementById('filterBody'); body.innerHTML = '';
+  READINGS.forEach((r) => {
+    const row = el('div', 'frow'); row.appendChild(el('span', 'flbl', r.name));
+    const seg = el('div', 'seg'); seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', r.name);
+    [['', 'Any'], ['d', 'Low'], ['n', 'Normal'], ['u', 'High']].forEach(([v, label]) => {
+      const b = el('button', null, label); b.type = 'button';
+      b.setAttribute('aria-pressed', String((want[r.k] || '') === v));
+      b.addEventListener('click', () => { want[r.k] = v; render(); });
+      seg.appendChild(b);
+    });
+    row.appendChild(seg); body.appendChild(row);
+  });
+  const c = el('button', 'clear', 'Clear filter'); c.type = 'button';
+  c.addEventListener('click', () => { want = {}; render(); });
+  body.appendChild(c);
+  body.appendChild(el('p', 'fnote', 'Matching rows are marked; the rest stay visible, dimmed. Several problems share the same pattern, so a match tells you what to check, not what is wrong. Tap a row for the lesson.'));
+}
+
+document.querySelectorAll('[data-meter]').forEach((b) => b.addEventListener('click', () => { meter = b.dataset.meter; openId = null; render(); }));
+if (Object.keys(want).some((k) => want[k])) document.getElementById('filter').open = true;
+render();
+if (openId) requestAnimationFrame(() => openAndScroll(openId));
 </script>
 </body>
 </html>

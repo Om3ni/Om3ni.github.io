@@ -52,6 +52,22 @@
   margin-top: 6px; display: none; letter-spacing: .03em;
 }
 .err.show { display: block; }
+/* Patterns to check (troubleshooting chart matches) */
+.tshoot { margin-top: 18px; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.tshoot[hidden] { display: none; }
+.tshoot-hdr { font-family: var(--ui); font-size: .78rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--orange-hi); }
+.tshoot-reads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+.tshoot-read { padding: 6px 8px; background: var(--surface2); border-radius: 6px; font-family: var(--mono); font-size: .78rem; color: var(--text-dim); }
+.tshoot-read b { display: block; font-family: var(--ui); font-size: .95rem; font-weight: 700; letter-spacing: .02em; }
+.tshoot-read b.u { color: #ef7a1f; } .tshoot-read b.d { color: #6cb4f5; } .tshoot-read b.n { color: var(--text); } .tshoot-read b.x { color: var(--text-mute); }
+[data-theme="light"] .tshoot-read b.u { color: #9a4000; } [data-theme="light"] .tshoot-read b.d { color: #1f5fa8; }
+.tshoot-msg { margin: 12px 0 0; font-size: .92rem; line-height: 1.45; color: var(--text-dim); }
+.tshoot-list { margin: 10px 0 0; padding: 0; list-style: none; }
+.tshoot-list li { margin-top: 8px; padding: 10px 12px; background: var(--surface2); border-radius: 6px; }
+.tshoot-list .nm { font-family: var(--ui); font-size: 1rem; font-weight: 700; color: var(--text); }
+.tshoot-list .cf { margin-top: 3px; font-size: .88rem; line-height: 1.4; color: var(--text-dim); }
+.tshoot-link { display: flex; align-items: center; justify-content: center; min-height: 46px; margin-top: 12px; border: 1px solid var(--orange); border-radius: 6px; color: var(--orange-hi); font-family: var(--ui); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; text-decoration: none; }
+.tshoot-note { margin: 10px 0 0; font-size: .8rem; line-height: 1.4; color: var(--text-mute); }
 </style>
 </head>
 <body>
@@ -77,6 +93,14 @@
   <div class="meter-grid">
     <button class="meter-btn active" data-sys="txv" onclick="selMeter(this)">TXV / EEV</button>
     <button class="meter-btn" data-sys="fo" onclick="selMeter(this)">Fixed Orifice</button>
+  </div>
+  <div class="fg" id="targetSH-field" style="display:none">
+    <label class="fl" for="targetSH">Target Superheat — Optional</label>
+    <div class="iw">
+      <input type="number" id="targetSH" inputmode="decimal" placeholder="--" step="0.1" oninput="recalc()">
+      <span class="iw-unit">F</span>
+    </div>
+    <div class="hint">From the unit's charging chart (indoor wet bulb + outdoor dry bulb). Superheat is judged within ±5°F of it; blank uses 10–18°F.</div>
   </div>
 
   <!-- SYSTEM MODE -->
@@ -185,6 +209,14 @@
         <span class="iw-unit">F</span>
       </div>
     </div>
+    <div class="fg" id="condDesign-field">
+      <label class="fl">Condenser Design (for expected head)</label>
+      <div class="meter-grid" style="grid-template-columns:repeat(3,1fr)">
+        <button class="meter-btn" data-dtd="30" onclick="selDTD(this)">6–8 SEER</button>
+        <button class="meter-btn" data-dtd="25" onclick="selDTD(this)">10–12 SEER</button>
+        <button class="meter-btn active" data-dtd="20" onclick="selDTD(this)">13+ SEER</button>
+      </div>
+    </div>
 
     <div id="wshp-fields" style="display:none">
       <div class="input-pair">
@@ -273,6 +305,16 @@
 
   </div>
 
+  <!-- PATTERNS TO CHECK — readings vs design, matched against the troubleshooting chart -->
+  <section class="tshoot" id="tshoot" hidden aria-live="polite">
+    <div class="tshoot-hdr">Patterns to check</div>
+    <div class="tshoot-reads" id="tshootReads"></div>
+    <p class="tshoot-msg" id="tshootMsg"></p>
+    <ul class="tshoot-list" id="tshootList"></ul>
+    <a class="tshoot-link" id="tshootLink" href="../resources/charge-troubleshooting.html">Open troubleshooting chart</a>
+    <p class="tshoot-note">From the troubleshooting chart: typical patterns, not a diagnosis. Several problems share a pattern and problems can stack. Confirm before acting.</p>
+  </section>
+
 </main>
 
 <!-- STANDALONE REPORT BAR — hidden when embedded in main tool -->
@@ -301,6 +343,7 @@
 
 <script type="module">
 import { getSatTemp, getSatPressure, getRange, listRefrigerants } from '../refrigerants/index.js';
+import { PROBLEMS, match as matchPatterns } from '../resources/troubleshooting-data.js';
 
 // ── Constants
 const ATM_PSIA = 14.696;
@@ -322,6 +365,12 @@ let selRef = null;
 let selSys = 'txv';
 let curMode = 'cool';
 let curSource = 'air';
+let condDTD = 20;          // condenser design temperature difference, °F (13+ SEER default)
+
+// Design values for "Patterns to check" (cooling only)
+const EVAP_DTD = 35;       // evap sat ≈ return air − 35°F at 400 CFM/ton
+const SAT_TOL  = 5;        // ± °F on saturation temps before a pressure counts as low/high
+const FO_TARGET_TOL = 5;   // ± °F around a charging-chart target superheat
 
 // ── Build refrigerant registry from library
 listRefrigerants().forEach(r => {
@@ -385,14 +434,87 @@ window.selMeter = function(btn) {
   grid.querySelectorAll('.meter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   selSys = btn.dataset.sys;
+  document.getElementById('targetSH-field').style.display = selSys === 'fo' ? '' : 'none';
   recalc();
 };
+
+window.selDTD = function(btn) {
+  btn.parentElement.querySelectorAll('.meter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  condDTD = +btn.dataset.dtd;
+  recalc();
+};
+
+// Superheat band in use: charging-chart target ±5 on a fixed orifice when given.
+function shBand() {
+  const t = fv('targetSH');
+  if (selSys === 'fo' && t !== null) return { low: t - FO_TARGET_TOL, high: t + FO_TARGET_TOL, target: t };
+  return SH_TARGETS[selSys];
+}
+
+function classify(v, low, high) { return v < low ? 'd' : v > high ? 'u' : 'n'; }
+
+// Readings vs design → troubleshooting chart patterns (cooling mode only).
+function updatePatterns(c) {
+  const box = document.getElementById('tshoot');
+  const cooling = curMode === 'cool';
+  const r = {}, rows = [];
+  const fmt1 = (x) => (Math.round(x * 10) / 10).toFixed(1);
+  const WORD = { u: 'High', d: 'Low', n: 'Normal' };
+  function add(label, key, code, detail) { if (code) r[key] = code; rows.push({ label, code, detail }); }
+
+  if (c.suctSat !== null && c.ret !== null) {
+    const exp = c.ret - EVAP_DTD;
+    add('Suction', 'sp', classify(c.suctSat, exp - SAT_TOL, exp + SAT_TOL), 'sat ' + fmt1(c.suctSat) + ' vs ~' + fmt1(exp) + '°F');
+  } else add('Suction', 'sp', null, c.suctSat === null ? 'enter pressure' : 'add return air');
+  if (c.liqSat !== null && c.amb !== null) {
+    const exp = c.amb + condDTD;
+    add('Liquid', 'lp', classify(c.liqSat, exp - SAT_TOL, exp + SAT_TOL), 'sat ' + fmt1(c.liqSat) + ' vs ~' + fmt1(exp) + '°F');
+  } else add('Liquid', 'lp', null, c.liqSat === null ? 'enter pressure' : 'add outdoor temp');
+  const shB = shBand(), scB = SC_TARGETS[selSys];
+  if (c.sh !== null) add('Superheat', 'sh', classify(c.sh, shB.low, shB.high), fmt1(c.sh) + ' vs ' + shB.low + '–' + shB.high + '°F');
+  else add('Superheat', 'sh', null, 'enter suction line temp');
+  if (c.sc !== null) add('Subcooling', 'sc', classify(c.sc, scB.low, scB.high), fmt1(c.sc) + ' vs ' + scB.low + '–' + scB.high + '°F');
+  else add('Subcooling', 'sc', null, 'enter liquid line temp');
+
+  const known = Object.keys(r);
+  box.hidden = !cooling || known.length === 0;
+  if (box.hidden) return;
+
+  document.getElementById('tshootReads').innerHTML = rows.map(x =>
+    `<div class="tshoot-read"><b class="${x.code || 'x'}">${x.label}: ${x.code ? WORD[x.code] : '—'}</b>${x.detail}</div>`).join('');
+
+  const meter = selSys === 'fo' ? 'fixed' : 'txv';
+  const msg = document.getElementById('tshootMsg'), list = document.getElementById('tshootList');
+  const ids = matchPatterns(meter, r);
+  list.innerHTML = '';
+  if (known.length < 3) {
+    msg.textContent = 'Add more readings to compare against the chart (at least three of the four above).';
+  } else if (known.every(k => r[k] === 'n')) {
+    msg.textContent = 'All readings are near design values. No chart pattern applies.';
+  } else if (!ids.length) {
+    msg.textContent = 'No single chart pattern matches these readings. Problems can stack (for example a dirty coil plus low charge); open the chart to compare.';
+  } else {
+    msg.textContent = ids.length === 1 ? 'One chart pattern matches. Check it before adjusting the charge:' : ids.length + ' chart patterns match. Check these before adjusting the charge:';
+    ids.forEach(id => {
+      const li = document.createElement('li');
+      const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = PROBLEMS[id].name;
+      const cf = document.createElement('div'); cf.className = 'cf'; cf.textContent = 'Confirm: ' + PROBLEMS[id].confirm;
+      li.appendChild(nm); li.appendChild(cf); list.appendChild(li);
+    });
+  }
+  const q = new URLSearchParams({ meter });
+  known.forEach(k => q.set(k, r[k]));
+  if (ids.length && known.length >= 3) q.set('open', ids[0]);
+  document.getElementById('tshootLink').href = '../resources/charge-troubleshooting.html?' + q.toString();
+}
 
 window.selMode = function(btn) {
   const grid = btn.parentElement;
   grid.querySelectorAll('.meter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   curMode = btn.dataset.mode;
+  document.getElementById('condDesign-field').style.display = curMode === 'cool' ? '' : 'none';
 
   const srcToggle = document.getElementById('hp-source-toggle');
   const label = document.getElementById('airside-label');
@@ -576,7 +698,7 @@ window.recalc = function() {
   }
 
   // Superheat color
-  const shTgt = SH_TARGETS[selSys];
+  const shTgt = shBand();
   let shColor = null;
   if (sh !== null) {
     if (sh < shTgt.low)       shColor = 'low';
@@ -615,6 +737,8 @@ window.recalc = function() {
     document.getElementById('rv-cr').className   = 'rr-val';
     document.getElementById('r-cr').className    = 'result-row dim';
   }
+
+  updatePatterns({ suctSat, liqSat, sh, sc, ret, amb });
 
   // Airside — show section header only if any airside data exists
   const hasAirside = ret !== null || sup !== null || amb !== null || ewt !== null || lwt !== null || cfm !== null;
