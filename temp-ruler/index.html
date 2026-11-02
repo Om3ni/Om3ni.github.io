@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Temp Ruler</title>
+<meta name="description" content="Fahrenheit and Celsius side by side, anchored to everyday HVAC temperatures.">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1a1a1a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Temp Ruler">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<style>
+/* Layout: one phone column. Sticky readout on top, entry + mode controls, tall dual ruler, then a tap-to-load cheat sheet. */
+:root{
+  --bg:#0f0f0f; --panel:#1a1a1a; --panel2:#242424; --line:#3d3d3d;
+  --fg:#f0ebe4; --dim:#c2b4a4; --mute:#a89886;
+  --f:#ef7a1f; --c:#6cb4f5; --accent:#c85a00; --zone:#161616;
+  --band:rgba(239,122,31,.16); --warn:#d4ad2a; --mark:#f0ebe4;
+  --ui:'Rajdhani',system-ui,sans-serif; --mono:'Share Tech Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f4f1ec; --panel:#ffffff; --panel2:#ece7e0; --line:#cfc6bb;
+  --fg:#1b1712; --dim:#4a3f34; --mute:#6b5d4f;
+  --f:#b34a00; --c:#1f5fa8; --accent:#b34a00; --zone:#faf8f5;
+  --band:rgba(179,74,0,.12); --warn:#7d5f00; --mark:#1b1712; color-scheme:light}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:16px;
+  padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  -webkit-tap-highlight-color:transparent}
+main{max-width:460px;margin:0 auto}
+button{font-family:inherit;color:inherit;cursor:pointer}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:16px 0 10px;border-bottom:2px solid var(--accent)}
+h1{margin:0;font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
+header span{font-family:var(--mono);font-size:12px;color:var(--mute)}
+
+/* Sticky readout */
+.readout{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 0 10px;margin:0 -2px}
+.readout-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px 10px}
+.vals{display:flex;align-items:baseline;justify-content:center;gap:12px;font-family:var(--mono);font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.vals b{font-weight:400;font-size:34px;line-height:1.05}
+.vals .eq{font-size:22px;color:var(--mute)}
+#vF{color:var(--f)} #vC{color:var(--c)}
+.cap{margin:6px 0 0;text-align:center;font-size:14px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);min-height:18px}
+
+/* Controls */
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:4px}
+.lbl{display:block;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin:0 0 6px}
+.seg{display:flex;gap:3px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px}
+.seg button{flex:1;min-height:42px;border:0;border-radius:6px;background:transparent;color:var(--dim);font-size:16px;font-weight:700;letter-spacing:.04em}
+.seg button[aria-pressed="true"]{background:var(--panel2);color:var(--fg);box-shadow:inset 0 0 0 1px var(--accent)}
+.seg button[data-u="F"][aria-pressed="true"]{color:var(--f)}
+.seg button[data-u="C"][aria-pressed="true"]{color:var(--c)}
+.entry{display:flex;gap:8px;margin-top:14px}
+.entry input{flex:1;min-width:0;height:56px;padding:0 14px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--fg);font:400 26px var(--mono);outline:none}
+.entry input:focus-visible,.seg button:focus-visible,.pm:focus-visible,.cheat button:focus-visible,.grab:focus-visible,.install button:focus-visible{outline:2px solid var(--f);outline-offset:2px}
+.pm{width:56px;height:56px;flex-shrink:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;font:400 24px var(--mono)}
+.unitTag{display:flex;align-items:center;justify-content:center;width:52px;flex-shrink:0;font:400 18px var(--mono);color:var(--mute)}
+#err{margin:6px 2px 0;min-height:18px;font-size:14px;color:var(--warn)}
+.hint{margin:4px 0 0;padding:10px 12px;border:1px dashed var(--line);border-radius:8px;font-size:15px;line-height:1.4;color:var(--dim)}
+.hint strong{color:var(--fg);font-weight:700}
+
+/* Ruler */
+.rulerWrap{position:relative;margin-top:16px}
+svg{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none}
+svg text{font-family:var(--mono)}
+.grab{position:absolute;touch-action:none;cursor:ns-resize;border-radius:6px}
+.note{margin:6px 0 0;text-align:center;font-size:14px;color:var(--mute)}
+
+/* Cheat sheet */
+.cheat{margin-top:22px}
+.cheat h2{margin:0 2px 8px;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--f)}
+.cheat .list{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.cheat button{display:grid;grid-template-columns:1fr 64px 72px;align-items:center;gap:8px;width:100%;min-height:50px;padding:6px 14px;background:none;border:0;border-top:1px solid var(--line);text-align:left;font-size:16px;font-weight:600}
+.cheat button:first-child{border-top:0}
+.cheat .nf,.cheat .nc{font:400 16px var(--mono);text-align:right}
+.cheat .nf{color:var(--f)} .cheat .nc{color:var(--c)}
+.cheat p{margin:8px 4px 0;font-size:14px;color:var(--mute);line-height:1.4}
+.cheat + .cheat{margin-top:20px}
+
+/* Install hint */
+.install{display:none;margin-top:14px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;font-size:15px;line-height:1.4;color:var(--dim)}
+.install.show{display:block}
+.install .acts{display:flex;gap:8px;margin-top:10px}
+.install button{min-height:44px;padding:0 16px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.install button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+footer{margin-top:22px;font-size:13px;color:var(--mute);text-align:center;line-height:1.5}
+</style>
+</head>
+<body>
+<main>
+  <header><h1>Temp Ruler</h1><span>°F ⇄ °C</span></header>
+
+  <div class="readout" aria-live="polite">
+    <div class="readout-box">
+      <div class="vals"><b id="vF">75 °F</b><span class="eq">=</span><b id="vC">23.9 °C</b></div>
+      <p class="cap" id="cap">Reading</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <span class="lbl" id="modeLbl">Convert a</span>
+      <div class="seg" role="group" aria-labelledby="modeLbl">
+        <button type="button" data-m="read" aria-pressed="true">Reading</button>
+        <button type="button" data-m="diff" aria-pressed="false">Difference</button>
+      </div>
+    </div>
+    <div>
+      <span class="lbl" id="unitLbl">I'm typing</span>
+      <div class="seg" role="group" aria-labelledby="unitLbl">
+        <button type="button" data-u="F" aria-pressed="true">°F</button>
+        <button type="button" data-u="C" aria-pressed="false">°C</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="entry">
+    <button type="button" class="pm" id="pm" aria-label="Make negative or positive">±</button>
+    <input id="tin" type="text" inputmode="decimal" autocomplete="off" aria-label="Temperature" placeholder="75">
+    <span class="unitTag" id="unitTag">°F</span>
+  </div>
+  <p id="err" role="alert"></p>
+  <p class="hint" id="hint"></p>
+
+  <div class="install" id="install">
+    <div id="installText"></div>
+    <div class="acts">
+      <button type="button" class="primary" id="installBtn" hidden>Install</button>
+      <button type="button" id="installHide">Hide</button>
+    </div>
+  </div>
+
+  <div class="rulerWrap">
+    <svg id="ruler" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fahrenheit and Celsius ruler from −40 to 160 °F, with common HVAC temperatures marked"></svg>
+    <div class="grab" id="grab" tabindex="0" role="slider" aria-label="Drag to set temperature" aria-valuemin="-40" aria-valuemax="160" aria-valuenow="75" aria-valuetext="75 °F"></div>
+  </div>
+  <p class="note" id="note">Drag inside the shaded strip. Scroll outside it.</p>
+
+  <section class="cheat">
+    <h2>Temperatures to know</h2>
+    <div class="list" id="readList"></div>
+    <p>Quick estimate: °C × 2 + 30 ≈ °F. Close between about 0 and 25 °C, a few degrees high above that.</p>
+  </section>
+
+  <section class="cheat">
+    <h2>Differences to know</h2>
+    <div class="list" id="diffList"></div>
+    <p>Superheat, subcooling, split and rise are differences. Convert them with 1.8 only. Never add or subtract 32.</p>
+  </section>
+
+  <footer>Tap any row to put it on the ruler.</footer>
+</main>
+
+<script>
+(function(){
+  // ── State (stored in °F) ─────────────────────────────────────
+  var S = { mode:'read', unit:'F', readF:75, diffF:20, anchorF:75 };
+  try { var saved = JSON.parse(localStorage.getItem('tempRuler') || 'null'); if (saved) for (var k in S) if (k in saved) S[k] = saved[k]; } catch(e) {}
+  function save(){ try { localStorage.setItem('tempRuler', JSON.stringify(S)); } catch(e) {} }
+
+  // ── Ruler geometry ───────────────────────────────────────────
+  var NS = 'http://www.w3.org/2000/svg', svg = document.getElementById('ruler');
+  var FMIN = -40, FMAX = 160, TOP = 30, PX = 3.5, X = 196, W = 340, HALF = 58;
+  var H = TOP + (FMAX - FMIN) * PX + 26;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  var yF = function(f){ return TOP + (FMAX - f) * PX; };
+  var yC = function(c){ return yF(c * 1.8 + 32); };
+  function el(t, a, txt, parent){ var e = document.createElementNS(NS, t); for (var k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; (parent || svg).appendChild(e); return e; }
+
+  el('rect', { x:X-HALF, y:yF(FMAX)-6, width:HALF*2, height:(FMAX-FMIN)*PX+12, rx:6, fill:'var(--zone)', stroke:'var(--line)', 'stroke-width':1 });
+  el('line', { x1:X, y1:yF(FMAX), x2:X, y2:yF(FMIN), stroke:'var(--line)', 'stroke-width':1 });
+  el('text', { x:X-30, y:16, 'text-anchor':'middle', 'font-size':14, fill:'var(--c)' }, '°C');
+  el('text', { x:X+30, y:16, 'text-anchor':'middle', 'font-size':14, fill:'var(--f)' }, '°F');
+
+  // °C ticks (left)
+  for (var c = -40; c <= 71; c++) {
+    var y = yC(c), len = c % 10 === 0 ? 22 : c % 5 === 0 ? 14 : 7;
+    el('line', { x1:X-len, y1:y, x2:X, y2:y, stroke:'var(--c)', 'stroke-width': c % 10 === 0 ? 1.4 : 0.8 });
+    if (c % 10 === 0) el('text', { x:X-27, y:y+4, 'text-anchor':'end', 'font-size':12, fill:'var(--fg)' }, String(c).replace('-', '−'));
+  }
+  // °F ticks (right)
+  for (var f = FMIN; f <= FMAX; f += 2) {
+    var yy = yF(f), l2 = f % 10 === 0 ? 22 : 8;
+    el('line', { x1:X, y1:yy, x2:X+l2, y2:yy, stroke:'var(--f)', 'stroke-width': f % 10 === 0 ? 1.4 : 0.8 });
+    if (f % 10 === 0) el('text', { x:X+27, y:yy+4, 'font-size':12, fill:'var(--fg)' }, String(f).replace('-', '−'));
+  }
+
+  // HVAC landmarks
+  var READINGS = [
+    ['Condensing, hot day', 110],
+    ['Hot day in Lagos', 90],
+    ['Room / return air', 75],
+    ['Supply air', 55],
+    ['Evaporator (cooling)', 40],
+    ['Water freezes', 32],
+    ['Freezer box', 0],
+    ['Same on both', -40]
+  ];
+  // [label, difference °F, top of the band in °F — where the difference really sits]
+  var DIFFS = [
+    ['Superheat, e.g.', 12, 52],              // 40 °F evaporator → 52 °F suction line
+    ['Subcooling, e.g.', 10, 110],            // 110 °F condensing → 100 °F liquid line
+    ['Coil split (cooling)', 20, 75],         // 75 °F return → 55 °F supply
+    ['Condenser over outdoor, e.g.', 25, 115],// 90 °F outdoor → 115 °F condensing
+    ['Furnace temp rise, e.g.', 50, 120]      // 70 °F return → 120 °F supply
+  ];
+  var SHORT = { 'Condensing, hot day':'Condensing', 'Room / return air':'Room air', 'Evaporator (cooling)':'Evaporator', 'Water freezes':'Freezing' };
+  READINGS.forEach(function(r){
+    var y = yF(r[1]);
+    el('line', { x1:4, y1:y, x2:X-HALF-2, y2:y, stroke:'var(--mute)', 'stroke-width':0.8, 'stroke-dasharray':'3 3' });
+    el('line', { x1:X+HALF+2, y1:y, x2:W-4, y2:y, stroke:'var(--mute)', 'stroke-width':0.8, 'stroke-dasharray':'3 3' });
+    el('text', { x:4, y:y-5, 'font-size':11.5, fill:'var(--dim)' }, SHORT[r[0]] || r[0]);
+  });
+
+  // Difference band + labels, then the reading marker (drawn last = on top)
+  var band = el('rect', { x:X-HALF, width:HALF*2, fill:'var(--band)', stroke:'var(--f)', 'stroke-width':1, visibility:'hidden' });
+  var halo = { stroke:'var(--bg)', 'stroke-width':5, 'stroke-linejoin':'round', 'paint-order':'stroke' };
+  var bandF = el('text', Object.assign({ x:X+HALF+8, 'font-size':13, fill:'var(--f)', visibility:'hidden' }, halo), '');
+  var bandC = el('text', Object.assign({ x:X+HALF+8, 'font-size':13, fill:'var(--c)', visibility:'hidden' }, halo), '');
+  var mark = el('line', { x1:X-HALF, x2:X+HALF, stroke:'var(--mark)', 'stroke-width':3, 'stroke-linecap':'round' });
+  var markL = el('path', { fill:'var(--mark)' });
+  var markR = el('path', { fill:'var(--mark)' });
+
+  // Drag strip sized from the same geometry
+  var grab = document.getElementById('grab');
+  grab.style.left = ((X - HALF) / W * 100) + '%';
+  grab.style.width = (HALF * 2 / W * 100) + '%';
+  grab.style.top = ((yF(FMAX) - 6) / H * 100) + '%';
+  grab.style.height = (((FMAX - FMIN) * PX + 12) / H * 100) + '%';
+
+  // ── Helpers ──────────────────────────────────────────────────
+  var $ = function(id){ return document.getElementById(id); };
+  var tin = $('tin'), err = $('err'), note = $('note');
+  function r1(v){ var n = Math.round(v * 10) / 10; return Object.is(n, -0) ? 0 : n; }
+  function fmt(v){ return String(r1(v)).replace('-', '−'); }
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+  // value in °F → number in the typed unit (diff: scale only; reading: scale + offset)
+  function toUnit(fv, diff){ return S.unit === 'F' ? fv : (diff ? fv / 1.8 : (fv - 32) / 1.8); }
+  function fromUnit(v, diff){ return S.unit === 'F' ? v : (diff ? v * 1.8 : v * 1.8 + 32); }
+  var NOTE = 'Drag inside the shaded strip. Scroll outside it.';
+
+  function setInput(){ tin.value = fmt(toUnit(S.mode === 'read' ? S.readF : S.diffF, S.mode === 'diff')).replace('−', '-'); }
+
+  function render(){
+    var diff = S.mode === 'diff';
+    document.querySelectorAll('[data-m]').forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.m === S.mode)); });
+    document.querySelectorAll('[data-u]').forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.u === S.unit)); });
+    $('unitTag').textContent = S.unit === 'F' ? '°F' : '°C';
+    $('unitTag').style.color = S.unit === 'F' ? 'var(--f)' : 'var(--c)';
+    tin.setAttribute('aria-label', diff ? 'Temperature difference in ' + (S.unit === 'F' ? '°F' : '°C') : 'Temperature in ' + (S.unit === 'F' ? '°F' : '°C'));
+    $('pm').hidden = diff;
+
+    var hint = $('hint'), off = false;
+    if (!diff) {
+      var f = S.readF, c = (f - 32) / 1.8;
+      $('vF').textContent = fmt(f) + ' °F';
+      $('vC').textContent = fmt(c) + ' °C';
+      $('cap').textContent = 'Reading';
+      var fc = clamp(f, FMIN, FMAX), y = yF(fc);
+      off = fc !== f;
+      mark.setAttribute('y1', y); mark.setAttribute('y2', y);
+      markL.setAttribute('d', 'M' + (X-HALF-10) + ' ' + (y-6) + 'L' + (X-HALF-1) + ' ' + y + 'L' + (X-HALF-10) + ' ' + (y+6) + 'Z');
+      markR.setAttribute('d', 'M' + (X+HALF+10) + ' ' + (y-6) + 'L' + (X+HALF+1) + ' ' + y + 'L' + (X+HALF+10) + ' ' + (y+6) + 'Z');
+      [mark, markL, markR].forEach(function(e){ e.setAttribute('visibility', 'visible'); });
+      [band, bandF, bandC].forEach(function(e){ e.setAttribute('visibility', 'hidden'); });
+      grab.setAttribute('aria-valuenow', r1(fc)); grab.setAttribute('aria-valuetext', fmt(f) + ' °F, ' + fmt(c) + ' °C');
+      if (S.unit === 'C') {
+        var est = c * 2 + 30;
+        hint.innerHTML = 'Mental math: <strong>°C × 2 + 30</strong> → ' + fmt(c) + ' × 2 + 30 ≈ <strong>' + fmt(Math.round(est)) + ' °F</strong>. Exact: ' + fmt(f) + ' °F.' + (Math.abs(est - f) > 3 ? ' The shortcut is off by more than 3° here, so trust the ruler.' : '');
+      } else {
+        var est2 = (f - 30) / 2;
+        hint.innerHTML = 'Mental math: <strong>(°F − 30) ÷ 2</strong> → (' + fmt(f) + ' − 30) ÷ 2 ≈ <strong>' + fmt(Math.round(est2)) + ' °C</strong>. Exact: ' + fmt(c) + ' °C.' + (Math.abs(est2 - c) > 3 ? ' The shortcut is off by more than 3° here, so trust the ruler.' : '');
+      }
+    } else {
+      var d = Math.abs(S.diffF), dc = d / 1.8;
+      $('vF').textContent = fmt(d) + ' °F';
+      $('vC').textContent = fmt(dc) + ' °C';
+      $('cap').textContent = 'Difference';
+      var span = Math.min(d, FMAX - FMIN);
+      var top = clamp(S.anchorF, FMIN + span, FMAX), bot = top - span;
+      off = span !== d;
+      band.setAttribute('y', yF(top)); band.setAttribute('height', Math.max(1, span * PX));
+      var mid = (yF(top) + yF(bot)) / 2;
+      bandF.setAttribute('y', mid - 3); bandF.textContent = fmt(d) + ' °F';
+      bandC.setAttribute('y', mid + 13); bandC.textContent = fmt(dc) + ' °C';
+      [band, bandF, bandC].forEach(function(e){ e.setAttribute('visibility', 'visible'); });
+      [mark, markL, markR].forEach(function(e){ e.setAttribute('visibility', 'hidden'); });
+      grab.setAttribute('aria-valuenow', r1(top)); grab.setAttribute('aria-valuetext', 'Band from ' + fmt(top) + ' to ' + fmt(bot) + ' °F');
+      if (S.unit === 'F') {
+        var wrong = (d - 32) / 1.8;
+        hint.innerHTML = 'A difference only gets <strong>÷ 1.8</strong>, no 32. ' + fmt(d) + ' °F of difference is <strong>' + fmt(dc) + ' °C</strong>, not ' + fmt(wrong) + ' °C. Quick: about half.';
+      } else {
+        var dcv = d / 1.8;
+        hint.innerHTML = 'A difference only gets <strong>× 1.8</strong>, no 32. ' + fmt(dcv) + ' °C of difference is <strong>' + fmt(d) + ' °F</strong>, not ' + fmt(dcv * 1.8 + 32) + ' °F. Quick: about double.';
+      }
+    }
+    note.textContent = !off ? NOTE : diff ? 'Wider than the ruler. Band shows the full scale.' : 'Off the ruler. Marker pinned at the ' + (S.readF > FMAX ? 'top' : 'bottom') + '.';
+    save();
+  }
+
+  // ── Input ────────────────────────────────────────────────────
+  function fromInput(){
+    err.textContent = '';
+    var s = tin.value.trim().replace(',', '.').replace('−', '-');
+    if (s === '' || s === '-') return;
+    var v = Number(s);
+    if (!isFinite(v)) { err.textContent = 'Enter a number, like 72 or -10.5'; return; }
+    if (S.mode === 'read') {
+      var f = fromUnit(v, false);
+      if (f < -459.67) { err.textContent = 'That is below absolute zero.'; return; }
+      S.readF = f; S.anchorF = clamp(f, FMIN, FMAX);
+    } else {
+      S.diffF = Math.abs(fromUnit(v, true));
+    }
+    render();
+  }
+  tin.addEventListener('input', fromInput);
+  $('pm').addEventListener('click', function(){
+    var s = tin.value.trim();
+    tin.value = s.charAt(0) === '-' ? s.slice(1) : '-' + (s || '');
+    fromInput(); tin.focus();
+  });
+  document.querySelectorAll('[data-m]').forEach(function(b){ b.addEventListener('click', function(){ S.mode = b.dataset.m; err.textContent = ''; setInput(); render(); }); });
+  document.querySelectorAll('[data-u]').forEach(function(b){ b.addEventListener('click', function(){ S.unit = b.dataset.u; err.textContent = ''; setInput(); render(); }); });
+
+  // ── Drag / keys on the ruler ─────────────────────────────────
+  function snap(f){ // whole degrees in the unit being typed
+    if (S.unit === 'C') return Math.round((f - 32) / 1.8) * 1.8 + 32;
+    return Math.round(f);
+  }
+  function setFromRuler(f){
+    f = clamp(f, FMIN, FMAX);
+    if (S.mode === 'read') { S.readF = snap(f); S.anchorF = S.readF; }
+    else { S.anchorF = clamp(snap(f), FMIN + Math.min(Math.abs(S.diffF), FMAX - FMIN), FMAX); }
+    err.textContent = ''; setInput(); render();
+  }
+  function pt(e){
+    var r = svg.getBoundingClientRect(), y = (e.clientY - r.top) * H / r.height;
+    setFromRuler(FMAX - (y - TOP) / PX);
+  }
+  var down = false;
+  grab.addEventListener('pointerdown', function(e){ down = true; grab.setPointerCapture(e.pointerId); pt(e); });
+  grab.addEventListener('pointermove', function(e){ if (down) pt(e); });
+  grab.addEventListener('pointerup', function(){ down = false; });
+  grab.addEventListener('pointercancel', function(){ down = false; });
+  grab.addEventListener('keydown', function(e){
+    var step = S.unit === 'C' ? 1.8 : 1;
+    var d = { ArrowUp:step, ArrowDown:-step, PageUp:10*step, PageDown:-10*step }[e.key];
+    if (!d) return; e.preventDefault();
+    setFromRuler((S.mode === 'read' ? S.readF : S.anchorF) + d);
+  });
+
+  // ── Cheat sheet ──────────────────────────────────────────────
+  function rows(list, diff, host){
+    list.forEach(function(r){
+      var b = document.createElement('button'); b.type = 'button';
+      var cVal = diff ? r[1] / 1.8 : (r[1] - 32) / 1.8;
+      b.innerHTML = '<span></span><span class="nf"></span><span class="nc"></span>';
+      b.children[0].textContent = r[0];
+      b.children[1].textContent = fmt(r[1]) + ' °F';
+      b.children[2].textContent = fmt(cVal) + ' °C';
+      b.setAttribute('aria-label', r[0] + ': ' + fmt(r[1]) + ' °F, ' + fmt(cVal) + ' °C' + (diff ? ' difference' : ''));
+      b.addEventListener('click', function(){
+        S.mode = diff ? 'diff' : 'read';
+        if (diff) { S.diffF = r[1]; S.anchorF = r[2]; }
+        else { S.readF = r[1]; S.anchorF = r[1]; }
+        err.textContent = ''; setInput(); render();
+        var target = diff ? band : mark, rect = target.getBoundingClientRect();
+        window.scrollBy({ top: rect.top - window.innerHeight * 0.55, behavior: 'smooth' });
+      });
+      host.appendChild(b);
+    });
+  }
+  rows(READINGS, false, $('readList'));
+  rows(DIFFS, true, $('diffList'));
+
+  // ── Add-to-home-screen hint ──────────────────────────────────
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  var hidden = false; try { hidden = localStorage.getItem('tempRulerInstallHidden') === '1'; } catch(e) {}
+  var box = $('install'), txt = $('installText'), ibtn = $('installBtn'), deferred = null;
+  if (!standalone && !hidden) {
+    var ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    txt.innerHTML = ios
+      ? '<strong>Keep this on your phone.</strong> In Safari, tap Share, then <strong>Add to Home Screen</strong>. It works offline after that.'
+      : '<strong>Keep this on your phone.</strong> Open the browser menu (⋮) and tap <strong>Add to Home screen</strong>. It works offline after that.';
+    box.classList.add('show');
+  }
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault(); deferred = e;
+    if (!standalone && !hidden) { ibtn.hidden = false; txt.innerHTML = '<strong>Keep this on your phone.</strong> Install it and it works offline.'; box.classList.add('show'); }
+  });
+  ibtn.addEventListener('click', function(){ if (deferred) { deferred.prompt(); deferred = null; box.classList.remove('show'); } });
+  $('installHide').addEventListener('click', function(){ box.classList.remove('show'); try { localStorage.setItem('tempRulerInstallHidden', '1'); } catch(e) {} });
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+
+  setInput(); render();
+})();
+</script>
+</body>
+</html>
