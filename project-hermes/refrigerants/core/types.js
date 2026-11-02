@@ -59,14 +59,19 @@ const TABLE_TYPE = Object.freeze({
  *   col 0 = bubble temp  (searched by getSatPressure "bubble")
  *   col 1 = pressure     (searched by getSatTemp)
  *   col 2 = dew temp     (searched by getSatPressure "dew"; returned by getSatTemp "dew")
- *   Sources: R-407C (iGas), R-422B/R-438A (Chemours), R-448A (Honeywell)
+ *   Sources: R-422B/R-438A (Chemours), R-448A/R-454C (Honeywell)
  *
  * "temp_indexed" — Source lists temperature as the key.
- *   Rows: [bubbleTempF, bubblePSIG, dewPSIG]
- *   col 0 = bubble temp  (searched by both getSatPressure variants)
+ *   Rows: [tempF, bubblePSIG, dewPSIG]
+ *   col 0 = temperature  (shared by both curves; searched by both getSatPressure variants)
  *   col 1 = bubble psig  (returned by getSatPressure "bubble"; searched by getSatTemp "bubble")
  *   col 2 = dew psig     (returned by getSatPressure "dew";    searched by getSatTemp "dew")
- *   Sources: R-427A (Arkema), R-449A (Hudson), R-450A/R-513A (Emerson), R-454B (Daikin)
+ *   Sources: R-407C (iGas), R-427A (Arkema), R-449A (Hudson), R-450A/R-513A (Emerson), R-454B (Daikin)
+ *
+ * Bubble vs dew: at a given temperature, bubble (liquid) pressure > dew (vapor)
+ * pressure; at a given pressure, dew temp > bubble temp. Charts label these
+ * inconsistently ("liquid/vapor", "vapor temp/bubble temp") — map columns by
+ * the physics, not the header. validate.js rejects a table that violates it.
  */
 const TABLE_ORIENTATION = Object.freeze({
   PRESSURE_INDEXED: "pressure_indexed",

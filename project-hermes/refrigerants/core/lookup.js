@@ -18,7 +18,7 @@
  *     — source was pressure-indexed (pressure is the single shared key)
  *
  *   zeotropic, temp_indexed:
- *     [bubbleTempF, bubblePSIG, dewPSIG]
+ *     [tempF, bubblePSIG, dewPSIG]
  *     — source was temp-indexed (temperature is the key, two pressure columns)
  *
  * Zeotropic lookups accept an optional `point` argument:
@@ -51,7 +51,7 @@ function getRangeFromTable(ref) {
   }
 
   if (ref.tableOrientation === TEMP_INDEXED) {
-    // [bubbleTempF, bubblePSIG, dewPSIG]
+    // [tempF, bubblePSIG, dewPSIG]
     return Object.freeze({
       minBubbleTemp_F: first[0],
       maxBubbleTemp_F: last[0],
@@ -120,10 +120,10 @@ function interpolate(x, x0, x1, y0, y1) {
  *   "bubble" — search col 0 (bubble temps), return col 1 (shared psig)
  *   "dew"    — search col 2 (dew temps),    return col 1 (shared psig)
  *
- * temp_indexed zeotropic [bubbleTempF, bubblePSIG, dewPSIG]:
- *   "bubble" — search col 0 (bubble temps), return col 1 (bubble psig)
- *   "dew"    — search col 0 (bubble temps), return col 2 (dew psig)
- *   Note: both look up by bubble temp since that is the indexed key.
+ * temp_indexed zeotropic [tempF, bubblePSIG, dewPSIG]:
+ *   "bubble" — search col 0 (temperature), return col 1 (bubble psig)
+ *   "dew"    — search col 0 (temperature), return col 2 (dew psig)
+ *   Col 0 is a plain saturation temperature shared by both curves.
  */
 function getSatPressureFromData(ref, tempF, point = "bubble") {
   const t          = ref.table;
@@ -139,8 +139,8 @@ function getSatPressureFromData(ref, tempF, point = "bubble") {
   }
 
   if (ref.tableOrientation === TEMP_INDEXED) {
-    // [bubbleTempF, bubblePSIG, dewPSIG]
-    // Both points search col 0 (bubble temp is the key)
+    // [tempF, bubblePSIG, dewPSIG]
+    // Both points search col 0 (the shared temperature key)
     const resultCol = (point === "dew") ? 2 : 1;
     const bracket = bsearch(t, 0, tempF);
     if (!bracket) return null;
@@ -170,12 +170,11 @@ function getSatPressureFromData(ref, tempF, point = "bubble") {
  *   "bubble" — search col 1 (shared psig), return col 0 (bubble temp)
  *   "dew"    — search col 1 (shared psig), return col 2 (dew temp)
  *
- * temp_indexed zeotropic [bubbleTempF, bubblePSIG, dewPSIG]:
- *   "bubble" — search col 1 (bubble psig), return col 0 (bubble temp)
- *   "dew"    — search col 2 (dew psig),    return col 0 (bubble temp)
- *   Note: both return bubble temp (the indexed key) — this is correct
- *   because the bubble temp is the temperature reference for the refrigerant
- *   at that operating pressure on that curve.
+ * temp_indexed zeotropic [tempF, bubblePSIG, dewPSIG]:
+ *   "bubble" — search col 1 (bubble psig), return col 0 → bubble-point temp
+ *   "dew"    — search col 2 (dew psig),    return col 0 → dew-point temp
+ *   Col 0 is a plain temperature shared by both curves, so the same column
+ *   yields the bubble temp on the bubble curve and the dew temp on the dew curve.
  */
 function getSatTempFromData(ref, psig, point = "bubble") {
   const t          = ref.table;
@@ -191,7 +190,7 @@ function getSatTempFromData(ref, psig, point = "bubble") {
   }
 
   if (ref.tableOrientation === TEMP_INDEXED) {
-    // [bubbleTempF, bubblePSIG, dewPSIG]
+    // [tempF, bubblePSIG, dewPSIG]
     const searchCol = (point === "dew") ? 2 : 1;
     const bracket = bsearch(t, searchCol, psig);
     if (!bracket) return null;

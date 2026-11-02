@@ -13,9 +13,15 @@ Design constraints:
 - **One owner.** A small `tools/shared/readings.js` module (get / offer / clear) used by every tool, so the rules live in one place. The shell gets a "Clear readings" control and clears them when a new unit is started.
 - **Tests first.** Expiry and "never auto-fill" are tested before any tool adopts it.
 
-## Refrigerant PT data verification (in progress)
+## Refrigerant PT data verification (done 2026-11)
 
-Every table in `refrigerants/data/` is being checked against an independent reference (manufacturer charts and an equation-of-state model), including bubble/dew orientation for zeotropic blends. The PT Chart lookup tool ships only after that audit.
+All 15 tables were checked against independent data (CoolProp and manufacturer charts). Three were wrong and are fixed: R-407C (wrong orientation and swapped bubble/dew), R-454B (swapped bubble/dew), R-454C (single bubble column replaced with Honeywell's two-curve chart). `core/validate.js` now rejects swapped bubble/dew columns and implausible glide at load, and `refrigerants/tests/reference.test.mjs` checks every refrigerant against independent values (run with `node`). Any data change must keep that test passing and bump `CACHE_VERSION` in `sw.js`.
+
+Still single-sourced: R-427A, R-449A, R-513A (model agreement only, within 0.7°F). R-410A drifts ~0.6°F low above 130°F (Chemours source).
+
+## PT Chart tool (next)
+
+Unblocked by the audit: a standalone pressure–temperature lookup built on the verified library, showing bubble and dew for blends.
 
 ## Tool page refresh (next)
 

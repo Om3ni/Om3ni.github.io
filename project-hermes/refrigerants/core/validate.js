@@ -20,6 +20,11 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+// Largest plausible temperature glide for an HVAC/R zeotropic blend (°F).
+// Real blends in this library glide 1–15°F. A value far outside this means a
+// column is in the wrong place (e.g. a pressure being read as a temperature).
+const MAX_GLIDE_F = 25;
+
 function validateMetadata(ref) {
   const id = ref.id ?? "(unknown)";
 
@@ -90,7 +95,7 @@ function validateTable(ref) {
   const rowLen      = zeotropic ? 3 : 2;
 
   const rowDesc = zeotropic
-    ? (tempIndexed ? "[bubbleTempF, bubblePSIG, dewPSIG]" : "[bubbleTempF, psig, dewTempF]")
+    ? (tempIndexed ? "[tempF, bubblePSIG, dewPSIG]" : "[bubbleTempF, psig, dewTempF]")
     : "[tempF, psig]";
 
   assert(Array.isArray(t) && t.length >= 2,
@@ -106,10 +111,24 @@ function validateTable(ref) {
         `[refrigerants] ${id}: non-finite value at row ${i} col ${col} (${row[col]})`);
     }
 
+    // Bubble/dew physics, checked on every row (including the first).
+    // At a given temperature a zeotrope's bubble (liquid) pressure is >= its dew
+    // (vapor) pressure; at a given pressure its dew temperature is >= its bubble
+    // temperature. A swapped bubble/dew column fails here.
+    if (zeotropic && tempIndexed) {
+      assert(row[1] >= row[2],
+        `[refrigerants] ${id}: bubble psig (${row[1]}) < dew psig (${row[2]}) at ${row[0]}°F (row ${i}) — bubble/dew columns swapped?`);
+    } else if (zeotropic) {
+      assert(row[2] >= row[0],
+        `[refrigerants] ${id}: dew temp (${row[2]}) < bubble temp (${row[0]}) at ${row[1]} psig (row ${i}) — bubble/dew columns swapped?`);
+      assert(row[2] - row[0] <= MAX_GLIDE_F,
+        `[refrigerants] ${id}: glide ${(row[2] - row[0]).toFixed(1)}°F at ${row[1]} psig (row ${i}) exceeds ${MAX_GLIDE_F}°F — wrong tableOrientation or column order?`);
+    }
+
     if (i > 0) {
       const prev = t[i - 1];
 
-      // Col 0: bubble temp (or single temp) — strictly increasing in all cases
+      // Col 0: temperature (bubble temp when pressure-indexed) — strictly increasing in all cases
       assert(row[0] > prev[0],
         `[refrigerants] ${id}: col 0 (temp) not strictly increasing at row ${i} (${prev[0]} → ${row[0]})`);
 
@@ -118,7 +137,7 @@ function validateTable(ref) {
         assert(row[1] > prev[1],
           `[refrigerants] ${id}: col 1 (pressure) not strictly increasing at row ${i} (${prev[1]} → ${row[1]})`);
       } else if (tempIndexed) {
-        // temp_indexed: [bubbleTempF, bubblePSIG, dewPSIG]
+        // temp_indexed: [tempF, bubblePSIG, dewPSIG]
         // Col 1 (bubble psig) and col 2 (dew psig) must both be strictly increasing
         assert(row[1] > prev[1],
           `[refrigerants] ${id}: col 1 (bubble psig) not strictly increasing at row ${i} (${prev[1]} → ${row[1]})`);
@@ -131,9 +150,25 @@ function validateTable(ref) {
           `[refrigerants] ${id}: col 1 (pressure) not strictly increasing at row ${i} (${prev[1]} → ${row[1]})`);
         assert(row[2] > prev[2],
           `[refrigerants] ${id}: col 2 (dew temp) not strictly increasing at row ${i} (${prev[2]} → ${row[2]})`);
-        // Dew temp must be >= bubble temp (glide is always positive or zero)
-        assert(row[2] >= row[0],
-          `[refrigerants] ${id}: dew temp (${row[2]}) < bubble temp (${row[0]}) at row ${i} — invalid glide`);
+      }
+    }
+  }
+}
+
+// temp_indexed tables store pressures, so glide is measured by finding the
+// temperature at which the dew curve reaches each row's bubble pressure.
+function validateGlide(ref) {
+  if (ref.tableType !== TABLE_TYPE.ZEOTROPIC || ref.tableOrientation !== TABLE_ORIENTATION.TEMP_INDEXED) return;
+  const t = ref.table;
+  for (let i = 0; i < t.length; i++) {
+    const p = t[i][1];
+    for (let j = 1; j < t.length; j++) {
+      if (t[j - 1][2] <= p && p <= t[j][2]) {
+        const dewT = t[j - 1][0] + (p - t[j - 1][2]) / (t[j][2] - t[j - 1][2]) * (t[j][0] - t[j - 1][0]);
+        const glide = dewT - t[i][0];
+        assert(glide >= 0 && glide <= MAX_GLIDE_F,
+          `[refrigerants] ${ref.id}: glide ${glide.toFixed(1)}°F at ${t[i][0]}°F exceeds 0–${MAX_GLIDE_F}°F — wrong tableOrientation or column order?`);
+        break;
       }
     }
   }
@@ -142,6 +177,7 @@ function validateTable(ref) {
 function validateRefrigerant(ref) {
   validateMetadata(ref);
   validateTable(ref);
+  validateGlide(ref);
   return true;
 }
 

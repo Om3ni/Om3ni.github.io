@@ -32,7 +32,7 @@ const r448a = {
   flammable:   false,
   gwp:         1387,
   source:      "Honeywell Solstice N40 (R-448A) Technical Data Sheet — Document 3820",
-  source_url:  "https://www.fsw.uk.com/wp-content/uploads/2023/12/r448a-n40-pt-chart.pdf",
+  source_url:  "https://meiersupply.com/customer/docs/skudocs/Document_Links/Vendors/Chemours/R-448A/R-448APTCHART.pdf",
 
   units: {
     temp:     UNITS.TEMP_F,

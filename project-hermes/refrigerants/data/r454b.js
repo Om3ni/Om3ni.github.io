@@ -6,14 +6,20 @@
  *            "A2L Pressure-Temperature Chart" — PM-A2LPTC-USA_04-24
  *            April 2024
  *
- * Table:     Zeotropic blend — rows: [bubbleTempF, bubblePSIG, dewPSIG]
+ * Table:     Zeotropic blend, temperature-indexed — rows: [tempF, bubblePSIG, dewPSIG]
  *            2°F steps from -38°F to 100°F, 5°F steps from 100°F to 150°F.
  *
- *            Source columns labeled "Liquid Pressure" and "Vapor Pressure".
- *            Convention is inverted from bubble/dew naming:
- *              Source "Vapor Pressure" (lower) = bubble point
- *              Source "Liquid Pressure" (higher) = dew point
- *            Temperature glide: ~5.6 PSIG at 40°F, ~12 PSIG at 100°F.
+ *            Source columns labeled "Liquid Pressure" and "Vapor Pressure":
+ *              Source "Liquid Pressure" (higher) = bubble point
+ *              Source "Vapor Pressure"  (lower)  = dew point
+ *            At any temperature a zeotrope's bubble pressure is above its
+ *            dew pressure; validate.js enforces this on every row.
+ *            Pressure split: ~5.6 PSIG at 40°F, ~12 PSIG at 100°F.
+ *
+ * Fixed:     2026-11 audit. Bubble and dew columns were swapped on import,
+ *            overstating superheat and subcooling by ~2.5°F each. Values
+ *            unchanged; columns corrected. All 80 rows match the Daikin chart;
+ *            CoolProp (R-32/R-1234yf 68.9/31.1) agrees within 0.3 psi.
  *
  * Verified:  8 anchor points checked against source — all delta 0.0 PSIG.
  */
@@ -42,42 +48,41 @@ const r454b = {
     status:             VERIFICATION_STATUS.ANCHOR_VALIDATED,
     tolerance_psig:     0.0,
     formula_recomputed: false,
-    note: "Source columns 'Liquid Pressure' (higher) = dew point, " +
-          "'Vapor Pressure' (lower) = bubble point — convention is inverted " +
-          "from common naming. Columns swapped on import. " +
+    note: "Source 'Liquid Pressure' (higher) = bubble point, " +
+          "'Vapor Pressure' (lower) = dew point. " +
           "2°F steps -38°F to 100°F, 5°F steps 100°F to 150°F. " +
           "8 anchor points verified against source — all delta 0.0.",
     anchors: [
-      { temp_F:  -38, point: "bubble", expected_psig:  10.0, calculated_psig:  10.0, delta: 0.0 },
-      { temp_F:  -38, point: "dew",    expected_psig:  11.2, calculated_psig:  11.2, delta: 0.0 },
-      { temp_F:    0, point: "bubble", expected_psig:  43.3, calculated_psig:  43.3, delta: 0.0 },
-      { temp_F:    0, point: "dew",    expected_psig:  46.1, calculated_psig:  46.1, delta: 0.0 },
-      { temp_F:   40, point: "bubble", expected_psig: 107.7, calculated_psig: 107.7, delta: 0.0 },
-      { temp_F:   40, point: "dew",    expected_psig: 113.3, calculated_psig: 113.3, delta: 0.0 },
-      { temp_F:  100, point: "bubble", expected_psig: 291.6, calculated_psig: 291.6, delta: 0.0 },
-      { temp_F:  150, point: "bubble", expected_psig: 568.2, calculated_psig: 568.2, delta: 0.0 }
+      { temp_F:  -38, point: "dew",    expected_psig:  10.0, calculated_psig:  10.0, delta: 0.0 },
+      { temp_F:  -38, point: "bubble", expected_psig:  11.2, calculated_psig:  11.2, delta: 0.0 },
+      { temp_F:    0, point: "dew",    expected_psig:  43.3, calculated_psig:  43.3, delta: 0.0 },
+      { temp_F:    0, point: "bubble", expected_psig:  46.1, calculated_psig:  46.1, delta: 0.0 },
+      { temp_F:   40, point: "dew",    expected_psig: 107.7, calculated_psig: 107.7, delta: 0.0 },
+      { temp_F:   40, point: "bubble", expected_psig: 113.3, calculated_psig: 113.3, delta: 0.0 },
+      { temp_F:  100, point: "dew",    expected_psig: 291.6, calculated_psig: 291.6, delta: 0.0 },
+      { temp_F:  150, point: "dew",    expected_psig: 568.2, calculated_psig: 568.2, delta: 0.0 }
     ]
   },
 
-  // Canonical table — [bubbleTempF, bubblePSIG, dewPSIG]
+  // Canonical table — [tempF, bubblePSIG, dewPSIG]
   // 2°F steps to 100°F, 5°F steps above. Range derived at runtime.
   table: [
-    [ -38, 10.0, 11.2], [ -36, 11.2, 12.5], [ -34, 12.5, 13.8], [ -32, 13.9, 15.3], [ -30, 15.3, 16.7],
-    [ -28, 16.7, 18.2], [ -26, 18.2, 19.8], [ -24, 19.8, 21.4], [ -22, 21.4, 23.1], [ -20, 23.0, 24.9],
-    [ -18, 24.8, 26.7], [ -16, 26.6, 28.6], [ -14, 28.4, 30.5], [ -12, 30.3, 32.5], [ -10, 32.3, 34.6],
-    [  -8, 34.4, 36.7], [  -6, 36.5, 39.0], [  -4, 38.7, 41.2], [  -2, 40.9, 43.6], [   0, 43.3, 46.1],
-    [   2, 45.7, 48.6], [   4, 48.1, 51.2], [   6, 50.7, 53.8], [   8, 53.3, 56.6], [  10, 56.1, 59.5],
-    [  12, 58.9, 62.4], [  14, 61.8, 65.4], [  16, 64.7, 68.5], [  18, 67.8, 71.7], [  20, 70.9, 75.0],
-    [  22, 74.2, 78.4], [  24, 77.5, 81.8], [  26, 80.9, 85.4], [  28, 84.4, 89.1], [  30, 88.1, 92.9],
-    [  32, 91.8, 96.8], [  34, 95.6,100.7], [  36, 99.5,104.8], [  38,103.6,109.0], [  40,107.7,113.3],
-    [  42,112.0,117.8], [  44,116.3,122.3], [  46,120.8,126.9], [  48,125.4,131.7], [  50,130.1,136.6],
-    [  52,134.9,141.6], [  54,139.8,146.7], [  56,144.9,152.0], [  58,150.1,157.4], [  60,155.4,162.9],
-    [  62,160.8,168.6], [  64,166.4,174.3], [  66,172.1,180.2], [  68,178.0,186.3], [  70,184.0,192.5],
-    [  72,190.1,198.8], [  74,196.4,205.3], [  76,202.8,211.9], [  78,209.3,218.7], [  80,216.1,225.6],
-    [  82,222.9,232.7], [  84,229.9,239.9], [  86,237.1,247.3], [  88,244.4,254.8], [  90,251.9,262.5],
-    [  92,259.6,270.4], [  94,267.4,278.4], [  96,275.4,286.6], [  98,283.6,295.0], [ 100,291.6,303.6],
-    [ 105,313.6,325.7], [ 110,336.4,348.9], [ 115,360.5,373.4], [ 120,385.8,399.1], [ 125,412.4,426.0],
-    [ 130,440.5,454.2], [ 135,470.0,483.8], [ 140,501.0,514.9], [ 145,533.7,547.3], [ 150,568.2,581.4]
+    [ -38, 11.2, 10.0], [ -36, 12.5, 11.2], [ -34, 13.8, 12.5], [ -32, 15.3, 13.9], [ -30, 16.7, 15.3],
+    [ -28, 18.2, 16.7], [ -26, 19.8, 18.2], [ -24, 21.4, 19.8], [ -22, 23.1, 21.4], [ -20, 24.9, 23.0],
+    [ -18, 26.7, 24.8], [ -16, 28.6, 26.6], [ -14, 30.5, 28.4], [ -12, 32.5, 30.3], [ -10, 34.6, 32.3],
+    [  -8, 36.7, 34.4], [  -6, 39.0, 36.5], [  -4, 41.2, 38.7], [  -2, 43.6, 40.9], [   0, 46.1, 43.3],
+    [   2, 48.6, 45.7], [   4, 51.2, 48.1], [   6, 53.8, 50.7], [   8, 56.6, 53.3], [  10, 59.5, 56.1],
+    [  12, 62.4, 58.9], [  14, 65.4, 61.8], [  16, 68.5, 64.7], [  18, 71.7, 67.8], [  20, 75.0, 70.9],
+    [  22, 78.4, 74.2], [  24, 81.8, 77.5], [  26, 85.4, 80.9], [  28, 89.1, 84.4], [  30, 92.9, 88.1],
+    [  32, 96.8, 91.8], [  34,100.7, 95.6], [  36,104.8, 99.5], [  38,109.0,103.6], [  40,113.3,107.7],
+    [  42,117.8,112.0], [  44,122.3,116.3], [  46,126.9,120.8], [  48,131.7,125.4], [  50,136.6,130.1],
+    [  52,141.6,134.9], [  54,146.7,139.8], [  56,152.0,144.9], [  58,157.4,150.1], [  60,162.9,155.4],
+    [  62,168.6,160.8], [  64,174.3,166.4], [  66,180.2,172.1], [  68,186.3,178.0], [  70,192.5,184.0],
+    [  72,198.8,190.1], [  74,205.3,196.4], [  76,211.9,202.8], [  78,218.7,209.3], [  80,225.6,216.1],
+    [  82,232.7,222.9], [  84,239.9,229.9], [  86,247.3,237.1], [  88,254.8,244.4], [  90,262.5,251.9],
+    [  92,270.4,259.6], [  94,278.4,267.4], [  96,286.6,275.4], [  98,295.0,283.6], [ 100,303.6,291.6],
+    [ 105,325.7,313.6], [ 110,348.9,336.4], [ 115,373.4,360.5], [ 120,399.1,385.8], [ 125,426.0,412.4],
+    [ 130,454.2,440.5], [ 135,483.8,470.0], [ 140,514.9,501.0], [ 145,547.3,533.7], [ 150,581.4,568.2]
   ]
 };
 
