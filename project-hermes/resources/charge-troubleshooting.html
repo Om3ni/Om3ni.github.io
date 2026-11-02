@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Charge Troubleshooting</title>
+<link rel="stylesheet" href="../base.css">
+<style>
+/* Layout: one phone column. Metering switch → filter → problem rows (pattern
+   chips) → footnotes → folding reference sections. */
+:root { --up: #ef7a1f; --down: #6cb4f5; --norm: var(--text-dim); --line: #2c2c2c; }
+[data-theme="light"] { --up: #9a4000; --down: #1f5fa8; --line: #b4b4b4; }
+body { padding-bottom: 32px; }
+.wrap { max-width: 640px; margin: 0 auto; padding: 14px 16px 0; }
+h2.lbl { margin: 22px 2px 8px; font-family: var(--ui); font-size: .82rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--orange-hi); }
+[data-theme="light"] h2.lbl { color: #9a4000; }
+.intro { margin: 0 2px; font-size: .95rem; color: var(--text-dim); line-height: 1.45; }
+
+.seg { display: flex; gap: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 3px; }
+.seg button { flex: 1; min-height: 44px; border: 0; border-radius: 6px; background: transparent; color: var(--text-dim); font-family: var(--ui); font-size: 1rem; font-weight: 700; letter-spacing: .04em; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--orange-dim); color: var(--orange-hi); box-shadow: inset 0 0 0 1px var(--orange-hi); }
+[data-theme="light"] .seg button[aria-pressed="true"] { color: #9a4000; box-shadow: inset 0 0 0 1px #9a4000; }
+
+/* Filter */
+.filter { margin-top: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.filter > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 14px; font-family: var(--ui); font-size: 1rem; font-weight: 700; color: var(--text); }
+.filter > summary::-webkit-details-marker { display: none; }
+.filter > summary .count { margin-left: auto; font-family: var(--mono); font-size: .8rem; font-weight: 400; color: var(--text-dim); }
+.filter > summary::before { content: '+'; font-family: var(--mono); color: var(--orange-hi); width: 12px; }
+.filter[open] > summary::before { content: '−'; }
+.fbody { padding: 2px 14px 14px; }
+.frow { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.frow .fl { width: 92px; flex-shrink: 0; font-size: .9rem; font-weight: 600; color: var(--text-dim); }
+.frow .seg { flex: 1; }
+.frow .seg button { min-height: 38px; font-size: .9rem; padding: 0 4px; }
+.fnote { margin: 10px 0 0; font-size: .85rem; color: var(--text-mute); line-height: 1.4; }
+.clear { margin-top: 10px; min-height: 40px; padding: 0 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--ui); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+
+/* Chart */
+.key { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 14px 2px 8px; font-size: .85rem; color: var(--text-dim); }
+.key b { font-family: var(--mono); font-weight: 400; }
+.list { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.prob { padding: 10px 12px 12px; border-top: 1px solid var(--line); transition: opacity .15s; }
+.prob:first-child { border-top: 0; }
+.prob.dim { opacity: .32; }
+.prob.hit { box-shadow: inset 3px 0 0 var(--orange-hi); }
+.pname { font-size: 1.05rem; font-weight: 700; line-height: 1.2; color: var(--text); }
+.pname sup, .cell sup { font-family: var(--mono); font-size: .7rem; color: var(--orange-hi); margin-left: 1px; }
+.cells { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 1.5fr); gap: 4px; margin-top: 8px; }
+.cell { background: var(--surface2); border-radius: 6px; padding: 4px 2px 5px; text-align: center; min-width: 0; }
+.cell .h { display: block; font-family: var(--mono); font-size: .66rem; letter-spacing: .04em; color: var(--text-mute); }
+.cell .v { display: block; font-family: var(--mono); font-size: 1.1rem; line-height: 1.2; white-space: nowrap; }
+.cell .v.rh { font-family: var(--ui); font-size: .82rem; font-weight: 700; line-height: 1.35; white-space: normal; }
+.up { color: var(--up); } .down { color: var(--down); } .norm { color: var(--norm); }
+.foot { margin: 12px 2px 0; padding: 0; list-style: none; font-size: .88rem; color: var(--text-dim); line-height: 1.45; }
+.foot li { margin-top: 6px; padding-left: 20px; text-indent: -20px; }
+.foot li b { font-family: var(--mono); font-weight: 400; color: var(--orange-hi); display: inline-block; width: 20px; text-indent: 0; }
+
+/* Reference sections */
+details.ref { margin-top: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+details.ref > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 14px; font-family: var(--ui); font-size: 1.05rem; font-weight: 700; color: var(--text); }
+details.ref > summary::-webkit-details-marker { display: none; }
+details.ref > summary::after { content: '+'; margin-left: auto; font-family: var(--mono); font-size: 1.1rem; color: var(--orange-hi); }
+details.ref[open] > summary::after { content: '−'; }
+.rbody { padding: 0 14px 14px; font-size: .95rem; line-height: 1.5; color: var(--text-dim); }
+.rbody ol, .rbody ul { margin: 0; padding-left: 20px; }
+.rbody li { margin-top: 7px; }
+.rbody strong { color: var(--text); }
+.rbody .mono { font-family: var(--mono); color: var(--text); }
+.tgt { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin-top: 4px; }
+.tgt div:nth-child(odd) { color: var(--text-dim); }
+.tgt div:nth-child(even) { font-family: var(--mono); color: var(--text); text-align: right; }
+.sub { margin: 14px 0 4px; font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--text-mute); }
+.eg { margin-top: 8px; padding: 10px 12px; background: var(--surface2); border-radius: 8px; font-family: var(--mono); font-size: .85rem; color: var(--text); line-height: 1.55; }
+.disc { margin: 18px 4px 0; font-size: .85rem; color: var(--text-mute); line-height: 1.45; }
+</style>
+</head>
+<body>
+<header>
+  <a class="hdr-home" href="../index.html" title="Project home">⌂</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Charge Troubleshooting</div>
+    <div class="hdr-sub">Fixed orifice · TXV · symptom chart</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <p class="intro">How each problem typically moves your readings, compared with what the system should read at design conditions. Check airflow and cleanliness first (see <em>Before you test</em> below).</p>
+
+  <div class="seg" role="group" aria-label="Metering device" style="margin-top:14px">
+    <button type="button" data-meter="fixed" aria-pressed="true">Fixed orifice</button>
+    <button type="button" data-meter="txv" aria-pressed="false">TXV / EEV</button>
+  </div>
+
+  <details class="filter" id="filter">
+    <summary>Filter by what you measured <span class="count" id="matchCount"></span></summary>
+    <div class="fbody" id="filterBody"></div>
+  </details>
+
+  <div class="key" aria-hidden="true">
+    <span><b class="up">↑</b> High</span><span><b class="down">↓</b> Low</span><span><b class="norm">N</b> Normal</span><span>RH = humidity control</span>
+  </div>
+  <div class="list" id="chart" aria-live="polite"></div>
+  <ol class="foot" id="foot" aria-label="Chart notes"></ol>
+
+  <h2 class="lbl">Reference</h2>
+
+  <details class="ref">
+    <summary>Before you test</summary>
+    <div class="rbody">
+      <ol>
+        <li>Filters, blower and both coils clean. Dampers open.</li>
+        <li>Know the metering device and the refrigerant.</li>
+        <li>Set and verify indoor airflow first: nominally <strong>400 CFM per ton</strong>. No charge reading means anything with wrong airflow.</li>
+        <li>Work out the pressures the system <em>should</em> run at from the design temperature difference (below).</li>
+        <li>Test heat pumps in <strong>cooling</strong> mode.</li>
+      </ol>
+    </div>
+  </details>
+
+  <details class="ref">
+    <summary>Expected pressures (design temperature difference)</summary>
+    <div class="rbody">
+      <div class="sub">Evaporator</div>
+      Evap saturation temp = return air − <span class="mono">35°F</span> (at 400 CFM/ton)
+      <div class="sub">Condenser</div>
+      Condensing temp = outdoor air + design difference:
+      <div class="tgt">
+        <div>6–8 SEER</div><div>+30°F</div>
+        <div>10–12 SEER</div><div>+25°F</div>
+        <div>13 SEER and up</div><div>+20°F</div>
+      </div>
+      <p style="margin:8px 0 0">These are standard design values; some manufacturers publish slightly different figures in their technical data. Condensing pressure also rises with indoor load. Convert both temperatures to pressures with a PT chart (or the Refrigeration Analysis tool).</p>
+      <div class="eg">75°F return − 35 = 40°F evap<br>→ 68.6 psig R-22 · 118 psig R-410A<br><br>95°F outdoor + 25 = 120°F cond<br>→ 260 psig R-22 · 418 psig R-410A</div>
+    </div>
+  </details>
+
+  <details class="ref">
+    <summary>Targets and definitions</summary>
+    <div class="rbody">
+      <div class="sub" style="margin-top:0">TXV / EEV</div>
+      <div class="tgt">
+        <div>Subcooling</div><div>8–12°F typical</div>
+        <div>Total superheat</div><div>8–20°F</div>
+        <div>Evaporator superheat</div><div>6–12°F</div>
+      </div>
+      <p style="margin:8px 0 0">Subcooling barely moves with indoor and outdoor conditions on a TXV system, which is why manufacturers give a single value. Aim within 3°F of it.</p>
+      <div class="sub">Fixed orifice</div>
+      <p style="margin:0">Charge to the manufacturer's charging chart or a target-superheat calculator (indoor wet bulb + outdoor dry bulb). Target superheat can range from about 5°F to 40°F. Subcooling varies with load; around 10°F at 95°F outdoor is typical.</p>
+      <div class="sub">Definitions</div>
+      <ul>
+        <li><strong>Total superheat</strong> = suction line temp at the service valve − suction saturation temp</li>
+        <li><strong>Evaporator superheat</strong> = suction line temp at the evaporator outlet − suction saturation temp</li>
+        <li><strong>Subcooling</strong> = condensing saturation temp − liquid line temp at the service valve</li>
+      </ul>
+    </div>
+  </details>
+
+  <details class="ref">
+    <summary>Field tips</summary>
+    <div class="rbody">
+      <div class="sub" style="margin-top:0">Charging</div>
+      <ul>
+        <li>Follow the manufacturer's charging procedure when there is one. Pressure-based methods only work with clean coils and correct airflow.</li>
+        <li>Never judge charge from one side. Read superheat <em>and</em> subcooling.</li>
+        <li>Charge heat pumps in cooling. If you must charge in heating by pressure, coils clean and airflow right, and come back to verify in cooling season.</li>
+        <li>Go slowly on heat pumps and anything with a suction accumulator. Liquid can sit in the accumulator and migrate out later, leaving the system overcharged.</li>
+      </ul>
+      <div class="sub">Not enough load</div>
+      <ul>
+        <li>Don't charge with the evaporator saturation below 32°F. As a rule, there isn't enough load below about 50°F indoor wet bulb or 68°F return air dry bulb.</li>
+        <li>If conditions are inside that range and the coil is still too cold, look for air bypassing the coil.</li>
+      </ul>
+      <div class="sub">TXV systems</div>
+      <ul>
+        <li>A TXV needs pressure drop across it: about <span class="mono">100 psi</span> on R-22, <span class="mono">160 psi</span> on R-410A. Without it, liquid backs up in the condenser: suction and liquid pressures low, superheat high, subcooling normal to high.</li>
+        <li>On a cool day, restrict condenser airflow to bring head pressure up to a 90–95°F-day equivalent, then check evaporator superheat and subcooling against spec. Not a charging method for charge-by-pressure systems, and keep the coil above freezing.</li>
+        <li>The valve can't control superheat past its bulb. If total superheat is high, insulate the suction line; a suction line over about 55°F deserves a closer look.</li>
+        <li>Before replacing a TXV, check bulb location and mounting. It needs metal straps; tape and zip ties don't hold. Valves themselves rarely fail.</li>
+      </ul>
+      <div class="sub">Other</div>
+      <ul>
+        <li><strong>Mixed refrigerant:</strong> recover into an empty evacuated cylinder, let it stabilize 12–24 h, then compare its pressure with the saturation pressure at the cylinder's temperature. More than 3–5°F off: evacuate, replace the drier, recharge with new refrigerant. Separate gauges per refrigerant avoid it.</li>
+        <li><strong>Airflow problems</strong> also come from condenser air recirculation or poor clearance, and on 90%+ furnaces a blocked secondary heat exchanger.</li>
+        <li><strong>Leave gauges off</strong> a sealed system once its charge is verified, unless you suspect a refrigerant problem. Most calls are dirt and maintenance.</li>
+        <li><strong>Verify capacity:</strong> BTU/h = 4.5 × CFM × Δh, with Δh the enthalpy change across the coil from wet bulb readings (see the Enthalpy calculator).</li>
+      </ul>
+    </div>
+  </details>
+
+  <p class="disc">Typical patterns only. Problems can overlap or occur together, and several share the same arrows. Use the chart to decide what to check next, confirm with tests, and follow the manufacturer's data.</p>
+</main>
+
+<script>
+(function () {
+  // Cell codes: u = high, d = low, n = normal; "n/d" = normal or low. [code, note]
+  var COLS = [
+    { k: 'sp', h: 'SUCT', name: 'Suction pressure' },
+    { k: 'lp', h: 'LIQ', name: 'Liquid pressure' },
+    { k: 'sh', h: 'SH', name: 'Superheat' },
+    { k: 'sc', h: 'SC', name: 'Subcooling' },
+    { k: 'a', h: 'AMPS', name: 'Amps' }
+  ];
+  function r(name, note, sp, lp, sh, sc, a, rh) { return { name: name, note: note, sp: sp, lp: lp, sh: sh, sc: sc, a: a, rh: rh }; }
+  var DATA = {
+    fixed: [
+      r('Refrigerant overcharge', 0, 'u', 'u', 'd', 'u', 'u', 'Poor'),
+      r('Refrigerant undercharge', 0, 'd', 'd', 'u', 'd', 'd', 'Ice / poor'),
+      r('Liquid restriction (drier)', 0, 'd', 'd', 'u', 'u', 'd', 'Ice / poor'),
+      r('Low evaporator airflow (low load)', 0, 'd', 'd', 'd', 'u', 'd', 'Ice / normal'),
+      r('Dirty condenser', 0, 'u', 'u', 'd', 'd', 'u', 'Poor'),
+      r('Low outdoor ambient', 0, 'd', 'd', 'u', 'u', 'd', 'Ice / normal'),
+      r('Inefficient compressor', 3, 'u', 'd', 'u', 'u', 'd', 'Poor'),
+      r('Non-condensables', 0, 'u', 'u', 'd', ['n', 6], 'u', 'Poor')
+    ],
+    txv: [
+      r('Refrigerant overcharge', 0, 'n', 'u', 'n', 'u', 'u', 'Normal'),
+      r('Refrigerant undercharge', 0, ['n/d', 2], 'd', ['n/u', 2], 'd', 'd', 'Ice / normal'),
+      r('Liquid restriction (drier)', 0, 'd', 'd', 'u', 'u', 'd', 'Ice / poor'),
+      r('Low evaporator airflow (low load)', 0, 'd', 'd', ['n', 4], 'n', 'd', 'Ice / normal'),
+      r('Dirty condenser', 0, 'n', 'u', 'n', 'n', 'u', 'Normal'),
+      r('Low outdoor ambient', 0, ['n', 4], 'd', ['n', 4], 'n', 'd', 'Normal'),
+      r('Inefficient compressor', 3, 'u', 'd', 'u', 'u', 'd', 'Poor'),
+      r('TXV bulb loose', 0, 'u', 'u', 'd', ['d', 5], 'u', 'Poor'),
+      r('TXV bulb lost its charge', 0, 'd', 'd', 'u', 'u', 'd', 'Ice / poor'),
+      r('TXV bulb poorly insulated', 0, 'u', 'u', 'd', 'd', 'u', 'Poor'),
+      r('Non-condensables', 0, 'n', 'u', ['n', 4], ['n', 6], 'u', 'Poor / normal')
+    ]
+  };
+  var NOTES = {
+    2: 'At part load, superheat and suction pressure can look normal. A coil that is very short of charge may frost.',
+    3: 'Pressures equalize very quickly after the compressor stops.',
+    4: 'The valve may hunt trying to control a low load, or because flash gas is reaching it.',
+    5: 'Can look normal if the system is also overcharged.',
+    6: 'Gauges can show subcooling that isn’t really there, because the non-condensable gas adds pressure in the condenser. A sight glass may still show bubbles.'
+  };
+  var SYM = { u: ['↑', 'up', 'high'], d: ['↓', 'down', 'low'], n: ['N', 'norm', 'normal'] };
+  var meter = 'fixed';
+  var want = {}; // col key → 'u' | 'n' | 'd'
+  try { var saved = JSON.parse(sessionStorage.getItem('chargeChart') || 'null'); if (saved) { meter = saved.meter || meter; want = saved.want || {}; } } catch (e) {}
+
+  function codes(cell) { return (Array.isArray(cell) ? cell[0] : cell).split('/'); }
+  function note(cell) { return Array.isArray(cell) ? cell[1] : 0; }
+  function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+
+  function cellEl(col, cell) {
+    var c = el('div', 'cell'), list = codes(cell);
+    c.appendChild(el('span', 'h', col.h));
+    var v = el('span', 'v');
+    list.forEach(function (code, i) {
+      if (i) v.appendChild(el('span', 'norm', '/'));
+      v.appendChild(el('span', SYM[code][1], SYM[code][0]));
+    });
+    if (note(cell)) v.appendChild(el('sup', null, String(note(cell))));
+    c.appendChild(v);
+    c.setAttribute('aria-label', col.name + ' ' + list.map(function (x) { return SYM[x][2]; }).join(' or ') + (note(cell) ? ', see note ' + note(cell) : ''));
+    return c;
+  }
+
+  function render() {
+    document.querySelectorAll('[data-meter]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.meter === meter)); });
+    var host = document.getElementById('chart'); host.innerHTML = '';
+    var active = Object.keys(want).filter(function (k) { return want[k]; });
+    var used = {}, hits = 0, rows = DATA[meter];
+    rows.forEach(function (row) {
+      var match = active.every(function (k) { return codes(row[k]).indexOf(want[k]) !== -1; });
+      if (match) hits++;
+      var p = el('div', 'prob' + (active.length ? (match ? ' hit' : ' dim') : ''));
+      var n = el('div', 'pname', row.name);
+      if (row.note) { n.appendChild(el('sup', null, String(row.note))); used[row.note] = 1; }
+      p.appendChild(n);
+      var cells = el('div', 'cells');
+      COLS.forEach(function (col) { cells.appendChild(cellEl(col, row[col.k])); if (note(row[col.k])) used[note(row[col.k])] = 1; });
+      var rh = el('div', 'cell'); rh.appendChild(el('span', 'h', 'RH')); rh.appendChild(el('span', 'v rh', row.rh));
+      rh.setAttribute('aria-label', 'Humidity control ' + row.rh);
+      cells.appendChild(rh);
+      p.appendChild(cells);
+      host.appendChild(p);
+    });
+    document.getElementById('matchCount').textContent = active.length ? hits + ' of ' + rows.length + ' match' : '';
+    var foot = document.getElementById('foot'); foot.innerHTML = '';
+    Object.keys(used).sort().forEach(function (k) {
+      var li = el('li'); li.appendChild(el('b', null, k)); li.appendChild(document.createTextNode(NOTES[k])); foot.appendChild(li);
+    });
+    renderFilter();
+    try { sessionStorage.setItem('chargeChart', JSON.stringify({ meter: meter, want: want })); } catch (e) {}
+  }
+
+  function renderFilter() {
+    var body = document.getElementById('filterBody'); body.innerHTML = '';
+    COLS.forEach(function (col) {
+      var row = el('div', 'frow'); row.appendChild(el('span', 'fl', col.name));
+      var seg = el('div', 'seg'); seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', col.name);
+      [['', 'Any'], ['d', 'Low'], ['n', 'Normal'], ['u', 'High']].forEach(function (o) {
+        var b = el('button', null, o[1]); b.type = 'button';
+        b.setAttribute('aria-pressed', String((want[col.k] || '') === o[0]));
+        b.addEventListener('click', function () { want[col.k] = o[0]; render(); });
+        seg.appendChild(b);
+      });
+      row.appendChild(seg); body.appendChild(row);
+    });
+    var c = el('button', 'clear', 'Clear filter'); c.type = 'button';
+    c.addEventListener('click', function () { want = {}; render(); });
+    body.appendChild(c);
+    body.appendChild(el('p', 'fnote', 'Matching rows are marked; the rest stay visible, dimmed. Several problems share the same pattern, so a match tells you what to check, not what is wrong.'));
+  }
+
+  document.querySelectorAll('[data-meter]').forEach(function (b) {
+    b.addEventListener('click', function () { meter = b.dataset.meter; render(); });
+  });
+  if (Object.keys(want).some(function (k) { return want[k]; })) document.getElementById('filter').open = true;
+  render();
+})();
+</script>
+</body>
+</html>
