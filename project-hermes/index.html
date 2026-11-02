@@ -426,6 +426,7 @@ This software is provided "as is" without warranty of any kind, express or impli
       </a>
     </div>
     <p class="note">Results are reference values only. Verify against current manufacturer service literature and applicable codes; the technician makes the call.</p>
+    <p class="note">Usage is counted anonymously (page visits and which tools are opened) with GoatCounter. No cookies, no personal data.</p>
   </section>
 </main>
 
@@ -511,6 +512,24 @@ TOOLS.forEach(function (t) { BY_ID[t.id] = t; });
 function toolPath(t) {
   if (t.path) return t.path;
   return t.kind === 'calc' ? 'tools/calculators/' + t.id + '.html' : 'tools/' + t.id + '.html';
+}
+
+/* ── Anonymous usage counts (GoatCounter, no cookies) ────────────
+   Page views are counted by the script tag at the end of <body>.
+   track() adds events: which tools are opened, and launches from a
+   home-screen icon. count.js loads async, so early events wait for it.
+   Offline use is not counted (the request simply fails). */
+function track(path, title) {
+  var tries = 0;
+  (function send() {
+    try {
+      if (window.goatcounter && window.goatcounter.count) {
+        window.goatcounter.count({ path: path, title: title || path, event: true });
+        return;
+      }
+    } catch (e) { return; }
+    if (++tries < 20) setTimeout(send, 500);
+  })();
 }
 
 /* ── Storage (all wrapped: private mode can throw) ───────────── */
@@ -658,6 +677,7 @@ function openById(id, opts) {
     rec.unshift(id); store(RECENT_KEY, rec.slice(0, 8));
   }
   if (!opts.fromRoute) { try { history.pushState({ tool: id }, '', routeHash(t)); } catch (e) {} }
+  track('tool/' + id, t.name);
 }
 function freshFrame() {
   var old = $('tool-frame'), f = document.createElement('iframe');
@@ -756,6 +776,12 @@ applyTheme();
 checkLicense();
 renderCatalog();
 renderRecent();
+// Home-screen launches stand in for installs; Android/desktop Chrome also report the install itself.
+if ((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true) {
+  track('launch/home-screen', 'Opened from home screen');
+}
+window.addEventListener('appinstalled', function () { track('install', 'App installed'); });
+
 (function restore() {
   var v = null; try { v = sessionStorage.getItem('hermes_view'); } catch (e) {}
   showView(v && VIEW_TITLES[v] ? v : 'tools');
@@ -874,6 +900,8 @@ function forceRefresh() {
 
   refreshBadge();
 </script>
+
+<script data-goatcounter="https://om3ni.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 
 <div class="update-banner" id="updateBanner" role="status" aria-live="polite" hidden>
   <span>New version available.</span>

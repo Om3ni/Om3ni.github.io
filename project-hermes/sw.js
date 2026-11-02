@@ -3,7 +3,7 @@
   Strategy: cache-first for app shell, network-first for external resources.
   Bump CACHE_VERSION to force update after deploy.
 */
-var CACHE_VERSION = 'hermes-v18';
+var CACHE_VERSION = 'hermes-v19';
 
 var APP_SHELL = [
   './',
@@ -116,6 +116,11 @@ self.addEventListener('activate', function(e) {
 self.addEventListener('fetch', function(e) {
   /* Only handle GET requests */
   if (e.request.method !== 'GET') return;
+
+  /* Usage counter (GoatCounter): never cache. Each ping has a unique URL and
+     would pile up in the cache; offline pings just fail, which is fine. */
+  var host = new URL(e.request.url).hostname;
+  if (host === 'gc.zgo.at' || host.endsWith('goatcounter.com')) return;
 
   /* Google Fonts and external resources — network with cache fallback */
   if (e.request.url.indexOf(self.location.origin) === -1) {
