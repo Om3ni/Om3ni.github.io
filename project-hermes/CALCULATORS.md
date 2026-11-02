@@ -76,10 +76,20 @@ Rules for how calculators in this app are classified, what they get, and when to
 
 ## Color Reference
 
-Used in the tools tab button grid and in each calculator's header badge.
+Used in each calculator's own header badge. The app's tool list does not use tier colors: it groups tools by trade and tags T3 calculators **Report** and the multi-reading modules **Analyzer**.
 
 | Tier | Border | Text | Badge label |
 |------|--------|------|-------------|
 | T1 | `#606060` | `#909090` | `utility` |
 | T2 | `#1a4a7a` | `#4a9de8` | `field` |
 | T3 | `#9a4a00` | `#e86d10` | `advanced` |
+
+---
+
+## Adding a Tool to the App
+
+The app shell (`index.html`) builds its catalog, search and favorites from the `TOOLS` array near the top of its script. A new calculator needs:
+
+1. Its file in `tools/calculators/` (or `tools/` for an analyzer module).
+2. An entry in `TOOLS`: `id` (the file name without `.html`), `kind` (`calc` or `tool`), `name`, `desc`, `cat` (index into `CATS`), optional `tag` (`Report` for T3, `Analyzer` for modules) and `kw` (extra search words techs would type).
+3. Its path in `sw.js` `APP_SHELL`, and a bump of `CACHE_VERSION`, so it works offline.

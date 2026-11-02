@@ -1,13 +1,13 @@
 {
   "name": "Project Hermes — HVAC Field Tools",
   "short_name": "Hermes",
-  "description": "HVAC/R field calculators, modules, and job tools",
+  "description": "HVAC/R field calculators and diagnostic tools. Works offline.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0f0f0f",
-  "theme_color": "#c85a00",
+  "theme_color": "#1c1c1c",
   "icons": [
     {
       "src": "./icon-192.png",

@@ -21,7 +21,7 @@
   /* Text */
   --text:       #f0ebe4;
   --text-dim:   #b0a090;
-  --text-mute:  #706050;
+  --text-mute:  #9a8a78;
 
   /* Status */
   --green:      #1e4a1e;
@@ -265,7 +265,7 @@ main { padding: 14px 14px 80px; max-width: 520px; margin: 0 auto; }
   --border:     #a0a0a0;
   --text:       #1a1a1a;
   --text-dim:   #3a3a3a;
-  --text-mute:  #606060;
+  --text-mute:  #4f4f4f;
   --orange-dim: #f0dcc8;
   --green-dim:  #d0e8d0;
   --red-dim:    #e8d0d0;
