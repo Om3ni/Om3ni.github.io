@@ -11,6 +11,9 @@
 #typeSeg button { flex: 1 1 30%; }
 .ir-sep { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 10px; font-size: .95rem; color: var(--text-dim); }
 .ir-sep input { width: 22px; height: 22px; accent-color: var(--orange); }
+.t-howto ul, .t-howto ol { margin: 6px 0 0; padding-left: 20px; font-size: .95rem; line-height: 1.5; color: var(--text-dim); }
+.t-howto li { margin-top: 6px; }
+.t-howto b { color: var(--text); }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -37,6 +40,34 @@
     <button type="button" data-type="c1">Compressor 1Φ</button>
     <button type="button" data-type="c3">Compressor 3Φ</button>
   </div>
+
+  <!-- ECM: run without a tester (shown for ECM only) -->
+  <details class="t-card" id="ecm-howto" data-type-only="ecm">
+    <summary><h2 class="t-title">Run an ECM without a tester</h2></summary>
+    <div class="t-body t-howto">
+      <p class="t-purpose"><b>First, which ECM is it?</b> Look at the connectors on the motor.</p>
+      <ul>
+        <li><b>Constant torque</b> (Genteq X13 and similar): one terminal block with <b>C L G N</b> and speed taps <b>1–5</b>. This method applies. Genteq's ECM tester is not designed for these.</li>
+        <li><b>Variable speed</b> (Genteq 2.0 / 2.3 / Eon, or 3.0 with a 4-pin plug): a separate 5-pin power plug and a 16-pin control plug. This method does <b>not</b> apply. Genteq directs these to its TECINspect tester. Never put line voltage on the 16-pin plug.</li>
+      </ul>
+      <p class="t-purpose" style="margin-top:12px"><b>Constant-torque motor: run it on one tap with a 9 V battery</b></p>
+      <ol>
+        <li>Power off at the disconnect and wait 5 minutes before handling connectors (the motor's capacitors need to discharge).</li>
+        <li>Unplug the low-voltage signal wire(s) from the speed taps.</li>
+        <li>Find a tap the equipment actually uses (wiring diagram, or where the wire was). A tap with no program won't run the motor; that's normal, so try another.</li>
+        <li>With insulated clip leads, connect the battery: <b>negative (−) to C</b>, <b>positive (+) to the tap</b>. A fresh 9 V battery is inside the motor's DC signal range of 9–23 V; a weak one may not be. 24 VAC from the unit's transformer works the same way (common to C, R to the tap).</li>
+        <li>Restore power with hands clear. Line voltage must be at L and N: within ±10% of the motor's rated 115, 230, 277 or 460 V. The X13 is voltage-specific.</li>
+        <li>The motor should start on that tap within a few seconds. Rocking back and forth at start-up is normal.</li>
+        <li>Power off and wait before removing the clips. Reconnect the signal wires.</li>
+      </ol>
+      <p class="t-purpose" style="margin-top:10px"><b>What the result points to (Genteq's sequence)</b></p>
+      <ul>
+        <li><b>Runs on the battery but not on a system call:</b> the motor responds to a signal, so follow the call back: thermostat, board output and wiring to the tap.</li>
+        <li><b>Correct line voltage at L–N, signal on a programmed tap, and it still doesn't run:</b> Genteq's guide moves on to motor / control replacement for this model.</li>
+      </ul>
+      <p class="t-hint">Speed taps take low-voltage signal only (24 VAC or 9–23 VDC); line voltage on a tap destroys the control. Source: Genteq (Regal) ECM Service Guide G9971, rev. 4-10-14: Model X13 diagnostics and Figures 9–10; safety warnings on page 1. Other makers' constant-torque motors are similar; check their literature.</p>
+    </div>
+  </details>
 
   <!-- NAMEPLATE -->
   <section class="t-card">
@@ -408,6 +439,7 @@ function applyType() {
   document.querySelectorAll('[data-for="motor"]').forEach((e) => { e.hidden = t.kind !== 'motor'; });
   document.querySelectorAll('[data-for="comp"]').forEach((e) => { e.hidden = t.kind !== 'comp'; });
   document.querySelectorAll('[data-for="m3"]').forEach((e) => { e.hidden = type !== 'm3'; });
+  document.querySelectorAll('[data-type-only]').forEach((e) => { e.hidden = e.dataset.typeOnly !== type; });
   document.querySelectorAll('#card-ld [data-legs="3"]').forEach((e) => { e.hidden = t.legs !== 3; });
   t.terms.forEach((n, i) => { $('lbl-ir-g' + (i + 1)).textContent = n + '–G'; });
   $('ld-purpose').textContent = t.kind === 'comp' ? 'Running amps at operating conditions, compared with the compressor rating.' : 'Running amps at operating conditions. ' + (t.legs === 3 ? 'Judged on the highest leg; overloads act per leg.' : '');
