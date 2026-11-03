@@ -13,6 +13,9 @@
 .ir-sep input { width: 22px; height: 22px; accent-color: var(--orange); }
 .t-howto ul, .t-howto ol { margin: 6px 0 0; padding-left: 20px; font-size: .95rem; line-height: 1.5; color: var(--text-dim); }
 .t-howto li { margin-top: 6px; }
+.t-disclaim { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--orange-lo); border-left: 4px solid var(--orange); border-radius: 8px; background: var(--orange-dim); font-size: .95rem; line-height: 1.5; color: var(--text); }
+.t-disclaim a { color: var(--orange-hi); font-weight: 700; }
+[data-theme="light"] .t-disclaim a { color: #9a4000; }
 .t-howto b { color: var(--text); }
 [hidden] { display: none !important; }
 </style>
@@ -45,6 +48,9 @@
   <details class="t-card" id="ecm-howto" data-type-only="ecm">
     <summary><h2 class="t-title">Run an ECM without a tester</h2></summary>
     <div class="t-body t-howto">
+      <div class="t-disclaim" role="note">
+        <b>Use the right tool first.</b> We always recommend appropriate test equipment for checking electrical equipment of any kind. Where an ECM tester fits the motor, use it: <a href="https://trutechtools.com/search.php?search_query=ecm+tester" target="_blank" rel="noopener">ECM testers at TruTech Tools</a>. The method below is a fallback for when no tester is available, and only for constant-torque motors. Line voltage is present during the test; work within your training and qualifications.
+      </div>
       <p class="t-purpose"><b>First, which ECM is it?</b> Look at the connectors on the motor.</p>
       <ul>
         <li><b>Constant torque</b> (Genteq X13 and similar): one terminal block with <b>C L G N</b> and speed taps <b>1–5</b>. This method applies. Genteq's ECM tester is not designed for these.</li>
