@@ -431,7 +431,13 @@ This software is provided "as is" without warranty of any kind, express or impli
       </a>
     </div>
     <p class="note">Results are reference values only. Verify against current manufacturer service literature and applicable codes; the technician makes the call.</p>
+    <div id="previewsWrap" hidden>
+      <h2 class="h2">Previews</h2>
+      <div class="list" id="previewsList"></div>
+      <p class="note">Unreleased redesigns for review. They replace the current tool once signed off.</p>
+    </div>
     <p class="note">Usage is counted anonymously (page visits and which tools are opened) with GoatCounter. No cookies, no personal data.</p>
+    <p class="note" id="versionTap" style="text-align:center;margin-top:24px;user-select:none">Hermes v0.2.0</p>
   </section>
 </main>
 
@@ -516,11 +522,16 @@ var TOOLS = [
   { id: 'temp-convert', kind: 'calc', name: 'Temperature', short: 'Temp', desc: '°F · °C · °R · K', cat: 6, kw: 'convert celsius fahrenheit' },
   { id: 'pressure-convert', kind: 'calc', name: 'Pressure', desc: 'psi · kPa · bar · inHg · mmHg', cat: 6, kw: 'convert' },
   { id: 'motor-convert', kind: 'calc', name: 'Power', desc: 'HP · kW · BTU/h · tons', cat: 6, kw: 'convert horsepower' },
+  { id: 'motors-next', preview: true, kind: 'tool', name: 'Motor Analysis (redesign)', desc: 'Preview — not yet released', cat: -1 },
   { id: 'samsung-dvm-s2', kind: 'ref', path: 'resources/samsung-dvm-s2-compressor.html', name: 'Samsung DVM S2 Compressor', desc: 'Field service guide', cat: -1, kw: 'vrf samsung' }
 ];
 var BY_ID = {};
 TOOLS.forEach(function (t) { BY_ID[t.id] = t; });
-function listed(t) { return t && !t.hidden; }
+/* Previews: unreleased redesigns, shown only when the owner turns Previews on
+   (tap the version at the bottom of More five times, or open ?preview=1). */
+var PREVIEW_KEY = 'hermes_previews';
+function previewsOn() { try { return localStorage.getItem(PREVIEW_KEY) === '1'; } catch (e) { return false; } }
+function listed(t) { return !!t && !t.hidden && (!t.preview || previewsOn()); }
 function toolPath(t) {
   if (t.path) return t.path;
   return t.kind === 'calc' ? 'tools/calculators/' + t.id + '.html' : 'tools/' + t.id + '.html';
@@ -749,7 +760,28 @@ document.querySelectorAll('[data-theme-pick]').forEach(function (b) {
 });
 
 /* ── More view helpers ───────────────────────────────────────── */
+function renderPreviews() {
+  var wrap = $('previewsWrap'), host = $('previewsList');
+  var items = TOOLS.filter(function (t) { return t.preview && listed(t); });
+  wrap.hidden = !items.length; host.innerHTML = '';
+  items.forEach(function (t) { host.appendChild(toolRow(t)); });
+}
+function setPreviews(on) {
+  try { localStorage.setItem(PREVIEW_KEY, on ? '1' : '0'); } catch (e) {}
+  renderPreviews();
+  toast(on ? 'Previews on' : 'Previews off');
+}
+(function () {
+  var q = new URLSearchParams(location.search).get('preview');
+  if (q === '1' || q === '0') { try { localStorage.setItem(PREVIEW_KEY, q); } catch (e) {} }
+  var taps = 0, timer = null;
+  $('versionTap').addEventListener('click', function () {
+    taps++; clearTimeout(timer); timer = setTimeout(function () { taps = 0; }, 2500);
+    if (taps >= 5) { taps = 0; setPreviews(!previewsOn()); }
+  });
+})();
 function refreshMore() {
+  renderPreviews();
   var ready = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
   $('offlineDesc').textContent = ready ? 'All tools saved to this device' : 'Saves to this device after the first full load';
   var tag = $('offlineTag'); tag.textContent = ready ? 'Ready' : 'Not yet'; tag.className = 'tag ' + (ready ? 'ok' : 'report');
