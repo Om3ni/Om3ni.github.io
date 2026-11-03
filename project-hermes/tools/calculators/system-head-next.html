@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pump Sizing · HVAC Tools</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="../shared/tool.css">
+<script>try { var th = localStorage.getItem('sl_theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}</script>
+<style>
+[hidden] { display: none !important; }
+.t-in select { width: 100%; height: 50px; padding: 0 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--ui); font-size: 1rem; }
+.comp-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 72px; gap: 8px; margin-top: 8px; }
+.comp-row input, .comp-row select { width: 100%; height: 46px; padding: 0 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 1rem; }
+.comp-row input[type=number] { font-family: var(--mono); }
+.fit-grid { display: grid; grid-template-columns: minmax(0, 1fr) 76px; gap: 6px 10px; align-items: center; margin-top: 10px; }
+.fit-grid span { font-size: .95rem; color: var(--text-dim); }
+.fit-grid input { height: 44px; width: 100%; padding: 0 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--mono); font-size: 1.05rem; }
+.curve-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.plot { margin-top: 12px; width: 100%; height: auto; display: block; }
+.plot text { font-family: var(--mono); font-size: 11px; fill: var(--text-dim); }
+.duty-bar { position: sticky; bottom: 0; z-index: 50; margin: 18px -16px -40px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 2px solid var(--orange); display: flex; gap: 14px; }
+.duty-bar div { flex: 1; min-width: 0; }
+.duty-bar .k { display: block; font-family: var(--ui); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--text-mute); }
+.duty-bar .v { display: block; font-family: var(--mono); font-size: 1.15rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+</head>
+<body>
+<p class="t-preview" id="previewFlag" hidden><b>Preview</b> — redesigned Pump Sizing, not yet released.</p>
+<header>
+  <a class="hdr-home" href="../../index.html" title="Project home">⌂</a>
+  <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Pump Sizing</div>
+    <div class="hdr-sub">Closed hydronic loops · flow · head · check</div>
+  </div>
+</header>
+
+<main class="t-wrap">
+  <p class="t-intro">Works out the flow and head a closed loop needs (the duty point you select a pump against), checks what an existing system is actually moving using the heat source and a thermometer, and, if you have the manufacturer's curve, where the pump will run.</p>
+
+  <!-- FLUID -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Fluid</h2><span class="t-badge" id="badge-fl"></span></div>
+    <div class="t-body">
+      <div class="t-seg" id="fluidSeg" role="group" aria-label="Fluid">
+        <button type="button" data-fluid="water">Water</button>
+        <button type="button" data-fluid="eg">Ethylene glycol</button>
+        <button type="button" data-fluid="pg">Propylene glycol</button>
+      </div>
+      <div class="t-grid c2">
+        <label class="t-f" id="f-conc"><span>Glycol</span><span class="t-in"><input id="fl-conc" type="number" inputmode="decimal" step="any"><span class="u">% vol</span></span></label>
+        <label class="t-f"><span>Average loop temp</span><span class="t-in"><input id="fl-temp" type="number" inputmode="decimal" step="any"><span class="u">°F</span></span></label>
+      </div>
+      <p class="t-hint">Average of supply and return at design. Glycol is % by volume, as mixed or read with a refractometer.</p>
+      <div class="t-res" id="res-fl"></div>
+    </div>
+  </section>
+
+  <!-- FLOW -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Flow the loop needs</h2><span class="t-badge" id="badge-q"></span></div>
+    <div class="t-body">
+      <div class="t-seg" id="flowSeg" role="group" aria-label="Flow from">
+        <button type="button" data-flow="load">From heat load</button>
+        <button type="button" data-flow="gpm">Known GPM</button>
+      </div>
+      <div class="t-grid c2" data-flowmode="load">
+        <label class="t-f"><span>Design load</span><span class="t-in"><input id="q-load" type="number" inputmode="decimal" step="any" style="padding-right:64px"><span class="u">Btu/h</span></span></label>
+        <label class="t-f"><span>Design ΔT</span><span class="t-in"><input id="q-dt" type="number" inputmode="decimal" step="any"><span class="u">°F</span></span></label>
+      </div>
+      <div class="t-grid c2" data-flowmode="gpm">
+        <label class="t-f"><span>Flow</span><span class="t-in"><input id="q-gpm" type="number" inputmode="decimal" step="any"><span class="u">GPM</span></span></label>
+      </div>
+      <p class="t-hint" data-flowmode="load">Load the circuit or pump serves. Residential boilers are usually designed around a 20 °F ΔT; check the equipment's spec.</p>
+      <div class="t-res" id="res-q"></div>
+    </div>
+  </section>
+
+  <!-- HEAD -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Head the loop needs</h2><span class="t-badge" id="badge-h"></span></div>
+    <div class="t-body">
+      <p class="t-purpose">Friction through the longest circuit (supply and return), at the flow above. Static height doesn't count in a closed loop.</p>
+      <div class="t-grid c2">
+        <label class="t-f"><span>Pipe</span><span class="t-in"><select id="h-mat"></select></span></label>
+        <label class="t-f"><span>Size</span><span class="t-in"><select id="h-size"></select></span></label>
+        <label class="t-f"><span>Longest circuit</span><span class="t-in"><input id="h-len" type="number" inputmode="decimal" step="any"><span class="u">ft</span></span></label>
+        <label class="t-f"><span>Margin <span class="opt">optional</span></span><span class="t-in"><input id="h-margin" type="number" inputmode="decimal" step="any"><span class="u">%</span></span></label>
+      </div>
+      <span class="t-lbl">Fittings</span>
+      <div class="t-seg" id="fitSeg" role="group" aria-label="Fittings">
+        <button type="button" data-fit="allow">+50% allowance</button>
+        <button type="button" data-fit="count">Count them</button>
+        <button type="button" data-fit="none">None</button>
+      </div>
+      <div class="fit-grid" id="fitGrid" hidden></div>
+      <p class="t-hint" id="fitHint"></p>
+      <span class="t-lbl">Components <span class="opt" style="text-transform:none;letter-spacing:0;font-weight:500">from manufacturer data</span></span>
+      <div id="compRows"></div>
+      <p class="t-hint">Boiler heat exchanger, air separator, flow-check, zone valve, coil… Enter pressure drop at this flow (ft or psi) or the Cv.</p>
+      <div class="t-res" id="res-h"></div>
+    </div>
+  </section>
+
+  <!-- CHECK BY HEAT -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Check an existing pump by heat</h2><span class="t-badge" id="badge-c"></span></div>
+    <div class="t-body">
+      <p class="t-purpose">What the system is actually moving. Run the heat source at a steady, known firing rate for 15 minutes or more, then read supply and return at the source.</p>
+      <div class="t-grid c2">
+        <label class="t-f" style="grid-column:1/-1"><span>Heat source output</span><span class="t-in"><input id="c-out" type="number" inputmode="decimal" step="any" style="padding-right:64px"><span class="u">Btu/h</span></span></label>
+        <label class="t-f"><span>Supply</span><span class="t-in"><input id="c-sup" type="number" inputmode="decimal" step="any"><span class="u">°F</span></span></label>
+        <label class="t-f"><span>Return</span><span class="t-in"><input id="c-ret" type="number" inputmode="decimal" step="any"><span class="u">°F</span></span></label>
+      </div>
+      <p class="t-hint">Use output, not input: rated output from the label, or input × efficiency at the current firing rate. A modulating boiler at low fire gives a much smaller number.</p>
+      <div class="t-res" id="res-c"></div>
+    </div>
+  </section>
+
+  <!-- PUMP CURVE (optional) -->
+  <details class="t-card" id="card-p">
+    <summary><h2 class="t-title">Pump curve <span class="opt" style="font-weight:500;font-size:.85rem;color:var(--text-mute)">optional</span></h2><span class="t-badge" id="badge-p"></span></summary>
+    <div class="t-body">
+      <p class="t-purpose">Only from the manufacturer's submittal or tech support, for the pump and speed setting actually installed. Enter 3–6 points read off the curve.</p>
+      <div class="curve-row"><span class="t-lbl" style="margin:0">Flow (GPM)</span><span class="t-lbl" style="margin:0">Head (ft)</span></div>
+      <div id="curveRows"></div>
+      <div class="t-grid c2">
+        <label class="t-f"><span>Measured ΔP across pump <span class="opt">opt.</span></span><span class="t-in"><input id="p-dp" type="number" inputmode="decimal" step="any"><span class="u">psi</span></span></label>
+      </div>
+      <p class="t-hint">Gauges on the pump's suction and discharge ports, same height, same gauge (or zeroed against each other).</p>
+      <div class="t-res" id="res-p"></div>
+      <svg class="plot" id="plot" viewBox="0 0 340 220" role="img" aria-label="Pump and system curves" hidden></svg>
+      <p class="t-hint" id="plotKey" hidden>Orange: pump curve (dashed past the points entered) · grey: system curve · □ duty point · ○ operating point · | flow from measured ΔP</p>
+    </div>
+  </details>
+
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Notes</h2></div>
+    <div class="t-body"><label class="t-f"><span class="opt" style="text-transform:none;letter-spacing:0">Pump model, speed setting, circuit</span><span class="t-in"><textarea id="notes"></textarea></span></label></div>
+  </section>
+
+  <div class="t-actions">
+    <button type="button" class="t-btn primary" id="btnReport">Report</button>
+    <button type="button" class="t-btn" id="btnClear">Clear all</button>
+  </div>
+
+  <div class="duty-bar" aria-live="polite">
+    <div><span class="k">Duty point</span><span class="v" id="bar-duty">—</span></div>
+    <div><span class="k">Measured flow</span><span class="v" id="bar-meas">—</span></div>
+  </div>
+</main>
+
+<dialog class="t-dialog" id="reportDlg" aria-labelledby="reportTitle">
+  <div class="dh"><span id="reportTitle">Pump sizing report</span><button type="button" class="t-btn" id="btnCloseReport" style="min-height:40px">Close</button></div>
+  <pre id="reportText"></pre>
+  <div class="da"><button type="button" class="t-btn" id="btnCopy">Copy</button><button type="button" class="t-btn primary" id="btnSave">Save .txt</button></div>
+</dialog>
+
+<script type="module">
+import { props } from '../shared/fluids.js';
+import * as H from '../shared/hydronics.js';
+
+const STORE = 'hermes_pump_next';
+const N_COMP = 4, N_CURVE = 6;
+let fluid = 'water', flowMode = 'load', fitMode = 'allow';
+
+const $ = (id) => document.getElementById(id);
+const val = (id) => { const e = $(id); if (!e || e.value === '') return null; const v = parseFloat(String(e.value).replace(',', '.')); return Number.isFinite(v) ? v : NaN; };
+const f = (n, d = 1) => (n === null || n === undefined || !Number.isFinite(n) ? '—' : (Math.round(n * 10 ** d) / 10 ** d).toFixed(d));
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function row(k, v, unit, ref, marker) {
+  return `<div class="t-row"><div class="top"><span class="k">${esc(k)}</span><span class="v">${esc(v)}${unit ? `<small>${esc(unit)}</small>` : ''}</span></div>` +
+    (ref ? `<div class="ref">${ref}</div>` : '') + (marker ? `<span class="t-mk">${esc(marker)}</span>` : '') + `</div>`;
+}
+const empty = (msg) => `<p class="t-empty">${esc(msg)}</p>`;
+const bad = (id, cond) => { const e = $(id); if (e) e.setAttribute('aria-invalid', String(!!cond)); };
+const pos = (v) => v !== null && Number.isFinite(v) && v > 0;
+
+/* ── Build dynamic inputs ────────────────────────────────────────── */
+Object.entries(H.PIPES).forEach(([k, p]) => { const o = document.createElement('option'); o.value = k; o.textContent = p.name; $('h-mat').appendChild(o); });
+function fillSizes(keep) {
+  const sel = $('h-size'), mat = H.PIPES[$('h-mat').value], prev = keep ?? sel.value;
+  sel.innerHTML = '<option value="">Size</option>' + Object.keys(mat.id).map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  if (prev && mat.id[prev]) sel.value = prev;
+}
+$('fitGrid').innerHTML = H.FITTINGS.map((ft) => `<span>${esc(ft.name)}</span><input id="fit-${ft.key}" type="number" inputmode="numeric" min="0" step="1" aria-label="${esc(ft.name)} count">`).join('');
+$('compRows').innerHTML = Array.from({ length: N_COMP }, (_, i) =>
+  `<div class="comp-row"><input id="comp-name-${i}" type="text" placeholder="Component" aria-label="Component ${i + 1} name"><input id="comp-val-${i}" type="number" inputmode="decimal" step="any" aria-label="Component ${i + 1} value"><select id="comp-unit-${i}" aria-label="Component ${i + 1} unit"><option value="ft">ft</option><option value="psi">psi</option><option value="cv">Cv</option></select></div>`).join('');
+$('curveRows').innerHTML = Array.from({ length: N_CURVE }, (_, i) =>
+  `<div class="curve-row"><span class="t-in"><input id="cv-q-${i}" type="number" inputmode="decimal" step="any" aria-label="Point ${i + 1} flow"><span class="u">GPM</span></span><span class="t-in"><input id="cv-h-${i}" type="number" inputmode="decimal" step="any" aria-label="Point ${i + 1} head"><span class="u">ft</span></span></div>`).join('');
+
+/* ── State shared between cards (recomputed from scratch on every input) ── */
+let S = {};
+let report = {};
+
+function calcFluid() {
+  document.querySelectorAll('#fluidSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.fluid === fluid)));
+  $('f-conc').hidden = fluid === 'water';
+  const t = val('fl-temp'), c = fluid === 'water' ? 0 : val('fl-conc');
+  bad('fl-temp', Number.isNaN(t)); bad('fl-conc', Number.isNaN(c));
+  if (t === null || (fluid !== 'water' && c === null)) { $('res-fl').innerHTML = empty(fluid === 'water' ? 'Enter the average loop temperature.' : 'Enter glycol % and average loop temperature.'); $('badge-fl').textContent = ''; S.fl = null; report.fl = null; return; }
+  const p = props(fluid, c, t);
+  if (!p.ok) { $('res-fl').innerHTML = empty(p.reason.charAt(0).toUpperCase() + p.reason.slice(1) + '.'); $('badge-fl').textContent = ''; S.fl = null; report.fl = null; return; }
+  S.fl = p; S.flowFactor = H.flowFactor(p);
+  $('res-fl').innerHTML = row('Specific gravity', f(p.sg, 3), '', `Density ${f(p.rho, 2)} lb/ft³ · specific heat ${f(p.cp, 3)} Btu/lb·°F · viscosity ${f(p.mu, 2)} cP<br>Flow factor <b>${f(S.flowFactor, 0)}</b> Btu/h per GPM·°F (500 for cool water) · ${esc(p.source)}`);
+  $('badge-fl').textContent = fluid === 'water' ? `${f(t, 0)} °F` : `${f(c, 0)}% · ${f(t, 0)} °F`;
+  report.fl = `Fluid: ${p.name}${fluid === 'water' ? '' : ` ${f(c, 0)}% by volume`} at ${f(t, 0)} °F average (SG ${f(p.sg, 3)}, cp ${f(p.cp, 3)}, µ ${f(p.mu, 2)} cP; ${p.source})`;
+}
+
+function calcFlow() {
+  document.querySelectorAll('#flowSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.flow === flowMode)));
+  document.querySelectorAll('[data-flowmode]').forEach((e) => { e.hidden = e.dataset.flowmode !== flowMode; });
+  S.gpm = null; report.q = null;
+  if (flowMode === 'gpm') {
+    const q = val('q-gpm'); bad('q-gpm', q !== null && !pos(q));
+    if (!pos(q)) { $('res-q').innerHTML = empty('Enter the flow.'); $('badge-q').textContent = ''; return; }
+    S.gpm = q;
+    $('res-q').innerHTML = row('Design flow', f(q, 2), 'GPM', 'Entered directly');
+    report.q = `Design flow: ${f(q, 2)} GPM (entered)`;
+  } else {
+    const load = val('q-load'), dt = val('q-dt');
+    bad('q-load', load !== null && !pos(load)); bad('q-dt', dt !== null && !pos(dt));
+    if (!pos(load) || !pos(dt)) { $('res-q').innerHTML = empty(load !== null && !pos(load) ? 'Load must be a positive number.' : dt !== null && !pos(dt) ? 'ΔT must be a positive number.' : 'Enter design load and ΔT.'); $('badge-q').textContent = ''; return; }
+    if (!S.fl) { $('res-q').innerHTML = empty('Set the fluid above first.'); $('badge-q').textContent = ''; return; }
+    S.gpm = H.gpmFromLoad(load, dt, S.fl);
+    $('res-q').innerHTML = row('Design flow', f(S.gpm, 2), 'GPM', `${f(load, 0)} Btu/h ÷ (${f(S.flowFactor, 0)} × ${f(dt, 0)} °F)`);
+    report.q = `Design flow: ${f(S.gpm, 2)} GPM = ${f(load, 0)} Btu/h ÷ (${f(S.flowFactor, 0)} × ${f(dt, 0)} °F ΔT)`;
+  }
+  $('badge-q').textContent = f(S.gpm, 1) + ' GPM';
+}
+
+function calcHead() {
+  document.querySelectorAll('#fitSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.fit === fitMode)));
+  $('fitGrid').hidden = fitMode !== 'count';
+  $('fitHint').textContent = fitMode === 'allow' ? 'Rule of thumb: fittings and valves add about half the pipe length in a typical residential loop. Count them for anything unusual.'
+    : fitMode === 'count' ? 'Counts along the longest circuit. Equivalent lengths from Crane TP-410 L/D values.' : 'Use when the length you entered is already a total equivalent length.';
+  S.head = null; report.h = null;
+  const mat = H.PIPES[$('h-mat').value], size = $('h-size').value, len = val('h-len'), margin = val('h-margin');
+  bad('h-len', len !== null && !pos(len)); bad('h-margin', margin !== null && (Number.isNaN(margin) || margin < 0));
+  if (!S.fl || !pos(S.gpm)) { $('res-h').innerHTML = empty('Set the fluid and flow above first.'); $('badge-h').textContent = ''; return; }
+  if (!size || !pos(len)) { $('res-h').innerHTML = empty('Choose pipe size and enter the longest circuit length.'); $('badge-h').textContent = ''; return; }
+  const idIn = mat.id[size];
+  let fitLen = 0, fitNote = '';
+  if (fitMode === 'allow') { fitLen = 0.5 * len; fitNote = '+50% allowance'; }
+  else if (fitMode === 'count') {
+    const counts = {}; H.FITTINGS.forEach((ft) => { const v = val('fit-' + ft.key); bad('fit-' + ft.key, v !== null && !(v >= 0)); if (v > 0) counts[ft.key] = Math.round(v); });
+    fitLen = H.fittingsEquivLength(counts, idIn);
+    fitNote = Object.entries(counts).map(([k, n]) => `${n} × ${H.FITTINGS.find((x) => x.key === k).name.toLowerCase()}`).join(', ') || 'none counted';
+  } else fitNote = 'none; length entered is the total equivalent length';
+  const pl = H.pipeLoss({ gpm: S.gpm, idIn, roughFt: mat.rough, lengthFt: len + fitLen, fluid: S.fl });
+  const comps = [];
+  for (let i = 0; i < N_COMP; i++) {
+    const v = val('comp-val-' + i), unit = $('comp-unit-' + i).value, name = $('comp-name-' + i).value.trim() || `Component ${i + 1}`;
+    bad('comp-val-' + i, v !== null && !pos(v));
+    if (pos(v)) { const h = H.componentHead({ value: v, unit, gpm: S.gpm, sg: S.fl.sg }); if (h !== null) comps.push({ name, v, unit, h }); }
+  }
+  const compHead = comps.reduce((s, c) => s + c.h, 0);
+  const raw = pl.head + compHead, m = margin !== null && margin >= 0 ? margin : 0;
+  S.head = raw * (1 + m / 100);
+  let html = row('Velocity', f(pl.velocity, 2), 'ft/s', `${esc(mat.name)} ${esc(size)} · ID ${f(idIn, 3)} in`);
+  html += row('Friction rate', f(pl.per100, 2), 'ft / 100 ft', `Darcy-Weisbach · Re ${f(pl.re, 0)} · ${pl.regime}`, pl.regime === 'transitional' ? 'Transitional flow: friction less certain' : pl.regime === 'laminar' ? 'Laminar flow' : null);
+  html += row('Pipe + fittings', f(pl.head, 2), 'ft', `${f(len, 0)} ft pipe + ${f(fitLen, 1)} ft fittings (${esc(fitNote)})`);
+  comps.forEach((c) => { html += row(c.name, f(c.h, 2), 'ft', `${f(c.v, 2)} ${c.unit === 'cv' ? 'Cv' : c.unit}${c.unit === 'cv' ? ` at ${f(S.gpm, 2)} GPM` : ''}`); });
+  html += row('Head the loop needs', f(S.head, 1), 'ft', m > 0 ? `${f(raw, 2)} ft + ${f(m, 0)}% margin` : 'No margin added');
+  $('res-h').innerHTML = html;
+  $('badge-h').textContent = f(S.head, 1) + ' ft';
+  report.h = [`Head: ${mat.name} ${size} (ID ${f(idIn, 3)} in), longest circuit ${f(len, 0)} ft + ${f(fitLen, 1)} ft fittings (${fitNote})`,
+    `  Velocity ${f(pl.velocity, 2)} ft/s · friction ${f(pl.per100, 2)} ft/100 ft (${pl.regime}, Re ${f(pl.re, 0)}) · pipe + fittings ${f(pl.head, 2)} ft`]
+    .concat(comps.map((c) => `  ${c.name}: ${f(c.h, 2)} ft (${f(c.v, 2)} ${c.unit === 'cv' ? 'Cv' : c.unit})`))
+    .concat([`  Head the loop needs: ${f(S.head, 1)} ft${m > 0 ? ` (${f(raw, 2)} ft + ${f(m, 0)}% margin)` : ''}`]);
+}
+
+function calcCheck() {
+  S.meas = null; report.c = null;
+  const out = val('c-out'), sup = val('c-sup'), ret = val('c-ret');
+  bad('c-out', out !== null && !pos(out)); bad('c-sup', Number.isNaN(sup)); bad('c-ret', Number.isNaN(ret));
+  if (out === null && sup === null && ret === null) { $('res-c').innerHTML = empty('Enter output, supply and return.'); $('badge-c').textContent = ''; return; }
+  if (!pos(out) || sup === null || ret === null || Number.isNaN(sup) || Number.isNaN(ret)) { $('res-c').innerHTML = empty('Enter output, supply and return.'); $('badge-c').textContent = ''; return; }
+  const avg = (sup + ret) / 2;
+  const p = props(fluid, fluid === 'water' ? 0 : (val('fl-conc') ?? NaN), avg);
+  if (!p.ok) { $('res-c').innerHTML = empty('Fluid properties at ' + f(avg, 0) + ' °F: ' + p.reason + '. Set the fluid above.'); $('badge-c').textContent = ''; return; }
+  const m = H.gpmFromMeasuredSplit(out, sup, ret, p);
+  if (!m) { $('res-c').innerHTML = empty('Supply and return are the same; the split must be greater than zero.'); $('badge-c').textContent = ''; return; }
+  S.meas = m.gpm;
+  let html = row('Actual flow', f(m.gpm, 2), 'GPM', `${f(out, 0)} Btu/h ÷ (${f(H.flowFactor(p), 0)} × ${f(m.deltaT, 1)} °F split)`);
+  const lines = [`Check by heat: ${f(out, 0)} Btu/h output, supply ${f(sup, 0)} °F, return ${f(ret, 0)} °F → ${f(m.gpm, 2)} GPM actual`];
+  if (pos(S.gpm)) {
+    const pct = m.gpm / S.gpm * 100;
+    html += row('vs flow the loop needs', f(pct, 0), '%', `Needs <b>${f(S.gpm, 2)} GPM</b> (from the flow card)`, pct < 90 ? 'Below required flow' : pct > 115 ? 'Above required flow' : null);
+    lines.push(`  ${f(pct, 0)}% of the ${f(S.gpm, 2)} GPM the loop needs`);
+  }
+  if (flowMode === 'load' && pos(val('q-dt'))) {
+    html += row('Measured split vs design ΔT', `${f(m.deltaT, 1)} / ${f(val('q-dt'), 0)}`, '°F', 'A wider split than design at full output means less flow than design.');
+  }
+  $('res-c').innerHTML = html;
+  $('badge-c').textContent = f(m.gpm, 1) + ' GPM';
+  report.c = lines;
+}
+
+function plot(curve, duty, op, meas) {
+  const svg = $('plot');
+  // SVG elements don't reflect the .hidden property to the attribute; toggle the attribute.
+  $('plotKey').hidden = !curve;
+  if (!curve) { svg.setAttribute('hidden', ''); return; }
+  const W = 340, Hh = 220, L = 38, R = 10, T = 10, B = 30;
+  const qMax = Math.max(curve.maxGpm * 1.15, duty ? duty.gpm * 1.2 : 0, op && op.ok ? op.gpm * 1.1 : 0, meas ? meas.gpm * 1.1 : 0, 1);
+  const hMax = Math.max(curve.a * 1.1, duty ? duty.head * 1.2 : 0, 1);
+  const x = (q) => L + (q / qMax) * (W - L - R), y = (h) => T + (1 - h / hMax) * (Hh - T - B);
+  const path = (fn, q0, q1) => { let d = ''; for (let i = 0; i <= 40; i++) { const q = q0 + (q1 - q0) * i / 40, h = fn(q); if (h < 0 || h > hMax * 1.05) continue; d += (d ? 'L' : 'M') + x(q).toFixed(1) + ' ' + y(h).toFixed(1); } return d; };
+  let s = `<line x1="${L}" y1="${T}" x2="${L}" y2="${Hh - B}" stroke="var(--border)"/><line x1="${L}" y1="${Hh - B}" x2="${W - R}" y2="${Hh - B}" stroke="var(--border)"/>`;
+  s += `<text x="${L}" y="${Hh - 8}">0</text><text x="${W - R}" y="${Hh - 8}" text-anchor="end">${f(qMax, 0)} GPM</text><text x="4" y="${T + 10}">${f(hMax, 0)} ft</text>`;
+  s += `<path d="${path(curve.head, 0, curve.maxGpm)}" fill="none" stroke="var(--orange-hi)" stroke-width="2.5"/>`;
+  s += `<path d="${path(curve.head, curve.maxGpm, qMax)}" fill="none" stroke="var(--orange-hi)" stroke-width="2" stroke-dasharray="5 4"/>`;
+  curve.points.forEach((p) => { s += `<circle cx="${x(p.gpm)}" cy="${y(p.head)}" r="3.5" fill="var(--orange-hi)"/>`; });
+  if (duty) {
+    s += `<path d="${path((q) => duty.k * q * q, 0, qMax)}" fill="none" stroke="var(--text-dim)" stroke-width="2"/>`;
+    s += `<rect x="${x(duty.gpm) - 5}" y="${y(duty.head) - 5}" width="10" height="10" fill="none" stroke="var(--text)" stroke-width="2"/>`;
+  }
+  if (op && op.ok) s += `<circle cx="${x(op.gpm)}" cy="${y(op.head)}" r="7" fill="none" stroke="var(--text)" stroke-width="2.5"/>`;
+  if (meas) s += `<line x1="${x(meas.gpm)}" y1="${y(meas.head) - 8}" x2="${x(meas.gpm)}" y2="${y(meas.head) + 8}" stroke="var(--text)" stroke-width="3"/>`;
+  svg.innerHTML = s; svg.removeAttribute('hidden');
+}
+
+function calcPump() {
+  report.p = null;
+  const pts = [];
+  for (let i = 0; i < N_CURVE; i++) {
+    const q = val('cv-q-' + i), h = val('cv-h-' + i);
+    bad('cv-q-' + i, Number.isNaN(q) || (q !== null && q < 0)); bad('cv-h-' + i, Number.isNaN(h) || (h !== null && h < 0));
+    if (q !== null && h !== null && Number.isFinite(q) && Number.isFinite(h)) pts.push({ gpm: q, head: h });
+  }
+  const dp = val('p-dp'); bad('p-dp', dp !== null && !pos(dp));
+  if (!pts.length) { $('res-p').innerHTML = empty('Enter points from the manufacturer\'s curve.'); $('badge-p').textContent = ''; plot(null); return; }
+  const curve = H.fitPumpCurve(pts);
+  if (!curve.ok) { $('res-p').innerHTML = empty(curve.reason.charAt(0).toUpperCase() + curve.reason.slice(1) + '.'); $('badge-p').textContent = ''; plot(null); return; }
+  let html = row('Curve', `${curve.points.length} points`, '', `${curve.points.map((p) => `${f(p.gpm, 1)} GPM @ ${f(p.head, 1)} ft`).join(' · ')}<br>Fit within ${f(curve.rms, 2)} ft of the points entered`);
+  const lines = ['Pump curve (from submittal): ' + curve.points.map((p) => `${f(p.gpm, 1)} GPM @ ${f(p.head, 1)} ft`).join(', ')];
+  let duty = null, op = null, meas = null;
+  if (pos(S.gpm) && pos(S.head)) {
+    duty = { gpm: S.gpm, head: S.head, k: S.head / (S.gpm * S.gpm) };
+    op = H.operatingPoint(curve, S.gpm, S.head);
+    if (op && op.ok) {
+      const pumpAtDuty = curve.head(S.gpm);
+      html += row('Operating point', `${f(op.gpm, 2)} GPM @ ${f(op.head, 1)}`, 'ft', `Where this pump meets the system curve through the duty point (${f(S.gpm, 2)} GPM @ ${f(S.head, 1)} ft)`, op.extrapolated ? 'Outside the points entered: extend the curve' : null);
+      html += row('Pump head at design flow', f(pumpAtDuty, 1), 'ft', `Loop needs <b>${f(S.head, 1)} ft</b> at ${f(S.gpm, 2)} GPM`, pumpAtDuty < S.head ? 'Below the duty point' : null);
+      lines.push(`  Operating point ${f(op.gpm, 2)} GPM @ ${f(op.head, 1)} ft${op.extrapolated ? ' (outside entered points)' : ''}; pump gives ${f(pumpAtDuty, 1)} ft at the ${f(S.gpm, 2)} GPM duty flow (needs ${f(S.head, 1)} ft)`);
+    } else if (op) html += empty(op.reason.charAt(0).toUpperCase() + op.reason.slice(1) + '.');
+  } else html += empty('Complete the flow and head cards to find the operating point.');
+  if (pos(dp)) {
+    if (!S.fl) html += empty('Set the fluid to convert psi to feet.');
+    else {
+      const hd = H.headFromDeltaP(dp, S.fl.sg), at = H.gpmAtHead(curve, hd);
+      if (at) {
+        meas = { gpm: at.gpm, head: hd };
+        html += row('Flow from measured ΔP', f(at.gpm, 2), 'GPM', `${f(dp, 2)} psi = ${f(hd, 1)} ft at SG ${f(S.fl.sg, 3)}, read off the curve`, at.extrapolated ? 'Outside the points entered' : null);
+        lines.push(`  Measured ΔP ${f(dp, 2)} psi = ${f(hd, 1)} ft → ${f(at.gpm, 2)} GPM on the curve${at.extrapolated ? ' (outside entered points)' : ''}`);
+      } else html += empty(`${f(hd, 1)} ft is above this curve's shutoff head; check the gauges and the speed setting.`);
+    }
+  }
+  $('res-p').innerHTML = html;
+  $('badge-p').textContent = op && op.ok ? `${f(op.gpm, 1)} GPM` : `${curve.points.length} pts`;
+  plot(curve, duty, op, meas);
+  report.p = lines;
+}
+
+function bar() {
+  $('bar-duty').textContent = pos(S.gpm) && pos(S.head) ? `${f(S.gpm, 1)} GPM @ ${f(S.head, 1)} ft` : pos(S.gpm) ? `${f(S.gpm, 1)} GPM @ —` : '—';
+  $('bar-meas').textContent = pos(S.meas) ? `${f(S.meas, 1)} GPM` : '—';
+}
+
+function renderAll() { S = {}; report = {}; calcFluid(); calcFlow(); calcHead(); calcCheck(); calcPump(); bar(); save(); }
+
+/* ── Persistence (this visit) ────────────────────────────────────── */
+const FIELDS = () => [...document.querySelectorAll('main input, main select, main textarea')];
+function save() { try { const d = { fluid, flowMode, fitMode }; FIELDS().forEach((e) => { d[e.id] = e.value; }); sessionStorage.setItem(STORE, JSON.stringify(d)); } catch (e) {} }
+function restore() {
+  try {
+    const d = JSON.parse(sessionStorage.getItem(STORE) || 'null'); if (!d) return;
+    if (d.fluid) fluid = d.fluid; if (d.flowMode) flowMode = d.flowMode; if (d.fitMode) fitMode = d.fitMode;
+    if (d['h-mat']) $('h-mat').value = d['h-mat'];
+    fillSizes(d['h-size']);
+    FIELDS().forEach((e) => { if (e.id in d && e.id !== 'h-mat' && e.id !== 'h-size') e.value = d[e.id]; });
+  } catch (e) {}
+}
+
+/* ── Report ──────────────────────────────────────────────────────── */
+function buildReport() {
+  const out = ['PUMP SIZING REPORT — Hermes', new Date().toLocaleString(), 'Closed hydronic loop', ''];
+  ['fl', 'q'].forEach((k) => { if (report[k]) out.push(report[k]); });
+  if (report.h) out.push(...report.h);
+  if (pos(S.gpm) && pos(S.head)) out.push('', `DUTY POINT: ${f(S.gpm, 2)} GPM at ${f(S.head, 1)} ft of head`);
+  if (report.c) out.push('', ...report.c);
+  if (report.p) out.push('', ...report.p);
+  const n = $('notes').value.trim(); if (n) out.push('', 'Notes:', n);
+  out.push('', 'Friction: Darcy-Weisbach with Colebrook (Churchill in the transitional range). Fittings: Crane TP-410 L/D or a +50% allowance as stated.',
+    'Reference values. Select pumps from the manufacturer\'s data for the actual pump and speed setting.');
+  return out.join('\n');
+}
+$('btnReport').addEventListener('click', () => { $('reportText').textContent = buildReport(); $('reportDlg').showModal(); });
+$('btnCloseReport').addEventListener('click', () => $('reportDlg').close());
+$('btnCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('reportText').textContent); $('btnCopy').textContent = 'Copied'; setTimeout(() => { $('btnCopy').textContent = 'Copy'; }, 1500); } catch (e) {} });
+$('btnSave').addEventListener('click', () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([$('reportText').textContent], { type: 'text/plain' })); a.download = 'pump-report-' + new Date().toISOString().slice(0, 10) + '.txt'; a.click(); URL.revokeObjectURL(a.href); });
+$('btnClear').addEventListener('click', () => { if (!confirm('Clear all inputs on this page?')) return; FIELDS().forEach((e) => { if (e.tagName === 'SELECT') e.selectedIndex = 0; else e.value = ''; }); fillSizes(''); renderAll(); });
+
+/* ── Wiring ──────────────────────────────────────────────────────── */
+document.querySelectorAll('#fluidSeg button').forEach((b) => b.addEventListener('click', () => { fluid = b.dataset.fluid; renderAll(); }));
+document.querySelectorAll('#flowSeg button').forEach((b) => b.addEventListener('click', () => { flowMode = b.dataset.flow; renderAll(); }));
+document.querySelectorAll('#fitSeg button').forEach((b) => b.addEventListener('click', () => { fitMode = b.dataset.fit; renderAll(); }));
+$('h-mat').addEventListener('change', () => { fillSizes(); renderAll(); });
+document.querySelector('main').addEventListener('input', renderAll);
+document.querySelector('main').addEventListener('change', renderAll);
+if (/system-head-next\.html$/.test(location.pathname) && window.parent === window) $('previewFlag').hidden = false;
+
+$('h-mat').value = 'copperL'; fillSizes('');
+restore();
+renderAll();
+</script>
+</body>
+</html>
