@@ -23,6 +23,10 @@ Still single-sourced: R-427A, R-449A, R-513A (model agreement only, within 0.7°
 
 Unblocked by the audit: a standalone pressure–temperature lookup built on the verified library, showing bubble and dew for blends.
 
-## Tool page refresh (next)
+## Tool redesigns (in progress)
 
-The shell is redesigned; the individual tool pages keep their original layout. Next pass: shared `calc-utils.js`, larger inputs, and a pinned results bar on the analyzers so results stay visible while entering readings.
+Each tool is rebuilt on the shared layout (`tools/shared/tool.css`) and shared, tested rule modules, then released through the gate in CALCULATORS.md.
+
+- Done: Motor Analysis, Pump Sizing (2026-11).
+- Next: the audit's Critical tools (MCA/MOCP, Gas Pipe, Combustion Air, Start Controls, Ventilation), then the rest of the hidden list. Capacitor and Electrical Analysis move onto `refs.js` so capacitor tolerance and unbalance follow one rule.
+- Pump Sizing later: open systems (cooling towers) with suction-surface static head and an NPSH caution.

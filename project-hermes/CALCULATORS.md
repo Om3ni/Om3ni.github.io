@@ -91,13 +91,19 @@ A tool is listed in the app only after it passes all three steps. Tools that fai
 | MCA / MOCP | Critical: MOCP rounded up past the 440.22 maximum |
 | Ventilation Sizing | Critical: fuel-fired rooms preset negative, labs preset positive |
 | Start Controls | Critical: overload rule inverted, starter size, capacitor math |
-| Pump Sizing | High: glycol properties, CPVC diameter, stale operating point |
 | Line Set Charge | High: rates 30–45% high, no factory allowance |
 | Long Line Set | High: same rates, fixed pressure drop, no limits |
 | Belt Length | High: section correction sign |
 | Belt Deflection | High: force table |
 | Enthalpy | High: saturation-pressure constant |
 | Breaker Sizing | Hidden by owner before the audit (audit: OK with issues) |
+
+### Released through the gate
+
+| Tool | Released | Notes |
+|---|---|---|
+| Motor Analysis | 2026-11 | Rebuilt by test on `tools/shared/refs.js` (IEEE 43 / NEMA MG-1 references, printed capacitor tolerance, highest-leg load). Tests: `tools/shared/refs.test.mjs`. |
+| Pump Sizing | 2026-11 | Rebuilt on `tools/shared/fluids.js` (Dow / Melinder data) and `tools/shared/hydronics.js`. Closed loops only. Tests: `tools/shared/hydronics.test.mjs`. |
 
 Findings, reproductions and suggested fixes: [audit/2026-11](audit/2026-11/README.md).
 

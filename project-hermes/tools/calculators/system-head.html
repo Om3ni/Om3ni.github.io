@@ -1,2014 +1,418 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Pump Sizing · HVAC Calculators</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pump Sizing · HVAC Tools</title>
 <link rel="stylesheet" href="../../base.css">
-<link rel="stylesheet" href="calc.css">
+<link rel="stylesheet" href="../shared/tool.css">
+<script>try { var th = localStorage.getItem('sl_theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}</script>
 <style>
-.select-wrap { position: relative; margin-bottom: 8px; }
-.select-wrap::after {
-  content: '▾'; position: absolute; right: 10px; top: 50%;
-  transform: translateY(-50%); color: var(--text-mute);
-  pointer-events: none; font-size: .8rem;
-}
-.calc-select {
-  width: 100%; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 3px; color: var(--text); font-family: var(--mono);
-  font-size: .9rem; padding: 11px 11px; outline: none;
-  transition: border-color .15s; -webkit-appearance: none; appearance: none; cursor: pointer;
-}
-.calc-select:focus { border-color: var(--orange); }
-.authority-badge {
-  display: inline-block; font-family: var(--mono); font-size: .6rem;
-  letter-spacing: .1em; text-transform: uppercase; padding: 2px 6px;
-  border-radius: 2px; margin-left: 6px; vertical-align: middle;
-}
-.badge-active { background: var(--orange-dim); color: var(--orange-hi); border: 1px solid var(--orange-lo); }
-.badge-ref    { background: var(--surface2);   color: var(--text-mute);  border: 1px solid var(--border); }
-.flow-authority-box {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 3px; padding: 10px 12px; margin-bottom: 10px;
-}
-.flow-authority-row {
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;
-}
-.flow-authority-row:last-child { margin-bottom: 0; }
-.fa-label { font-family: var(--mono); font-size: .63rem; color: var(--text-mute); letter-spacing: .05em; text-transform: uppercase; }
-.fa-val   { font-family: var(--mono); font-size: .95rem; color: var(--orange-hi); }
-.fa-val.ref { color: var(--text-mute); font-size: .82rem; }
-.warn-box {
-  background: var(--yellow-dim); border: 1px solid var(--yellow-hi);
-  border-radius: 3px; padding: 8px 10px; margin-top: 8px;
-}
-.warn-item {
-  font-family: var(--mono); font-size: .63rem; color: var(--yellow-hi);
-  letter-spacing: .03em; line-height: 1.6;
-}
-.warn-item.error { color: var(--red-hi); }
-.warn-item.info  { color: var(--text-dim); }
-.fitting-row {
-  display: grid; grid-template-columns: 1fr auto; gap: 8px;
-  align-items: center; margin-bottom: 6px;
-}
-.fitting-label { font-family: var(--mono); font-size: .72rem; color: var(--text-dim); letter-spacing: .03em; }
-.fitting-qty {
-  width: 60px; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 3px; color: var(--text); font-family: var(--mono);
-  font-size: .9rem; padding: 7px 8px; outline: none; text-align: center;
-  -webkit-appearance: none; appearance: none;
-}
-.fitting-qty:focus { border-color: var(--orange); }
-.phase-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 14px; }
-.pump-point-row {
-  display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px;
-  align-items: center; margin-bottom: 6px;
-}
-.pump-point-del {
-  background: none; border: 1px solid var(--border); border-radius: 3px;
-  color: var(--text-mute); font-size: .9rem; cursor: pointer;
-  padding: 7px 10px; transition: all .1s;
-}
-.pump-point-del:active { border-color: var(--red-hi); color: var(--red-hi); }
-.curve-canvas {
-  width: 100%; height: 220px; background: var(--surface);
-  border: 1px solid var(--border); border-radius: 3px; display: block;
-}
-.custom-loss-row {
-  display: grid; grid-template-columns: 1fr auto auto auto; gap: 6px;
-  align-items: center; margin-bottom: 6px;
-  padding: 8px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 3px;
-}
-.custom-loss-row .iw { min-width: 90px; }
-.custom-loss-name {
-  width: 100%; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 3px; color: var(--text); font-family: var(--mono);
-  font-size: .78rem; padding: 7px 8px; outline: none;
-}
-.custom-loss-name:focus { border-color: var(--orange); }
-.custom-loss-type {
-  font-family: var(--mono); font-size: .58rem; color: var(--text-mute);
-  letter-spacing: .05em; text-transform: uppercase; text-align: center; min-width: 40px;
-}
-.btn-add {
-  display: block; width: 100%; padding: 8px; border-radius: 3px;
-  border: 1px dashed var(--border); background: none;
-  color: var(--text-mute); font-family: var(--mono); font-size: .72rem;
-  letter-spacing: .05em; cursor: pointer; transition: all .15s;
-}
-.btn-add:hover { border-color: var(--orange-lo); color: var(--orange-hi); }
-.result-sec-hdr-sm {
-  font-size: .6rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
-  color: var(--text-mute); padding: 8px 2px 4px; margin-top: 4px;
-}
-.source-ref {
-  font-family: var(--mono); font-size: .58rem; color: var(--text-mute);
-  letter-spacing: .03em; margin-top: 3px; font-style: italic;
-}
+[hidden] { display: none !important; }
+.t-in select { width: 100%; height: 50px; padding: 0 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--ui); font-size: 1rem; }
+.comp-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 72px; gap: 8px; margin-top: 8px; }
+.comp-row input, .comp-row select { width: 100%; height: 46px; padding: 0 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 1rem; }
+.comp-row input[type=number] { font-family: var(--mono); }
+.fit-grid { display: grid; grid-template-columns: minmax(0, 1fr) 76px; gap: 6px 10px; align-items: center; margin-top: 10px; }
+.fit-grid span { font-size: .95rem; color: var(--text-dim); }
+.fit-grid input { height: 44px; width: 100%; padding: 0 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--mono); font-size: 1.05rem; }
+.curve-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.plot { margin-top: 12px; width: 100%; height: auto; display: block; }
+.plot text { font-family: var(--mono); font-size: 11px; fill: var(--text-dim); }
+.duty-bar { position: sticky; bottom: 0; z-index: 50; margin: 18px -16px -40px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 2px solid var(--orange); display: flex; gap: 14px; }
+.duty-bar div { flex: 1; min-width: 0; }
+.duty-bar .k { display: block; font-family: var(--ui); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--text-mute); }
+.duty-bar .v { display: block; font-family: var(--mono); font-size: 1.15rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>
 </head>
 <body>
-<script src="../shared/withdrawn.js" data-reason="glycol viscosity and specific heat are wrong, CPVC uses an outside diameter, and the operating point does not update when inputs change"></script>
 <header>
   <a class="hdr-home" href="../../index.html" title="Project home">⌂</a>
   <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
   <div class="hdr-titles">
     <div class="hdr-title">Pump Sizing</div>
-    <div class="hdr-sub"><span class="hdr-tier t3">advanced</span>Single Loop · Pipe Loss · Pump Curve · BHP</div>
+    <div class="hdr-sub">Closed hydronic loops · flow · head · check</div>
   </div>
-  <button class="hdr-fav" id="favBtn" title="Favorite" onclick="toggleFav()">&#9734;</button>
 </header>
 
-<div class="tabs">
-  <div class="tab active" data-tab="flow">Flow</div>
-  <div class="tab" data-tab="pipe">Pipe</div>
-  <div class="tab" data-tab="head">Head</div>
-  <div class="tab" data-tab="pump">Pump</div>
-</div>
+<main class="t-wrap">
+  <p class="t-intro">Works out the flow and head a closed loop needs (the duty point you select a pump against), checks what an existing system is actually moving using the heat source and a thermometer, and, if you have the manufacturer's curve, where the pump will run.</p>
 
-<!-- ═══════════════════════════════════════
-     TAB 1 — FLOW AUTHORITY
-     ═══════════════════════════════════════ -->
-<div class="panel active" id="panel-flow">
+  <!-- FLUID -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Fluid</h2><span class="t-badge" id="badge-fl"></span></div>
+    <div class="t-body">
+      <div class="t-seg" id="fluidSeg" role="group" aria-label="Fluid">
+        <button type="button" data-fluid="water">Water</button>
+        <button type="button" data-fluid="eg">Ethylene glycol</button>
+        <button type="button" data-fluid="pg">Propylene glycol</button>
+      </div>
+      <div class="t-grid c2">
+        <label class="t-f" id="f-conc"><span>Glycol</span><span class="t-in"><input id="fl-conc" type="number" inputmode="decimal" step="any"><span class="u">% vol</span></span></label>
+        <label class="t-f"><span>Average loop temp</span><span class="t-in"><input id="fl-temp" type="number" inputmode="decimal" step="any"><span class="u">°F</span></span></label>
+      </div>
+      <p class="t-hint">Average of supply and return at design. Glycol is % by volume, as mixed or read with a refractometer.</p>
+      <div class="t-res" id="res-fl"></div>
+    </div>
+  </section>
 
-  <div class="sec sec-flush">
-    <div class="sec-lbl sec-lbl-flush">Fluid</div>
-    <div class="phase-grid" id="fluidGrid">
-      <button class="phase-btn active" data-fluid="water">Water</button>
-      <button class="phase-btn" data-fluid="eg">Ethylene Glycol</button>
-      <button class="phase-btn" data-fluid="pg">Propylene Glycol</button>
-    </div>
-    <div id="glycolInputs" style="display:none">
-      <div class="input-pair">
-        <div class="fg">
-          <label class="fl">Glycol %</label>
-          <div class="iw">
-            <input type="number" id="glycolPct" inputmode="decimal" placeholder="0–50">
-            <span class="iw-unit">%</span>
-          </div>
-        </div>
-        <div class="fg">
-          <label class="fl">Fluid Temp</label>
-          <div class="iw">
-            <input type="number" id="fluidTemp" inputmode="decimal" placeholder="60">
-            <span class="iw-unit">°F</span>
-          </div>
-        </div>
+  <!-- FLOW -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Flow the loop needs</h2><span class="t-badge" id="badge-q"></span></div>
+    <div class="t-body">
+      <div class="t-seg" id="flowSeg" role="group" aria-label="Flow from">
+        <button type="button" data-flow="load">From heat load</button>
+        <button type="button" data-flow="gpm">Known GPM</button>
       </div>
-    </div>
-    <div id="waterTempRow" class="fg">
-      <label class="fl">Fluid Temp</label>
-      <div class="iw">
-        <input type="number" id="waterTemp" inputmode="decimal" placeholder="60">
-        <span class="iw-unit">°F</span>
+      <div class="t-grid c2" data-flowmode="load">
+        <label class="t-f"><span>Design load</span><span class="t-in"><input id="q-load" type="number" inputmode="decimal" step="any" style="padding-right:64px"><span class="u">Btu/h</span></span></label>
+        <label class="t-f"><span>Design ΔT</span><span class="t-in"><input id="q-dt" type="number" inputmode="decimal" step="any"><span class="u">°F</span></span></label>
       </div>
+      <div class="t-grid c2" data-flowmode="gpm">
+        <label class="t-f"><span>Flow</span><span class="t-in"><input id="q-gpm" type="number" inputmode="decimal" step="any"><span class="u">GPM</span></span></label>
+      </div>
+      <p class="t-hint" data-flowmode="load">Load the circuit or pump serves. Residential boilers are usually designed around a 20 °F ΔT; check the equipment's spec.</p>
+      <div class="t-res" id="res-q"></div>
     </div>
+  </section>
+
+  <!-- HEAD -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Head the loop needs</h2><span class="t-badge" id="badge-h"></span></div>
+    <div class="t-body">
+      <p class="t-purpose">Friction through the longest circuit (supply and return), at the flow above. Static height doesn't count in a closed loop.</p>
+      <div class="t-grid c2">
+        <label class="t-f"><span>Pipe</span><span class="t-in"><select id="h-mat"></select></span></label>
+        <label class="t-f"><span>Size</span><span class="t-in"><select id="h-size"></select></span></label>
+        <label class="t-f"><span>Longest circuit</span><span class="t-in"><input id="h-len" type="number" inputmode="decimal" step="any"><span class="u">ft</span></span></label>
+        <label class="t-f"><span>Margin <span class="opt">optional</span></span><span class="t-in"><input id="h-margin" type="number" inputmode="decimal" step="any"><span class="u">%</span></span></label>
+      </div>
+      <span class="t-lbl">Fittings</span>
+      <div class="t-seg" id="fitSeg" role="group" aria-label="Fittings">
+        <button type="button" data-fit="allow">+50% allowance</button>
+        <button type="button" data-fit="count">Count them</button>
+        <button type="button" data-fit="none">None</button>
+      </div>
+      <div class="fit-grid" id="fitGrid" hidden></div>
+      <p class="t-hint" id="fitHint"></p>
+      <span class="t-lbl">Components <span class="opt" style="text-transform:none;letter-spacing:0;font-weight:500">from manufacturer data</span></span>
+      <div id="compRows"></div>
+      <p class="t-hint">Boiler heat exchanger, air separator, flow-check, zone valve, coil… Enter pressure drop at this flow (ft or psi) or the Cv.</p>
+      <div class="t-res" id="res-h"></div>
+    </div>
+  </section>
+
+  <!-- CHECK BY HEAT -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Check an existing pump by heat</h2><span class="t-badge" id="badge-c"></span></div>
+    <div class="t-body">
+      <p class="t-purpose">What the system is actually moving. Run the heat source at a steady, known firing rate for 15 minutes or more, then read supply and return at the source.</p>
+      <div class="t-grid c2">
+        <label class="t-f" style="grid-column:1/-1"><span>Heat source output</span><span class="t-in"><input id="c-out" type="number" inputmode="decimal" step="any" style="padding-right:64px"><span class="u">Btu/h</span></span></label>
+        <label class="t-f"><span>Supply</span><span class="t-in"><input id="c-sup" type="number" inputmode="decimal" step="any"><span class="u">°F</span></span></label>
+        <label class="t-f"><span>Return</span><span class="t-in"><input id="c-ret" type="number" inputmode="decimal" step="any"><span class="u">°F</span></span></label>
+      </div>
+      <p class="t-hint">Use output, not input: rated output from the label, or input × efficiency at the current firing rate. A modulating boiler at low fire gives a much smaller number.</p>
+      <div class="t-res" id="res-c"></div>
+    </div>
+  </section>
+
+  <!-- PUMP CURVE (optional) -->
+  <details class="t-card" id="card-p">
+    <summary><h2 class="t-title">Pump curve <span class="opt" style="font-weight:500;font-size:.85rem;color:var(--text-mute)">optional</span></h2><span class="t-badge" id="badge-p"></span></summary>
+    <div class="t-body">
+      <p class="t-purpose">Only from the manufacturer's submittal or tech support, for the pump and speed setting actually installed. Enter 3–6 points read off the curve.</p>
+      <div class="curve-row"><span class="t-lbl" style="margin:0">Flow (GPM)</span><span class="t-lbl" style="margin:0">Head (ft)</span></div>
+      <div id="curveRows"></div>
+      <div class="t-grid c2">
+        <label class="t-f"><span>Measured ΔP across pump <span class="opt">opt.</span></span><span class="t-in"><input id="p-dp" type="number" inputmode="decimal" step="any"><span class="u">psi</span></span></label>
+      </div>
+      <p class="t-hint">Gauges on the pump's suction and discharge ports, same height, same gauge (or zeroed against each other).</p>
+      <div class="t-res" id="res-p"></div>
+      <svg class="plot" id="plot" viewBox="0 0 340 220" role="img" aria-label="Pump and system curves" hidden></svg>
+      <p class="t-hint" id="plotKey" hidden>Orange: pump curve (dashed past the points entered) · grey: system curve · □ duty point · ○ operating point · | flow from measured ΔP</p>
+    </div>
+  </details>
+
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Notes</h2></div>
+    <div class="t-body"><label class="t-f"><span class="opt" style="text-transform:none;letter-spacing:0">Pump model, speed setting, circuit</span><span class="t-in"><textarea id="notes"></textarea></span></label></div>
+  </section>
+
+  <div class="t-actions">
+    <button type="button" class="t-btn primary" id="btnReport">Report</button>
+    <button type="button" class="t-btn" id="btnClear">Clear all</button>
   </div>
 
-  <div class="sec">
-    <div class="sec-lbl">Load → Flow (BTU Method)</div>
-    <div class="fg">
-      <label class="fl">System Load</label>
-      <div class="iw">
-        <input type="number" id="btuLoad" inputmode="decimal" placeholder="—">
-        <span class="iw-unit">BTU/hr</span>
-      </div>
-    </div>
-    <div class="fg">
-      <label class="fl">Supply / Return ΔT</label>
-      <div class="iw">
-        <input type="number" id="deltaT" inputmode="decimal" placeholder="20">
-        <span class="iw-unit">°F</span>
-      </div>
-    </div>
-    <div class="source-ref">ASHRAE Fundamentals 2021, Ch. 13 — GPM = BTU/hr ÷ (500 × ΔT × Cp_factor × ρ_factor)</div>
+  <div class="duty-bar" aria-live="polite">
+    <div><span class="k">Duty point</span><span class="v" id="bar-duty">—</span></div>
+    <div><span class="k">Measured flow</span><span class="v" id="bar-meas">—</span></div>
   </div>
+</main>
 
-  <div class="sec">
-    <div class="sec-lbl">Known GPM Override <span class="authority-badge badge-active" id="overrideBadge" style="display:none">ACTIVE — TAB 1 AUTHORITY</span></div>
-    <div class="fg">
-      <label class="fl">Design GPM</label>
-      <div class="iw">
-        <input type="number" id="knownGPM" inputmode="decimal" placeholder="— leave blank to use BTU calc">
-        <span class="iw-unit">GPM</span>
-      </div>
-    </div>
-  </div>
+<dialog class="t-dialog" id="reportDlg" aria-labelledby="reportTitle">
+  <div class="dh"><span id="reportTitle">Pump sizing report</span><button type="button" class="t-btn" id="btnCloseReport" style="min-height:40px">Close</button></div>
+  <pre id="reportText"></pre>
+  <div class="da"><button type="button" class="t-btn" id="btnCopy">Copy</button><button type="button" class="t-btn primary" id="btnSave">Save .txt</button></div>
+</dialog>
 
-  <!-- Flow Authority Display -->
-  <div class="flow-authority-box" id="flowAuthorityBox" style="display:none">
-    <div class="flow-authority-row">
-      <span class="fa-label">BTU-Derived Flow</span>
-      <span class="fa-val" id="faCalcGPM" style="color:var(--text-mute);font-size:.82rem">—</span>
-    </div>
-    <div class="flow-authority-row">
-      <span class="fa-label">Active Design Flow <span class="authority-badge badge-active">AUTH</span></span>
-      <span class="fa-val" id="faActiveGPM">—</span>
-    </div>
-    <div class="flow-authority-row">
-      <span class="fa-label">Mass Flow</span>
-      <span class="fa-val" id="faMassFlow" style="color:var(--text-mute);font-size:.82rem">—</span>
-    </div>
-  </div>
+<script type="module">
+import { props } from '../shared/fluids.js';
+import * as H from '../shared/hydronics.js';
 
-  <div id="flowWarnings"></div>
+const STORE = 'hermes_pump_next';
+const N_COMP = 4, N_CURVE = 6;
+let fluid = 'water', flowMode = 'load', fitMode = 'allow';
 
-  <div class="results" id="flowResults">
-    <div class="result-sec-hdr">Fluid Properties</div>
-    <div class="result-row dim" id="rowCp">
-      <div class="rr-left">
-        <div class="rr-label">Specific Heat</div>
-        <div class="rr-sub" id="subCp">ASHRAE Fund. Ch. 31</div>
-      </div>
-      <div class="rr-val" id="valCp">—</div>
-    </div>
-    <div class="result-row dim" id="rowDensity">
-      <div class="rr-left">
-        <div class="rr-label">Density</div>
-        <div class="rr-sub" id="subDensity">ASHRAE Fund. Ch. 31</div>
-      </div>
-      <div class="rr-val" id="valDensity">—</div>
-    </div>
-    <div class="result-row dim" id="rowVisc">
-      <div class="rr-left">
-        <div class="rr-label">Dynamic Viscosity</div>
-        <div class="rr-sub" id="subVisc">ASHRAE Fund. Ch. 31</div>
-      </div>
-      <div class="rr-val" id="valVisc">—</div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════
-     TAB 2 — PIPE
-     ═══════════════════════════════════════ -->
-<div class="panel" id="panel-pipe">
-
-  <div class="hint" style="margin:0 0 10px;font-size:.6rem;">Single pipe size, single loop. This calculator sizes one uniform pipe run — not multi-segment or branched piping networks. For systems where pipe size reduces along the loop, evaluate each segment separately.</div>
-
-  <div class="sec sec-flush">
-    <div class="sec-lbl sec-lbl-flush">Design Flow (from Tab 1)</div>
-    <div class="readout">
-      <span class="readout-lbl">Active GPM</span>
-      <span class="readout-val" id="pipeGPMDisplay">— GPM</span>
-    </div>
-    <div class="source-ref" style="margin-bottom:8px">Tab 1 owns flow authority. Edit flow on Tab 1.</div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-lbl">Pipe Material</div>
-    <div class="select-wrap">
-      <select class="calc-select" id="pipeMaterial">
-        <option value="">— Select material —</option>
-        <option value="steel">Schedule 40 Steel</option>
-        <option value="copper">Copper Type L</option>
-        <option value="copperM">Copper Type M</option>
-        <option value="cpvc">CPVC</option>
-        <option value="pex">PEX</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="sec" id="pipeSizeSection" style="display:none">
-    <div class="sec-lbl">Nominal Pipe Size</div>
-    <div class="select-wrap">
-      <select class="calc-select" id="pipeSize"></select>
-    </div>
-    <div class="readout" style="margin-top:6px">
-      <span class="readout-lbl">Inside Diameter</span>
-      <span class="readout-val" id="pipeIDDisplay">—</span>
-    </div>
-    <div class="source-ref">ASME B36.10 / ASTM B88</div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-lbl">Pipe Runs</div>
-    <div class="fg">
-      <label class="fl">Horizontal Run Length</label>
-      <div class="iw">
-        <input type="number" id="lengthH" inputmode="decimal" placeholder="—">
-        <span class="iw-unit">ft</span>
-      </div>
-    </div>
-    <div class="fg">
-      <label class="fl">Vertical Rise Length</label>
-      <div class="iw">
-        <input type="number" id="lengthV" inputmode="decimal" placeholder="—">
-        <span class="iw-unit">ft</span>
-      </div>
-    </div>
-    <div class="source-ref">Friction loss applies to both runs. Static head evaluated separately in Tab 3.</div>
-  </div>
-
-  <div id="pipeWarnings"></div>
-
-  <div class="results" id="pipeResults">
-    <div class="result-sec-hdr">Flow Characteristics</div>
-    <div class="result-row dim" id="rowVelocity">
-      <div class="rr-left">
-        <div class="rr-label">Velocity</div>
-        <div class="rr-sub" id="subVelocity">ASHRAE 90.1 / Fund. Ch. 22 — 2–4 ft/s recommended</div>
-      </div>
-      <div class="rr-val" id="valVelocity">—</div>
-    </div>
-    <div class="result-row dim" id="rowRe">
-      <div class="rr-left">
-        <div class="rr-label">Reynolds Number</div>
-        <div class="rr-sub" id="subRe">—</div>
-      </div>
-      <div class="rr-val" id="valRe">—</div>
-    </div>
-    <div class="result-row dim" id="rowRegime">
-      <div class="rr-left">
-        <div class="rr-label">Flow Regime</div>
-        <div class="rr-sub" id="subRegime">Re &lt;2300 laminar · 2300–4000 transitional · &gt;4000 turbulent</div>
-      </div>
-      <div class="rr-val" id="valRegime">—</div>
-    </div>
-    <div class="result-row dim" id="rowFriction">
-      <div class="rr-left">
-        <div class="rr-label">Friction Factor (f)</div>
-        <div class="rr-sub" id="subFriction">Darcy-Weisbach / Colebrook-White — ASHRAE Fund. Ch. 22</div>
-      </div>
-      <div class="rr-val" id="valFriction">—</div>
-    </div>
-    <div class="result-row dim" id="rowFricPer100">
-      <div class="rr-left">
-        <div class="rr-label">Friction Loss / 100 ft</div>
-        <div class="rr-sub">ft head per 100 ft of pipe</div>
-      </div>
-      <div class="rr-val" id="valFricPer100">—</div>
-    </div>
-
-    <div class="result-sec-hdr">Pipe Friction Head</div>
-    <div class="result-row dim" id="rowHfH">
-      <div class="rr-left">
-        <div class="rr-label">Horizontal Run Loss</div>
-        <div class="rr-sub" id="subHfH">—</div>
-      </div>
-      <div class="rr-val" id="valHfH">—</div>
-    </div>
-    <div class="result-row dim" id="rowHfV">
-      <div class="rr-left">
-        <div class="rr-label">Vertical Run Loss</div>
-        <div class="rr-sub" id="subHfV">Friction only — not static head</div>
-      </div>
-      <div class="rr-val" id="valHfV">—</div>
-    </div>
-    <div class="result-row dim" id="rowHfTotal">
-      <div class="rr-left">
-        <div class="rr-label">Total Pipe Friction</div>
-        <div class="rr-sub" id="subHfTotal">—</div>
-      </div>
-      <div class="rr-val" id="valHfTotal">—</div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════
-     TAB 3 — HEAD
-     ═══════════════════════════════════════ -->
-<div class="panel" id="panel-head">
-
-  <div class="sec sec-flush">
-    <div class="sec-lbl sec-lbl-flush">System Type</div>
-    <div class="phase-grid" id="loopGrid">
-      <button class="phase-btn active" data-loop="closed">Closed Loop</button>
-      <button class="phase-btn" data-loop="open">Open System</button>
-    </div>
-    <div class="hint" id="loopHint">Closed loop: static head cancels — excluded from TDH. Fill pressure and NPSH not evaluated by this calculator.</div>
-  </div>
-
-  <div class="sec" id="staticHeadSec" style="display:none">
-    <div class="sec-lbl">Static Head (Open System)</div>
-    <div class="fg">
-      <label class="fl">Elevation Lift</label>
-      <div class="iw">
-        <input type="number" id="staticHead" inputmode="decimal" placeholder="—">
-        <span class="iw-unit">ft</span>
-      </div>
-    </div>
-    <div class="source-ref">Pump reference datum to highest discharge point. ASHRAE Fund. Ch. 13.</div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-lbl">Fittings — Equivalent Length Method</div>
-    <div class="source-ref" style="margin-bottom:10px">ASHRAE Fundamentals 2021, Ch. 22, Table 7</div>
-    <div id="fittingsList"></div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-lbl">Custom Losses</div>
-    <div class="source-ref" style="margin-bottom:8px">Coils, heat exchangers, control valves, triple duty valves, and other components with published pressure drops. Enter manufacturer spec'd values at design flow.</div>
-    <div id="customLossesList"></div>
-    <button class="btn-add" id="btnAddCustom" style="margin-bottom:4px">+ Add Component</button>
-  </div>
-
-  <div class="sec">
-    <div class="sec-lbl">Safety Margin</div>
-    <div class="fg">
-      <label class="fl">Design Margin</label>
-      <div class="iw">
-        <input type="number" id="safetyMargin" inputmode="decimal" placeholder="10">
-        <span class="iw-unit">%</span>
-      </div>
-    </div>
-    <div class="source-ref">Recommended: 5–15%. Warning issued above 20%.</div>
-  </div>
-
-  <div id="headWarnings"></div>
-
-  <div class="results" id="headResults">
-    <div class="result-sec-hdr">Head Summary</div>
-    <div class="result-row dim" id="rowHfPipe">
-      <div class="rr-left">
-        <div class="rr-label">Pipe Friction Head</div>
-        <div class="rr-sub">From Tab 2</div>
-      </div>
-      <div class="rr-val" id="valHfPipe">—</div>
-    </div>
-    <div class="result-row dim" id="rowHfFit">
-      <div class="rr-left">
-        <div class="rr-label">Fitting Friction Head</div>
-        <div class="rr-sub" id="subHfFit">Equivalent length method</div>
-      </div>
-      <div class="rr-val" id="valHfFit">—</div>
-    </div>
-    <div class="result-row dim" id="rowHfCustom">
-      <div class="rr-left">
-        <div class="rr-label">Custom Component Losses</div>
-        <div class="rr-sub" id="subHfCustom">Coils, HX, valves — manufacturer data</div>
-      </div>
-      <div class="rr-val" id="valHfCustom">—</div>
-    </div>
-    <div class="result-row dim" id="rowHStatic">
-      <div class="rr-left">
-        <div class="rr-label">Static Head</div>
-        <div class="rr-sub" id="subHStatic">—</div>
-      </div>
-      <div class="rr-val" id="valHStatic">—</div>
-    </div>
-    <div class="result-row dim" id="rowTDH">
-      <div class="rr-left">
-        <div class="rr-label">TDH (Raw)</div>
-        <div class="rr-sub">Pipe + fittings + components + static</div>
-      </div>
-      <div class="rr-val" id="valTDH">—</div>
-    </div>
-    <div class="result-row dim" id="rowDesignTDH">
-      <div class="rr-left">
-        <div class="rr-label">Design TDH</div>
-        <div class="rr-sub" id="subDesignTDH">TDH + safety margin</div>
-      </div>
-      <div class="rr-val" id="valDesignTDH">—</div>
-    </div>
-
-    <div class="result-sec-hdr">Power</div>
-    <div class="result-row dim" id="rowHHP">
-      <div class="rr-left">
-        <div class="rr-label">Hydraulic HP</div>
-        <div class="rr-sub">HHP = GPM × TDH × SG ÷ 3960</div>
-      </div>
-      <div class="rr-val" id="valHHP">—</div>
-    </div>
-    <div class="result-row dim" id="rowBHP">
-      <div class="rr-left">
-        <div class="rr-label">Brake HP (est.)</div>
-        <div class="rr-sub" id="subBHP">HHP ÷ pump efficiency — enter eff. on Pump tab</div>
-      </div>
-      <div class="rr-val" id="valBHP">—</div>
-    </div>
-  </div>
-
-  <div style="padding: 14px 0 0;">
-    <button class="btn btn-primary" id="btnHeadReport">Generate Report</button>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════
-     TAB 4 — PUMP CURVE
-     ═══════════════════════════════════════ -->
-<div class="panel" id="panel-pump">
-
-  <div class="sec sec-flush">
-    <div class="sec-lbl sec-lbl-flush">Pump Curve Data Points</div>
-    <div class="source-ref" style="margin-bottom:8px">Enter 3–5 points from manufacturer curve. Flow must be strictly increasing, head monotonically decreasing.</div>
-    <div id="pumpPointsList"></div>
-    <button class="btn-add" id="btnAddPoint">+ Add Point</button>
-  </div>
-
-  <div class="sec">
-    <div class="sec-lbl">Best Efficiency Point</div>
-    <div class="fg">
-      <label class="fl">BEP Flow</label>
-      <div class="iw">
-        <input type="number" id="bepGPM" inputmode="decimal" placeholder="—">
-        <span class="iw-unit">GPM</span>
-      </div>
-    </div>
-    <div class="fg">
-      <label class="fl">Pump Efficiency at BEP</label>
-      <div class="iw">
-        <input type="number" id="pumpEff" inputmode="decimal" placeholder="65">
-        <span class="iw-unit">%</span>
-      </div>
-    </div>
-  </div>
-
-  <div id="pumpWarnings"></div>
-
-  <div class="results" id="pumpResults">
-    <div class="result-sec-hdr">Curve Fit</div>
-    <div class="result-row dim" id="rowFitQuality">
-      <div class="rr-left">
-        <div class="rr-label">Fit Quality</div>
-        <div class="rr-sub" id="subFitQuality">Quadratic regression on entered points</div>
-      </div>
-      <div class="rr-val" id="valFitQuality">—</div>
-    </div>
-
-    <div class="result-sec-hdr">Operating Point</div>
-    <div class="result-row dim" id="rowOpGPM">
-      <div class="rr-left">
-        <div class="rr-label">Operating Flow</div>
-        <div class="rr-sub" id="subOpGPM">System / pump curve intersection</div>
-      </div>
-      <div class="rr-val" id="valOpGPM">—</div>
-    </div>
-    <div class="result-row dim" id="rowOpHead">
-      <div class="rr-left">
-        <div class="rr-label">Operating Head</div>
-        <div class="rr-sub">ft at intersection</div>
-      </div>
-      <div class="rr-val" id="valOpHead">—</div>
-    </div>
-    <div class="result-row dim" id="rowDevDesign">
-      <div class="rr-left">
-        <div class="rr-label">Deviation from Design</div>
-        <div class="rr-sub">Operating GPM vs. design GPM</div>
-      </div>
-      <div class="rr-val" id="valDevDesign">—</div>
-    </div>
-    <div class="result-row dim" id="rowDevBEP">
-      <div class="rr-left">
-        <div class="rr-label">BEP Proximity</div>
-        <div class="rr-sub">Operating point vs. BEP — ±15% recommended</div>
-      </div>
-      <div class="rr-val" id="valDevBEP">—</div>
-    </div>
-  </div>
-
-  <canvas class="curve-canvas" id="curveCanvas"></canvas>
-  <div class="source-ref" style="margin-top:4px">System curve: H = H_static + k×Q² · Pump curve: quadratic fit · Intersection: bisection method</div>
-
-  <div id="pumpWarnings2"></div>
-
-  <div style="padding: 14px 0 0;">
-    <button class="btn btn-primary" id="btnPumpReport">Generate Report</button>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════
-     REPORT MODAL
-     ═══════════════════════════════════════ -->
-<div class="modal-overlay" id="reportModal">
-  <div class="modal">
-    <div class="modal-hdr">
-      <div class="modal-title">Pump Sizing — Field Report</div>
-      <button class="modal-close" id="modalClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <pre class="report-pre" id="reportText"></pre>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" id="btnCopy">Copy Text</button>
-      <button class="btn btn-primary" id="btnPrint">Print</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast">Copied to clipboard</div>
-
-<script>
-'use strict';
-
-/* ══════════════════════════════════════════════════════════════
-   FLUID PROPERTY TABLES
-   Source: ASHRAE Fundamentals Handbook 2021, Chapter 31
-   EG = Ethylene Glycol, PG = Propylene Glycol
-   Axes: concentration [0,20,30,40,50]%, temperature [20,40,60,80,100,120]°F
-   ══════════════════════════════════════════════════════════════ */
-
-var CONC_AXIS = [0, 20, 30, 40, 50];
-var TEMP_AXIS = [20, 40, 60, 80, 100, 120, 140, 160, 180, 200];
-
-// Specific heat BTU/(lb·°F) — ASHRAE Fundamentals 2021, Ch. 31
-var EG_CP = [
-  [1.000, 1.000, 1.000, 1.001, 1.002, 1.004, 1.007, 1.011, 1.016, 1.022],
-  [0.946, 0.953, 0.960, 0.967, 0.974, 0.981, 0.988, 0.995, 1.002, 1.009],
-  [0.916, 0.924, 0.933, 0.941, 0.950, 0.958, 0.967, 0.975, 0.984, 0.992],
-  [0.882, 0.891, 0.901, 0.911, 0.921, 0.931, 0.941, 0.951, 0.961, 0.971],
-  [0.847, 0.857, 0.868, 0.879, 0.890, 0.901, 0.912, 0.923, 0.934, 0.945]
-];
-var PG_CP = [
-  [1.000, 1.000, 1.000, 1.001, 1.002, 1.004, 1.007, 1.011, 1.016, 1.022],
-  [0.960, 0.966, 0.972, 0.978, 0.984, 0.990, 0.996, 1.002, 1.008, 1.014],
-  [0.934, 0.941, 0.948, 0.955, 0.962, 0.969, 0.976, 0.983, 0.990, 0.997],
-  [0.906, 0.914, 0.922, 0.930, 0.938, 0.946, 0.954, 0.962, 0.970, 0.978],
-  [0.877, 0.886, 0.895, 0.904, 0.913, 0.922, 0.931, 0.940, 0.949, 0.958]
-];
-
-// Density lb/ft³ — ASHRAE Fundamentals 2021, Ch. 31
-var EG_RHO = [
-  [62.43, 62.43, 62.37, 62.22, 61.99, 61.71, 61.38, 61.00, 60.58, 60.12],
-  [64.54, 64.41, 64.21, 63.95, 63.63, 63.26, 62.84, 62.38, 61.87, 61.32],
-  [65.63, 65.47, 65.24, 64.95, 64.60, 64.19, 63.73, 63.22, 62.67, 62.07],
-  [66.74, 66.55, 66.28, 65.95, 65.56, 65.12, 64.62, 64.07, 63.47, 62.83],
-  [67.81, 67.59, 67.29, 66.93, 66.51, 66.04, 65.51, 64.93, 64.30, 63.63]
-];
-var PG_RHO = [
-  [62.43, 62.43, 62.37, 62.22, 61.99, 61.71, 61.38, 61.00, 60.58, 60.12],
-  [64.18, 64.03, 63.82, 63.55, 63.23, 62.86, 62.44, 61.98, 61.47, 60.92],
-  [65.07, 64.89, 64.65, 64.35, 63.99, 63.58, 63.12, 62.62, 62.07, 61.48],
-  [65.94, 65.73, 65.46, 65.13, 64.74, 64.30, 63.81, 63.27, 62.69, 62.07],
-  [66.78, 66.54, 66.24, 65.88, 65.46, 64.99, 64.47, 63.91, 63.30, 62.65]
-];
-
-// Dynamic viscosity cP — ASHRAE Fundamentals 2021, Ch. 31
-var EG_MU = [
-  [1.73, 1.55, 1.13, 0.86, 0.68, 0.55, 0.46, 0.39, 0.33, 0.29],
-  [4.20, 2.85, 2.06, 1.57, 1.24, 1.01, 0.83, 0.70, 0.60, 0.52],
-  [8.50, 5.20, 3.52, 2.55, 1.95, 1.54, 1.25, 1.03, 0.86, 0.73],
-  [22.0, 11.8, 7.00, 4.60, 3.25, 2.42, 1.88, 1.50, 1.22, 1.01],
-  [72.0, 32.0, 15.5, 8.80, 5.60, 3.85, 2.80, 2.12, 1.66, 1.34]
-];
-var PG_MU = [
-  [1.73,  1.55,  1.13,  0.86, 0.68, 0.55, 0.46, 0.39, 0.33, 0.29],
-  [9.50,  5.50,  3.50,  2.40, 1.75, 1.35, 1.07, 0.87, 0.72, 0.61],
-  [28.0,  13.5,  7.20,  4.30, 2.80, 1.95, 1.44, 1.10, 0.87, 0.70],
-  [95.0,  38.0,  17.0,  8.80, 5.10, 3.20, 2.15, 1.52, 1.12, 0.86],
-  [350.0, 115.0, 43.0, 18.5,  9.00, 5.00, 3.05, 2.00, 1.40, 1.02]
-];
-
-/* ── Unit conversion helpers ── */
-function inchToFt(i)    { return i / 12; }
-function cPtoLbFtS(cP)  { return cP / 1488.16; }
-function ftToPSI(ft, rho) { return ft * rho / 144; }
-function psiToFt(psi, rho){ return psi * 144 / rho; }
-
-/* ── Bilinear interpolation ──
-   table[ci][ti], ci = concentration index, ti = temperature index */
-function bilinear(table, conc, temp) {
-  // find bounding indices
-  var ci0 = 0, ci1 = 0, ti0 = 0, ti1 = 0;
-  for (var i = 0; i < CONC_AXIS.length - 1; i++) {
-    if (conc >= CONC_AXIS[i] && conc <= CONC_AXIS[i+1]) { ci0 = i; ci1 = i+1; break; }
-  }
-  for (var j = 0; j < TEMP_AXIS.length - 1; j++) {
-    if (temp >= TEMP_AXIS[j] && temp <= TEMP_AXIS[j+1]) { ti0 = j; ti1 = j+1; break; }
-  }
-  var tc = (conc - CONC_AXIS[ci0]) / (CONC_AXIS[ci1] - CONC_AXIS[ci0]);
-  var tt = (temp - TEMP_AXIS[ti0]) / (TEMP_AXIS[ti1] - TEMP_AXIS[ti0]);
-  var v00 = table[ci0][ti0], v10 = table[ci1][ti0];
-  var v01 = table[ci0][ti1], v11 = table[ci1][ti1];
-  return v00 * (1-tc)*(1-tt) + v10*tc*(1-tt) + v01*(1-tc)*tt + v11*tc*tt;
+const $ = (id) => document.getElementById(id);
+const val = (id) => { const e = $(id); if (!e || e.value === '') return null; const v = parseFloat(String(e.value).replace(',', '.')); return Number.isFinite(v) ? v : NaN; };
+const f = (n, d = 1) => (n === null || n === undefined || !Number.isFinite(n) ? '—' : (Math.round(n * 10 ** d) / 10 ** d).toFixed(d));
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function row(k, v, unit, ref, marker) {
+  return `<div class="t-row"><div class="top"><span class="k">${esc(k)}</span><span class="v">${esc(v)}${unit ? `<small>${esc(unit)}</small>` : ''}</span></div>` +
+    (ref ? `<div class="ref">${ref}</div>` : '') + (marker ? `<span class="t-mk">${esc(marker)}</span>` : '') + `</div>`;
 }
+const empty = (msg) => `<p class="t-empty">${esc(msg)}</p>`;
+const bad = (id, cond) => { const e = $(id); if (e) e.setAttribute('aria-invalid', String(!!cond)); };
+const pos = (v) => v !== null && Number.isFinite(v) && v > 0;
 
-/* ── Fluid property resolver ──
-   Returns { valid, cp, rho, mu_cP, mu_lbfts, warnings[] }
-   Source: ASHRAE Fundamentals 2021, Ch. 31 */
-function resolveFluidProperties(fluidType, glycolPct, tempF) {
-  var warnings = [];
-  var pct = parseFloat(glycolPct) || 0;
-  var T   = parseFloat(tempF)    || 60;
-
-  // Domain checks
-  if (T < 20 || T > 200) {
-    return { valid: false, warnings: [{ id:'W03', sev:'error',
-      msg: 'Fluid temp ' + T + '°F outside table domain (20–200°F). ASHRAE Ch. 31.' }] };
-  }
-
-  if (fluidType === 'water') {
-    // Water: use 0% row from EG tables (same values)
-    var cp  = bilinear(EG_CP,  0, T);
-    var rho = bilinear(EG_RHO, 0, T);
-    var mu  = bilinear(EG_MU,  0, T);
-    return { valid: true, cp: cp, rho: rho, mu_cP: mu, mu_lbfts: cPtoLbFtS(mu), warnings: warnings };
-  }
-
-  // Glycol checks
-  if (pct < 0 || pct > 50) {
-    return { valid: false, warnings: [{ id:'W04', sev:'error',
-      msg: 'Glycol concentration ' + pct + '% outside table domain (0–50%). ASHRAE Ch. 31.' }] };
-  }
-
-  var cpTable  = fluidType === 'eg' ? EG_CP  : PG_CP;
-  var rhoTable = fluidType === 'eg' ? EG_RHO : PG_RHO;
-  var muTable  = fluidType === 'eg' ? EG_MU  : PG_MU;
-
-  var cp2  = bilinear(cpTable,  pct, T);
-  var rho2 = bilinear(rhoTable, pct, T);
-  var mu2  = bilinear(muTable,  pct, T);
-
-  return { valid: true, cp: cp2, rho: rho2, mu_cP: mu2, mu_lbfts: cPtoLbFtS(mu2), warnings: warnings };
+/* ── Build dynamic inputs ────────────────────────────────────────── */
+Object.entries(H.PIPES).forEach(([k, p]) => { const o = document.createElement('option'); o.value = k; o.textContent = p.name; $('h-mat').appendChild(o); });
+function fillSizes(keep) {
+  const sel = $('h-size'), mat = H.PIPES[$('h-mat').value], prev = keep ?? sel.value;
+  sel.innerHTML = '<option value="">Size</option>' + Object.keys(mat.id).map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  if (prev && mat.id[prev]) sel.value = prev;
 }
+$('fitGrid').innerHTML = H.FITTINGS.map((ft) => `<span>${esc(ft.name)}</span><input id="fit-${ft.key}" type="number" inputmode="numeric" min="0" step="1" aria-label="${esc(ft.name)} count">`).join('');
+$('compRows').innerHTML = Array.from({ length: N_COMP }, (_, i) =>
+  `<div class="comp-row"><input id="comp-name-${i}" type="text" placeholder="Component" aria-label="Component ${i + 1} name"><input id="comp-val-${i}" type="number" inputmode="decimal" step="any" aria-label="Component ${i + 1} value"><select id="comp-unit-${i}" aria-label="Component ${i + 1} unit"><option value="ft">ft</option><option value="psi">psi</option><option value="cv">Cv</option></select></div>`).join('');
+$('curveRows').innerHTML = Array.from({ length: N_CURVE }, (_, i) =>
+  `<div class="curve-row"><span class="t-in"><input id="cv-q-${i}" type="number" inputmode="decimal" step="any" aria-label="Point ${i + 1} flow"><span class="u">GPM</span></span><span class="t-in"><input id="cv-h-${i}" type="number" inputmode="decimal" step="any" aria-label="Point ${i + 1} head"><span class="u">ft</span></span></div>`).join('');
 
-/* ══════════════════════════════════════════════════════════════
-   PIPE DATA TABLES
-   Inside diameters per ASME B36.10 (steel) and ASTM B88 (copper)
-   ══════════════════════════════════════════════════════════════ */
-var PIPE_DATA = {
-  steel: {
-    label: 'Schedule 40 Steel',
-    roughness_ft: 0.000150,  // ASHRAE Fund. Ch. 22, Table 2
-    sizes: [
-      { nom:'3/4"',  id_in: 0.824 },
-      { nom:'1"',    id_in: 1.049 },
-      { nom:'1-1/4"',id_in: 1.380 },
-      { nom:'1-1/2"',id_in: 1.610 },
-      { nom:'2"',    id_in: 2.067 },
-      { nom:'2-1/2"',id_in: 2.469 },
-      { nom:'3"',    id_in: 3.068 },
-      { nom:'4"',    id_in: 4.026 },
-      { nom:'6"',    id_in: 6.065 }
-    ]
-  },
-  copper: {
-    label: 'Copper Type L',
-    roughness_ft: 0.000005,  // ASHRAE Fund. Ch. 22, Table 2 (drawn tubing)
-    sizes: [
-      { nom:'3/4"',  id_in: 0.785 },
-      { nom:'1"',    id_in: 1.025 },
-      { nom:'1-1/4"',id_in: 1.265 },
-      { nom:'1-1/2"',id_in: 1.505 },
-      { nom:'2"',    id_in: 1.985 },
-      { nom:'2-1/2"',id_in: 2.465 },
-      { nom:'3"',    id_in: 2.945 },
-      { nom:'4"',    id_in: 3.905 }
-    ]
-  },
-  copperM: {
-    label: 'Copper Type M',
-    roughness_ft: 0.000005,
-    sizes: [
-      { nom:'3/4"',  id_in: 0.811 },
-      { nom:'1"',    id_in: 1.055 },
-      { nom:'1-1/4"',id_in: 1.291 },
-      { nom:'1-1/2"',id_in: 1.527 },
-      { nom:'2"',    id_in: 2.009 },
-      { nom:'2-1/2"',id_in: 2.495 },
-      { nom:'3"',    id_in: 2.981 },
-      { nom:'4"',    id_in: 3.935 }
-    ]
-  },
-  cpvc: {
-    label: 'CPVC',
-    roughness_ft: 0.000005,  // ASHRAE Fund. Ch. 22, Table 2 (smooth plastic)
-    sizes: [
-      { nom:'3/4"',  id_in: 0.874 },
-      { nom:'1"',    id_in: 1.101 },
-      { nom:'1-1/4"',id_in: 1.380 },
-      { nom:'1-1/2"',id_in: 1.590 },
-      { nom:'2"',    id_in: 2.047 },
-      { nom:'2-1/2"',id_in: 2.563 },
-      { nom:'3"',    id_in: 3.042 }
-    ]
-  },
-  pex: {
-    label: 'PEX',
-    roughness_ft: 0.000007,  // ASHRAE Fund. Ch. 22, Table 2
-    sizes: [
-      { nom:'1/2"',  id_in: 0.475 },
-      { nom:'3/4"',  id_in: 0.671 },
-      { nom:'1"',    id_in: 0.862 },
-      { nom:'1-1/4"',id_in: 1.077 },
-      { nom:'1-1/2"',id_in: 1.265 },
-      { nom:'2"',    id_in: 1.649 }
-    ]
-  }
-};
+/* ── State shared between cards (recomputed from scratch on every input) ── */
+let S = {};
+let report = {};
 
-/* ══════════════════════════════════════════════════════════════
-   FITTING EQUIVALENT LENGTHS
-   Source: ASHRAE Fundamentals 2021, Ch. 22, Table 7
-   Expressed as L_eq = multiplier × D_inside (feet)
-   ══════════════════════════════════════════════════════════════ */
-var FITTINGS = [
-  { key:'elbow90s',  label:'90° Elbow (Standard)',    mult: 30 },
-  { key:'elbow90lr', label:'90° Elbow (Long Radius)', mult: 16 },
-  { key:'elbow45',   label:'45° Elbow',               mult: 16 },
-  { key:'teeThru',   label:'Tee (Flow-Through)',       mult: 20 },
-  { key:'teeBranch', label:'Tee (Branch)',             mult: 60 },
-  { key:'gateValve', label:'Gate Valve (Open)',        mult:  7 },
-  { key:'ballValve', label:'Ball Valve (Open)',        mult:  3 },
-  { key:'globeValve',label:'Globe Valve (Open)',       mult:340 },
-  { key:'checkSwing',label:'Check Valve (Swing)',      mult:100 },
-  { key:'strainerY', label:'Strainer (Y-Type)',        mult: 60 }
-];
-
-/* ══════════════════════════════════════════════════════════════
-   FRICTION FACTOR — Colebrook-White
-   Source: ASHRAE Fundamentals 2021, Ch. 22, Eq. 6
-   Laminar: f = 64/Re (Re < 2300)
-   Turbulent: iterative Colebrook (tolerance 1e-6, max 25 iter)
-   Transitional (2300-4000): rejected, warning returned
-   ══════════════════════════════════════════════════════════════ */
-function frictionFactor(Re, eps_ft, D_ft) {
-  if (Re < 2300) {
-    return { f: 64 / Re, regime: 'laminar', converged: true, warnings: [] };
-  }
-  if (Re <= 4000) {
-    return { f: null, regime: 'transitional', converged: false,
-      warnings: [{ id:'W02', sev:'warn',
-        msg: 'Transitional flow (Re=' + Re.toFixed(0) + '). Friction factor withheld — results unreliable in this regime. ASHRAE Fund. Ch. 22.' }] };
-  }
-  // Turbulent — Colebrook-White iterative
-  var relRough = eps_ft / D_ft;
-  var f = 0.02; // initial guess
-  var tol = 1e-6, maxIter = 25, converged = false;
-  for (var i = 0; i < maxIter; i++) {
-    var fNew = Math.pow(-2.0 * Math.log10(relRough / 3.7 + 2.51 / (Re * Math.sqrt(f))), -2);
-    if (Math.abs(fNew - f) < tol) { f = fNew; converged = true; break; }
-    f = fNew;
-  }
-  var warns = [];
-  if (!converged) warns.push({ id:'W16', sev:'warn',
-    msg: 'Colebrook-White did not converge within 25 iterations. Result flagged low-confidence.' });
-  return { f: f, regime: 'turbulent', converged: converged, warnings: warns };
+function calcFluid() {
+  document.querySelectorAll('#fluidSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.fluid === fluid)));
+  $('f-conc').hidden = fluid === 'water';
+  const t = val('fl-temp'), c = fluid === 'water' ? 0 : val('fl-conc');
+  bad('fl-temp', Number.isNaN(t)); bad('fl-conc', Number.isNaN(c));
+  if (t === null || (fluid !== 'water' && c === null)) { $('res-fl').innerHTML = empty(fluid === 'water' ? 'Enter the average loop temperature.' : 'Enter glycol % and average loop temperature.'); $('badge-fl').textContent = ''; S.fl = null; report.fl = null; return; }
+  const p = props(fluid, c, t);
+  if (!p.ok) { $('res-fl').innerHTML = empty(p.reason.charAt(0).toUpperCase() + p.reason.slice(1) + '.'); $('badge-fl').textContent = ''; S.fl = null; report.fl = null; return; }
+  S.fl = p; S.flowFactor = H.flowFactor(p);
+  $('res-fl').innerHTML = row('Specific gravity', f(p.sg, 3), '', `Density ${f(p.rho, 2)} lb/ft³ · specific heat ${f(p.cp, 3)} Btu/lb·°F · viscosity ${f(p.mu, 2)} cP<br>Flow factor <b>${f(S.flowFactor, 0)}</b> Btu/h per GPM·°F (500 for cool water) · ${esc(p.source)}`);
+  $('badge-fl').textContent = fluid === 'water' ? `${f(t, 0)} °F` : `${f(c, 0)}% · ${f(t, 0)} °F`;
+  report.fl = `Fluid: ${p.name}${fluid === 'water' ? '' : ` ${f(c, 0)}% by volume`} at ${f(t, 0)} °F average (SG ${f(p.sg, 3)}, cp ${f(p.cp, 3)}, µ ${f(p.mu, 2)} cP; ${p.source})`;
 }
-
-/* ══════════════════════════════════════════════════════════════
-   DARCY-WEISBACH HEAD LOSS
-   hf = f × (L/D) × V²/(2g)
-   Source: ASHRAE Fundamentals 2021, Ch. 22, Eq. 1
-   ══════════════════════════════════════════════════════════════ */
-var G = 32.174; // ft/s²
-function darcyHead(f, L_ft, D_ft, V_fps) {
-  return f * (L_ft / D_ft) * (V_fps * V_fps) / (2 * G);
-}
-
-/* ══════════════════════════════════════════════════════════════
-   VELOCITY
-   V = GPM × 0.4085 / D_in²
-   Source: Crane TP-410 / ASHRAE Fund. Ch. 22
-   (0.4085 = 144 × 4 / (π × 60) unit conversion GPM→ft/s via in²)
-   ══════════════════════════════════════════════════════════════ */
-function velocity_fps(GPM, D_in) {
-  return GPM * 0.4085 / (D_in * D_in);
-}
-
-/* ══════════════════════════════════════════════════════════════
-   QUADRATIC REGRESSION (least squares)
-   Fits H = a×Q² + b×Q + c to pump curve points
-   ══════════════════════════════════════════════════════════════ */
-function quadraticFit(points) {
-  // points: [{q, h}]
-  var n = points.length;
-  // Build normal equations for [a, b, c]
-  var s0=n, s1=0, s2=0, s3=0, s4=0, t0=0, t1=0, t2=0;
-  for (var i = 0; i < n; i++) {
-    var q = points[i].q, h = points[i].h;
-    var q2=q*q, q3=q2*q, q4=q2*q2;
-    s1+=q; s2+=q2; s3+=q3; s4+=q4;
-    t0+=h; t1+=q*h; t2+=q2*h;
-  }
-  // 3x3 system: [[s4,s3,s2],[s3,s2,s1],[s2,s1,s0]] × [a,b,c] = [t2,t1,t0]
-  var A=[[s4,s3,s2],[s3,s2,s1],[s2,s1,s0]];
-  var B=[t2,t1,t0];
-  var sol = solveLinear3(A, B);
-  if (!sol) return null;
-  // Compute residual
-  var sse = 0;
-  for (var j = 0; j < n; j++) {
-    var pred = sol[0]*points[j].q*points[j].q + sol[1]*points[j].q + sol[2];
-    sse += (pred - points[j].h) * (pred - points[j].h);
-  }
-  var rmse = Math.sqrt(sse / n);
-  return { a: sol[0], b: sol[1], c: sol[2], rmse: rmse };
-}
-
-function solveLinear3(A, B) {
-  // Gaussian elimination with partial pivoting
-  var M = [
-    [A[0][0],A[0][1],A[0][2],B[0]],
-    [A[1][0],A[1][1],A[1][2],B[1]],
-    [A[2][0],A[2][1],A[2][2],B[2]]
-  ];
-  for (var col = 0; col < 3; col++) {
-    var maxRow = col;
-    for (var row = col+1; row < 3; row++) {
-      if (Math.abs(M[row][col]) > Math.abs(M[maxRow][col])) maxRow = row;
-    }
-    var tmp = M[col]; M[col] = M[maxRow]; M[maxRow] = tmp;
-    if (Math.abs(M[col][col]) < 1e-12) return null;
-    for (var r = col+1; r < 3; r++) {
-      var factor = M[r][col] / M[col][col];
-      for (var c = col; c < 4; c++) M[r][c] -= factor * M[col][c];
-    }
-  }
-  var x = [0,0,0];
-  for (var i = 2; i >= 0; i--) {
-    x[i] = M[i][3];
-    for (var j = i+1; j < 3; j++) x[i] -= M[i][j]*x[j];
-    x[i] /= M[i][i];
-  }
-  return x;
-}
-
-/* ══════════════════════════════════════════════════════════════
-   BISECTION ROOT FINDER
-   Finds Q where H_pump(Q) - H_system(Q) = 0
-   ══════════════════════════════════════════════════════════════ */
-function bisectionIntersect(pumpCoeffs, H_static, k_sys, qMin, qMax, tol) {
-  tol = tol || 0.001;
-  function F(q) {
-    var hp = pumpCoeffs.a*q*q + pumpCoeffs.b*q + pumpCoeffs.c;
-    var hs = H_static + k_sys*q*q;
-    return hp - hs;
-  }
-  var fa = F(qMin), fb = F(qMax);
-  if (fa * fb > 0) return null; // no sign change — no intersection
-  for (var i = 0; i < 60; i++) {
-    var qMid = (qMin + qMax) / 2;
-    var fm = F(qMid);
-    if (Math.abs(fm) < tol || (qMax - qMin)/2 < tol) return qMid;
-    if (fa * fm < 0) { qMax = qMid; fb = fm; }
-    else             { qMin = qMid; fa = fm; }
-  }
-  return (qMin + qMax) / 2;
-}
-
-/* ══════════════════════════════════════════════════════════════
-   STATE
-   ══════════════════════════════════════════════════════════════ */
-var STATE = {
-  fluidType: 'water',
-  glycolPct: 0,
-  fluidTempF: 60,
-  btuLoad: NaN,
-  deltaT: 20,
-  knownGPM: NaN,
-  fluidProps: null,
-  q_design: NaN,
-  pipeMaterial: '',
-  pipeSize: null,
-  lengthH: NaN,
-  lengthV: NaN,
-  hfPipe: NaN,
-  hfPipePSI: NaN,
-  loopType: 'closed',
-  staticHead: NaN,
-  safetyMargin: 10,
-  fittingQtys: {},
-  hfFittings: NaN,
-  customLosses: [],
-  hfCustom: NaN,
-  tdh_raw: NaN,
-  tdh_design: NaN,
-  pumpEff: NaN,
-  bepGPM: NaN,
-  pumpPoints: [],
-  pumpCoeffs: null,
-  opGPM: NaN,
-  opHead: NaN,
-  warnings: [],
-  velocity: NaN,
-  Re: NaN,
-  f: NaN,
-  rho: NaN
-};
-
-/* ══════════════════════════════════════════════════════════════
-   WARNINGS RENDERER
-   ══════════════════════════════════════════════════════════════ */
-function renderWarnings(containerId, warnings) {
-  var el = document.getElementById(containerId);
-  if (!el) return;
-  if (!warnings || warnings.length === 0) { el.innerHTML = ''; return; }
-  var html = '<div class="warn-box">';
-  warnings.forEach(function(w) {
-    var cls = w.sev === 'error' ? 'error' : (w.sev === 'info' ? 'info' : '');
-    html += '<div class="warn-item ' + cls + '">[' + w.id + '] ' + w.msg + '</div>';
-  });
-  html += '</div>';
-  el.innerHTML = html;
-}
-
-/* ══════════════════════════════════════════════════════════════
-   RESULT ROW HELPERS
-   ══════════════════════════════════════════════════════════════ */
-function setRow(id, state, val, sub) {
-  var row = document.getElementById('row' + id);
-  var valEl = document.getElementById('val' + id);
-  var subEl = document.getElementById('sub' + id);
-  if (!row) return;
-  row.className = 'result-row ' + (state === 'dim' ? 'dim' : 'live');
-  if (state === 'ok')   row.classList.add('ok');
-  if (state === 'high') row.classList.add('high');
-  if (state === 'warn') row.classList.add('warn');
-  valEl.className = 'rr-val ' + (state !== 'dim' ? (state === 'live' ? 'live' : state) : '');
-  if (val !== undefined) valEl.textContent = val;
-  if (sub !== undefined && subEl) subEl.textContent = sub;
-}
-
-/* ══════════════════════════════════════════════════════════════
-   TAB 1 — FLOW
-   ══════════════════════════════════════════════════════════════ */
-var fluidBtns = document.querySelectorAll('#fluidGrid .phase-btn');
-fluidBtns.forEach(function(b) {
-  b.addEventListener('click', function() {
-    STATE.fluidType = b.dataset.fluid;
-    fluidBtns.forEach(function(x){ x.classList.toggle('active', x.dataset.fluid === STATE.fluidType); });
-    document.getElementById('glycolInputs').style.display = STATE.fluidType !== 'water' ? 'block' : 'none';
-    document.getElementById('waterTempRow').style.display = STATE.fluidType === 'water'  ? 'block' : 'none';
-    calcFlow();
-  });
-});
-
-['btuLoad','deltaT','knownGPM','glycolPct','fluidTemp','waterTemp'].forEach(function(id) {
-  var el = document.getElementById(id);
-  if (el) el.addEventListener('input', calcFlow);
-});
 
 function calcFlow() {
-  var warns = [];
-  var tempF = STATE.fluidType === 'water'
-    ? (parseFloat(document.getElementById('waterTemp').value) || 60)
-    : (parseFloat(document.getElementById('fluidTemp').value) || 60);
-  var pct = parseFloat(document.getElementById('glycolPct').value) || 0;
-
-  STATE.glycolPct  = pct;
-  STATE.fluidTempF = tempF;
-  STATE.btuLoad    = parseFloat(document.getElementById('btuLoad').value);
-  STATE.deltaT     = parseFloat(document.getElementById('deltaT').value) || 20;
-  STATE.knownGPM   = parseFloat(document.getElementById('knownGPM').value);
-
-  // Resolve fluid properties
-  var fp = resolveFluidProperties(STATE.fluidType, pct, tempF);
-  STATE.fluidProps = fp.valid ? fp : null;
-  if (!fp.valid) { warns = warns.concat(fp.warnings); }
-
-  // Show/hide override badge
-  var badge = document.getElementById('overrideBadge');
-  badge.style.display = !isNaN(STATE.knownGPM) && STATE.knownGPM > 0 ? 'inline-block' : 'none';
-
-  // Compute BTU-derived GPM
-  var calcGPM = NaN;
-  if (fp.valid && !isNaN(STATE.btuLoad) && STATE.deltaT > 0) {
-    // GPM = BTU/hr / (500 × ΔT × Cp × ρ/62.4)
-    // 500 = 60 min/hr × 8.33 lb/gal (water at std). For other fluids correct for density and Cp.
-    // Full formula: GPM = BTU/hr / (60 × 8.33 × (ρ/62.4) × Cp × ΔT)
-    var rhoFactor = fp.rho / 62.4; // relative density vs. water standard
-    calcGPM = STATE.btuLoad / (500 * STATE.deltaT * fp.cp * rhoFactor);
-  }
-
-  // Flow authority
-  var activeGPM = (!isNaN(STATE.knownGPM) && STATE.knownGPM > 0)
-    ? STATE.knownGPM : calcGPM;
-  STATE.q_design = activeGPM;
-  STATE.rho = fp.valid ? fp.rho : NaN;
-
-  if (!isNaN(STATE.knownGPM) && STATE.knownGPM > 0) {
-    warns.push({ id:'W17', sev:'info', msg:'GPM override active. BTU-derived flow shown as reference only.' });
-  }
-
-  // Authority display
-  var box = document.getElementById('flowAuthorityBox');
-  if (!isNaN(activeGPM)) {
-    box.style.display = 'block';
-    var calcEl = document.getElementById('faCalcGPM');
-    calcEl.textContent = isNaN(calcGPM) ? '— (enter load + ΔT)' : calcGPM.toFixed(2) + ' GPM';
-    calcEl.style.color = (!isNaN(STATE.knownGPM) && STATE.knownGPM > 0) ? 'var(--text-mute)' : 'var(--orange-hi)';
-    calcEl.style.fontSize = (!isNaN(STATE.knownGPM) && STATE.knownGPM > 0) ? '.82rem' : '1rem';
-    document.getElementById('faActiveGPM').textContent = activeGPM.toFixed(2) + ' GPM';
-    if (fp.valid) {
-      var massFlow = activeGPM * fp.rho * 8.021; // lb/hr: GPM × lb/ft³ × 7.48 gal/ft³ × 60 min / 60... actually GPM × 8.021 lb/gal-equivalent
-      // Correct: mass flow = GPM × (rho lb/ft³) / 7.48 gal/ft³ × 60 min/hr
-      massFlow = activeGPM * fp.rho / 7.48 * 60;
-      document.getElementById('faMassFlow').textContent = massFlow.toFixed(0) + ' lb/hr';
-    }
+  document.querySelectorAll('#flowSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.flow === flowMode)));
+  document.querySelectorAll('[data-flowmode]').forEach((e) => { e.hidden = e.dataset.flowmode !== flowMode; });
+  S.gpm = null; report.q = null;
+  if (flowMode === 'gpm') {
+    const q = val('q-gpm'); bad('q-gpm', q !== null && !pos(q));
+    if (!pos(q)) { $('res-q').innerHTML = empty('Enter the flow.'); $('badge-q').textContent = ''; return; }
+    S.gpm = q;
+    $('res-q').innerHTML = row('Design flow', f(q, 2), 'GPM', 'Entered directly');
+    report.q = `Design flow: ${f(q, 2)} GPM (entered)`;
   } else {
-    box.style.display = 'none';
+    const load = val('q-load'), dt = val('q-dt');
+    bad('q-load', load !== null && !pos(load)); bad('q-dt', dt !== null && !pos(dt));
+    if (!pos(load) || !pos(dt)) { $('res-q').innerHTML = empty(load !== null && !pos(load) ? 'Load must be a positive number.' : dt !== null && !pos(dt) ? 'ΔT must be a positive number.' : 'Enter design load and ΔT.'); $('badge-q').textContent = ''; return; }
+    if (!S.fl) { $('res-q').innerHTML = empty('Set the fluid above first.'); $('badge-q').textContent = ''; return; }
+    S.gpm = H.gpmFromLoad(load, dt, S.fl);
+    $('res-q').innerHTML = row('Design flow', f(S.gpm, 2), 'GPM', `${f(load, 0)} Btu/h ÷ (${f(S.flowFactor, 0)} × ${f(dt, 0)} °F)`);
+    report.q = `Design flow: ${f(S.gpm, 2)} GPM = ${f(load, 0)} Btu/h ÷ (${f(S.flowFactor, 0)} × ${f(dt, 0)} °F ΔT)`;
   }
-
-  // Fluid property display
-  if (fp.valid) {
-    setRow('Cp', 'live', fp.cp.toFixed(4) + ' BTU/lb·°F', 'ASHRAE Fund. Ch. 31 — bilinear interpolation');
-    setRow('Density', 'live', fp.rho.toFixed(2) + ' lb/ft³', 'At ' + tempF + '°F' + (STATE.fluidType !== 'water' ? ', ' + pct + '% ' + STATE.fluidType.toUpperCase() : ''));
-    setRow('Visc', 'live', fp.mu_cP.toFixed(3) + ' cP  (' + fp.mu_lbfts.toFixed(6) + ' lb/ft·s)', 'ASHRAE Fund. Ch. 31');
-  } else {
-    setRow('Cp', 'dim'); setRow('Density', 'dim'); setRow('Visc', 'dim');
-  }
-
-  renderWarnings('flowWarnings', warns);
-  syncPipeGPMDisplay();
-  calcPipe();
-  calcHead();
+  $('badge-q').textContent = f(S.gpm, 1) + ' GPM';
 }
-
-/* ══════════════════════════════════════════════════════════════
-   TAB 2 — PIPE
-   ══════════════════════════════════════════════════════════════ */
-function syncPipeGPMDisplay() {
-  var el = document.getElementById('pipeGPMDisplay');
-  el.textContent = isNaN(STATE.q_design) ? '— GPM' : STATE.q_design.toFixed(2) + ' GPM';
-  el.className = 'readout-val' + (isNaN(STATE.q_design) ? '' : ' live');
-}
-
-document.getElementById('pipeMaterial').addEventListener('change', function() {
-  STATE.pipeMaterial = this.value;
-  populatePipeSizes();
-  calcPipe();
-});
-document.getElementById('pipeSize').addEventListener('change', function() {
-  var mat = PIPE_DATA[STATE.pipeMaterial];
-  if (!mat) return;
-  var idx = parseInt(this.value);
-  STATE.pipeSize = mat.sizes[idx] || null;
-  document.getElementById('pipeIDDisplay').textContent = STATE.pipeSize
-    ? STATE.pipeSize.id_in.toFixed(3) + '"  (' + (STATE.pipeSize.id_in / 12).toFixed(4) + ' ft)'
-    : '—';
-  document.getElementById('pipeIDDisplay').className = 'readout-val' + (STATE.pipeSize ? ' live' : '');
-  calcPipe();
-});
-['lengthH','lengthV'].forEach(function(id) {
-  document.getElementById(id).addEventListener('input', function() {
-    STATE[id] = parseFloat(this.value);
-    calcPipe();
-  });
-});
-
-function populatePipeSizes() {
-  var sel = document.getElementById('pipeSize');
-  sel.innerHTML = '<option value="">— Select size —</option>';
-  var sec = document.getElementById('pipeSizeSection');
-  var mat = PIPE_DATA[STATE.pipeMaterial];
-  if (!mat) { sec.style.display = 'none'; return; }
-  sec.style.display = 'block';
-  mat.sizes.forEach(function(s, i) {
-    var opt = document.createElement('option');
-    opt.value = i; opt.textContent = s.nom + '  (ID ' + s.id_in + '")';
-    sel.appendChild(opt);
-  });
-  STATE.pipeSize = null;
-  document.getElementById('pipeIDDisplay').textContent = '—';
-}
-
-function calcPipe() {
-  var warns = [];
-  STATE.hfPipe = NaN;
-
-  if (!STATE.pipeSize || isNaN(STATE.q_design) || !STATE.fluidProps || !STATE.fluidProps.valid) {
-    ['Velocity','Re','Regime','Friction','FricPer100','HfH','HfV','HfTotal'].forEach(function(k){ setRow(k,'dim'); });
-    renderWarnings('pipeWarnings', []);
-    return;
-  }
-
-  var D_in = STATE.pipeSize.id_in;
-  var D_ft = inchToFt(D_in);
-  var mat  = PIPE_DATA[STATE.pipeMaterial];
-  var eps  = mat.roughness_ft;
-  var fp   = STATE.fluidProps;
-
-  // Velocity — Crane TP-410 / ASHRAE Fund. Ch. 22
-  var V = velocity_fps(STATE.q_design, D_in);
-  STATE.velocity = V;
-
-  // Velocity flags — ASHRAE 90.1 / Fund. Ch. 22
-  var velState = 'live';
-  var velNote  = V.toFixed(2) + ' ft/s';
-  if (V < 2)      { velState = 'warn'; warns.push({ id:'W05', sev:'warn', msg:'Velocity ' + V.toFixed(2) + ' ft/s below 2 ft/s — sedimentation risk. ASHRAE Fund. Ch. 22.' }); }
-  else if (V > 8) { velState = 'high'; warns.push({ id:'W06', sev:'warn', msg:'Velocity ' + V.toFixed(2) + ' ft/s exceeds 8 ft/s — noise and erosion risk. ASHRAE 90.1 / Fund. Ch. 22.' }); }
-  else if (V > 4) { velState = 'warn'; }
-  setRow('Velocity', velState, velNote,
-    V < 2 ? 'LOW — sedimentation risk' : V > 8 ? 'HIGH — noise/erosion' : V > 4 ? 'Acceptable (main run)' : 'Recommended range');
-
-  // Reynolds number
-  var Re = V * D_ft * fp.rho / fp.mu_lbfts;
-  STATE.Re = Re;
-  setRow('Re', 'live', Re.toFixed(0), 'Re = V × D × ρ / μ — ASHRAE Fund. Ch. 22');
-
-  // Flow regime + friction factor
-  var ffResult = frictionFactor(Re, eps, D_ft);
-  warns = warns.concat(ffResult.warnings);
-
-  var regLabel = ffResult.regime.charAt(0).toUpperCase() + ffResult.regime.slice(1);
-  var regState = ffResult.regime === 'transitional' ? 'warn' : 'live';
-  setRow('Regime', regState, regLabel,
-    Re < 2300 ? 'f = 64/Re (Hagen-Poiseuille)' :
-    Re <= 4000 ? 'Transitional — unreliable regime' :
-    'Colebrook-White iteration');
-
-  if (ffResult.regime === 'transitional') {
-    STATE.f = NaN;
-    STATE.hfPipe = NaN;
-    setRow('Friction', 'warn', 'WITHHELD', 'Transitional regime — no f calculated');
-    setRow('FricPer100', 'dim');
-    setRow('HfH', 'dim'); setRow('HfV', 'dim'); setRow('HfTotal', 'dim');
-    renderWarnings('pipeWarnings', warns);
-    calcHead();
-    return;
-  }
-
-  var f = ffResult.f;
-  STATE.f = f;
-  setRow('Friction', 'live', f.toFixed(5),
-    ffResult.regime === 'laminar' ? 'f = 64/Re' : 'Colebrook-White — ASHRAE Fund. Ch. 22, Eq. 6');
-
-  // Friction loss per 100 ft
-  var hfPer100 = darcyHead(f, 100, D_ft, V);
-  setRow('FricPer100', 'live', hfPer100.toFixed(3) + ' ft  (' + ftToPSI(hfPer100, fp.rho).toFixed(3) + ' PSI)',
-    'Per 100 ft of pipe');
-
-  // Horizontal friction
-  var hfH = NaN, hfHpsi = NaN;
-  if (!isNaN(STATE.lengthH) && STATE.lengthH > 0) {
-    hfH = darcyHead(f, STATE.lengthH, D_ft, V);
-    hfHpsi = ftToPSI(hfH, fp.rho);
-    setRow('HfH', 'live',
-      hfH.toFixed(3) + ' ft  (' + hfHpsi.toFixed(3) + ' PSI)',
-      STATE.lengthH + ' ft horizontal — Darcy-Weisbach');
-  } else {
-    setRow('HfH', 'dim', '—', 'Enter horizontal run length');
-  }
-
-  // Vertical friction (friction only — not static head)
-  var hfV = NaN, hfVpsi = NaN;
-  if (!isNaN(STATE.lengthV) && STATE.lengthV > 0) {
-    hfV = darcyHead(f, STATE.lengthV, D_ft, V);
-    hfVpsi = ftToPSI(hfV, fp.rho);
-    setRow('HfV', 'live',
-      hfV.toFixed(3) + ' ft  (' + hfVpsi.toFixed(3) + ' PSI)',
-      STATE.lengthV + ' ft vertical — friction only, not static head');
-  } else {
-    setRow('HfV', 'dim', '—', 'Enter vertical run length');
-  }
-
-  // Total pipe friction
-  var hfH2 = isNaN(hfH) ? 0 : hfH;
-  var hfV2 = isNaN(hfV) ? 0 : hfV;
-  if (!isNaN(hfH) || !isNaN(hfV)) {
-    var hfTotal = hfH2 + hfV2;
-    STATE.hfPipe    = hfTotal;
-    STATE.hfPipePSI = ftToPSI(hfTotal, fp.rho);
-    setRow('HfTotal', 'live',
-      hfTotal.toFixed(3) + ' ft  (' + STATE.hfPipePSI.toFixed(3) + ' PSI)',
-      'Horizontal + vertical friction — Darcy-Weisbach');
-  } else {
-    STATE.hfPipe = NaN;
-    setRow('HfTotal', 'dim');
-  }
-
-  renderWarnings('pipeWarnings', warns);
-  calcHead();
-}
-
-/* ══════════════════════════════════════════════════════════════
-   TAB 3 — HEAD
-   ══════════════════════════════════════════════════════════════ */
-// Build fittings list
-(function buildFittings() {
-  var container = document.getElementById('fittingsList');
-  FITTINGS.forEach(function(fit) {
-    STATE.fittingQtys[fit.key] = 0;
-    var row = document.createElement('div');
-    row.className = 'fitting-row';
-    row.innerHTML = '<span class="fitting-label">' + fit.label + ' (' + fit.mult + '×D)</span>' +
-      '<input type="number" class="fitting-qty" id="fit_' + fit.key + '" placeholder="0" min="0" step="1" inputmode="numeric">';
-    container.appendChild(row);
-    var inp = row.querySelector('input');
-    inp.addEventListener('input', function() {
-      var v = parseInt(this.value) || 0;
-      if (v < 0) { this.value = ''; v = 0; }
-      STATE.fittingQtys[fit.key] = v;
-      calcHead();
-    });
-    inp.addEventListener('focus', function() {
-      if (this.value === '0') this.value = '';
-    });
-    inp.addEventListener('blur', function() {
-      if (this.value === '') this.value = '';
-    });
-  });
-})();
-
-/* ── Custom losses (coils, HX, valves, etc.) ── */
-function renderCustomLosses() {
-  var container = document.getElementById('customLossesList');
-  container.innerHTML = '';
-  STATE.customLosses.forEach(function(cl, i) {
-    var row = document.createElement('div');
-    row.className = 'custom-loss-row';
-    row.innerHTML =
-      '<input type="text" class="custom-loss-name cl-name" data-idx="' + i + '" placeholder="Component name" value="' + (cl.name || '') + '">' +
-      '<div class="iw"><input type="number" class="cl-val" data-idx="' + i + '" inputmode="decimal" placeholder="—" value="' + (cl.value || '') + '"><span class="iw-unit">ft</span></div>' +
-      '<div class="custom-loss-type">' + (cl.type === 'eqlen' ? 'eq. ft' : 'head') + '</div>' +
-      '<button class="pump-point-del cl-del" data-idx="' + i + '">✕</button>';
-    container.appendChild(row);
-  });
-  container.querySelectorAll('.cl-name').forEach(function(el) {
-    el.addEventListener('input', function() { STATE.customLosses[parseInt(this.dataset.idx)].name = this.value; });
-  });
-  container.querySelectorAll('.cl-val').forEach(function(el) {
-    el.addEventListener('input', function() {
-      STATE.customLosses[parseInt(this.dataset.idx)].value = this.value;
-      calcHead();
-    });
-  });
-  container.querySelectorAll('.cl-del').forEach(function(el) {
-    el.addEventListener('click', function() {
-      STATE.customLosses.splice(parseInt(this.dataset.idx), 1);
-      renderCustomLosses();
-      calcHead();
-    });
-  });
-}
-
-document.getElementById('btnAddCustom').addEventListener('click', function() {
-  /* Alternate between equivalent length and direct head loss */
-  var lastType = STATE.customLosses.length > 0 ? STATE.customLosses[STATE.customLosses.length - 1].type : 'head';
-  STATE.customLosses.push({ name: '', value: '', type: 'head' });
-  renderCustomLosses();
-});
-
-var loopBtns = document.querySelectorAll('#loopGrid .phase-btn');
-loopBtns.forEach(function(b) {
-  b.addEventListener('click', function() {
-    STATE.loopType = b.dataset.loop;
-    loopBtns.forEach(function(x){ x.classList.toggle('active', x.dataset.loop === STATE.loopType); });
-    document.getElementById('staticHeadSec').style.display = STATE.loopType === 'open' ? 'block' : 'none';
-    document.getElementById('loopHint').textContent = STATE.loopType === 'closed'
-      ? 'Closed loop: static head cancels — excluded from TDH. Fill pressure and NPSH not evaluated by this calculator.'
-      : 'Open system: static head included as elevation lift from pump datum to highest discharge point.';
-    calcHead();
-  });
-});
-
-document.getElementById('staticHead').addEventListener('input', function() {
-  STATE.staticHead = parseFloat(this.value);
-  calcHead();
-});
-document.getElementById('safetyMargin').addEventListener('input', function() {
-  STATE.safetyMargin = parseFloat(this.value) || 10;
-  calcHead();
-});
-document.getElementById('pumpEff').addEventListener('input', function() {
-  STATE.pumpEff = parseFloat(this.value);
-  calcHead();
-});
 
 function calcHead() {
-  var warns = [];
-
-  // Pipe friction (from Tab 2)
-  var hfPipe = isNaN(STATE.hfPipe) ? 0 : STATE.hfPipe;
-  setRow('HfPipe', isNaN(STATE.hfPipe) ? 'dim' : 'live',
-    isNaN(STATE.hfPipe) ? '—' : STATE.hfPipe.toFixed(3) + ' ft  (' + (STATE.hfPipePSI || 0).toFixed(3) + ' PSI)',
-    'From Tab 2 pipe calculation');
-
-  // Fittings — equivalent length method
-  // ASHRAE Fund. Ch. 22, Table 7: L_eq = multiplier × D_inside (ft)
-  var hfFit = 0;
-  if (STATE.pipeSize && STATE.fluidProps && STATE.fluidProps.valid && !isNaN(STATE.f) && !isNaN(STATE.velocity)) {
-    var D_ft = inchToFt(STATE.pipeSize.id_in);
-    FITTINGS.forEach(function(fit) {
-      var qty = STATE.fittingQtys[fit.key] || 0;
-      if (qty > 0) {
-        var L_eq = fit.mult * D_ft * qty;
-        hfFit += darcyHead(STATE.f, L_eq, D_ft, STATE.velocity);
-      }
-    });
-    if (hfFit > hfPipe * 1.5 && hfPipe > 0) {
-      warns.push({ id:'W07', sev:'warn',
-        msg: 'Fitting head (' + hfFit.toFixed(2) + ' ft) exceeds pipe friction by >150%. Verify fitting quantities.' });
-    }
+  document.querySelectorAll('#fitSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.fit === fitMode)));
+  $('fitGrid').hidden = fitMode !== 'count';
+  $('fitHint').textContent = fitMode === 'allow' ? 'Rule of thumb: fittings and valves add about half the pipe length in a typical residential loop. Count them for anything unusual.'
+    : fitMode === 'count' ? 'Counts along the longest circuit. Equivalent lengths from Crane TP-410 L/D values.' : 'Use when the length you entered is already a total equivalent length.';
+  S.head = null; report.h = null;
+  const mat = H.PIPES[$('h-mat').value], size = $('h-size').value, len = val('h-len'), margin = val('h-margin');
+  bad('h-len', len !== null && !pos(len)); bad('h-margin', margin !== null && (Number.isNaN(margin) || margin < 0));
+  if (!S.fl || !pos(S.gpm)) { $('res-h').innerHTML = empty('Set the fluid and flow above first.'); $('badge-h').textContent = ''; return; }
+  if (!size || !pos(len)) { $('res-h').innerHTML = empty('Choose pipe size and enter the longest circuit length.'); $('badge-h').textContent = ''; return; }
+  const idIn = mat.id[size];
+  let fitLen = 0, fitNote = '';
+  if (fitMode === 'allow') { fitLen = 0.5 * len; fitNote = '+50% allowance'; }
+  else if (fitMode === 'count') {
+    const counts = {}; H.FITTINGS.forEach((ft) => { const v = val('fit-' + ft.key); bad('fit-' + ft.key, v !== null && !(v >= 0)); if (v > 0) counts[ft.key] = Math.round(v); });
+    fitLen = H.fittingsEquivLength(counts, idIn);
+    fitNote = Object.entries(counts).map(([k, n]) => `${n} × ${H.FITTINGS.find((x) => x.key === k).name.toLowerCase()}`).join(', ') || 'none counted';
+  } else fitNote = 'none; length entered is the total equivalent length';
+  const pl = H.pipeLoss({ gpm: S.gpm, idIn, roughFt: mat.rough, lengthFt: len + fitLen, fluid: S.fl });
+  const comps = [];
+  for (let i = 0; i < N_COMP; i++) {
+    const v = val('comp-val-' + i), unit = $('comp-unit-' + i).value, name = $('comp-name-' + i).value.trim() || `Component ${i + 1}`;
+    bad('comp-val-' + i, v !== null && !pos(v));
+    if (pos(v)) { const h = H.componentHead({ value: v, unit, gpm: S.gpm, sg: S.fl.sg }); if (h !== null) comps.push({ name, v, unit, h }); }
   }
-  STATE.hfFittings = hfFit;
-  var fitPSI = (!isNaN(STATE.rho) && STATE.rho > 0) ? ftToPSI(hfFit, STATE.rho) : NaN;
-  setRow('HfFit', hfFit > 0 ? 'live' : 'dim',
-    hfFit.toFixed(3) + ' ft' + (!isNaN(fitPSI) ? '  (' + fitPSI.toFixed(3) + ' PSI)' : ''),
-    'ASHRAE Fund. Ch. 22, Table 7 — equivalent length method');
-
-  // Custom component losses (coils, HX, valves, etc.)
-  var hfCustom = 0;
-  var customCount = 0;
-  var customNames = [];
-  STATE.customLosses.forEach(function(cl) {
-    var v = parseFloat(cl.value);
-    if (!isNaN(v) && v > 0) {
-      hfCustom += v;
-      customCount++;
-      if (cl.name) customNames.push(cl.name);
-    }
-  });
-  STATE.hfCustom = hfCustom;
-  var customPSI = (!isNaN(STATE.rho) && STATE.rho > 0) ? ftToPSI(hfCustom, STATE.rho) : NaN;
-  setRow('HfCustom', hfCustom > 0 ? 'live' : 'dim',
-    hfCustom.toFixed(3) + ' ft' + (!isNaN(customPSI) ? '  (' + customPSI.toFixed(3) + ' PSI)' : ''),
-    customCount > 0 ? customCount + ' component' + (customCount > 1 ? 's' : '') + (customNames.length > 0 ? ': ' + customNames.join(', ') : '') : 'Add components above');
-
-  // Static head
-  var hStatic = 0;
-  if (STATE.loopType === 'open' && !isNaN(STATE.staticHead) && STATE.staticHead > 0) {
-    hStatic = STATE.staticHead;
-    var sPSI = (!isNaN(STATE.rho) && STATE.rho > 0) ? ftToPSI(hStatic, STATE.rho) : NaN;
-    setRow('HStatic', 'live',
-      hStatic.toFixed(1) + ' ft' + (!isNaN(sPSI) ? '  (' + sPSI.toFixed(2) + ' PSI)' : ''),
-      'Open system: elevation lift — ASHRAE Fund. Ch. 13');
-  } else {
-    warns.push({ id:'W08', sev:'info', msg:'Static head excluded — closed loop. TDH = friction losses only.' });
-    setRow('HStatic', 'dim', '0 ft', STATE.loopType === 'closed' ? 'Excluded — closed loop' : 'Enter elevation lift');
-  }
-
-  // TDH raw
-  var tdh = hfPipe + hfFit + hfCustom + hStatic;
-  STATE.tdh_raw = tdh;
-  var tdhPSI = (!isNaN(STATE.rho) && STATE.rho > 0) ? ftToPSI(tdh, STATE.rho) : NaN;
-  var tdhState = (isNaN(STATE.hfPipe) && hfFit === 0) ? 'dim' : 'live';
-  setRow('TDH', tdhState,
-    tdh.toFixed(3) + ' ft' + (!isNaN(tdhPSI) ? '  (' + tdhPSI.toFixed(2) + ' PSI)' : ''),
-    'Pipe friction + fitting friction + static head');
-
-  // Safety margin
-  var margin = isNaN(STATE.safetyMargin) ? 10 : STATE.safetyMargin;
-  if (margin < 0) {
-    warns.push({ id:'W09e', sev:'error', msg:'Negative safety margin rejected.' });
-    margin = 0;
-  } else if (margin > 20) {
-    warns.push({ id:'W09', sev:'warn', msg:'Safety margin ' + margin + '% exceeds 20% — verify design basis.' });
-  }
-  var tdhDesign = tdh * (1 + margin / 100);
-  STATE.tdh_design = tdhDesign;
-  var tdhDPSI = (!isNaN(STATE.rho) && STATE.rho > 0) ? ftToPSI(tdhDesign, STATE.rho) : NaN;
-  setRow('DesignTDH', tdhState,
-    tdhDesign.toFixed(3) + ' ft' + (!isNaN(tdhDPSI) ? '  (' + tdhDPSI.toFixed(2) + ' PSI)' : ''),
-    'TDH × (1 + ' + margin + '%)');
-
-  // Hydraulic HP
-  // HHP = GPM × TDH_ft × SG / 3960
-  // Source: Hydraulics Institute / ASHRAE
-  if (!isNaN(STATE.q_design) && !isNaN(STATE.rho) && tdh > 0) {
-    var SG = STATE.rho / 62.4;
-    var hhp = STATE.q_design * tdh * SG / 3960;
-    setRow('HHP', 'live', hhp.toFixed(3) + ' HP', 'HHP = GPM × TDH × SG ÷ 3960');
-
-    // Brake HP
-    if (!isNaN(STATE.pumpEff) && STATE.pumpEff > 0) {
-      var bhp = hhp / (STATE.pumpEff / 100);
-      setRow('BHP', 'live', bhp.toFixed(3) + ' HP',
-        'BHP = HHP ÷ ' + STATE.pumpEff.toFixed(0) + '% efficiency');
-    } else {
-      setRow('BHP', 'dim', '—', 'Enter pump efficiency on Pump tab');
-    }
-  } else {
-    setRow('HHP', 'dim'); setRow('BHP', 'dim');
-  }
-
-  renderWarnings('headWarnings', warns);
-  drawCurves();
+  const compHead = comps.reduce((s, c) => s + c.h, 0);
+  const raw = pl.head + compHead, m = margin !== null && margin >= 0 ? margin : 0;
+  S.head = raw * (1 + m / 100);
+  let html = row('Velocity', f(pl.velocity, 2), 'ft/s', `${esc(mat.name)} ${esc(size)} · ID ${f(idIn, 3)} in`);
+  html += row('Friction rate', f(pl.per100, 2), 'ft / 100 ft', `Darcy-Weisbach · Re ${f(pl.re, 0)} · ${pl.regime}`, pl.regime === 'transitional' ? 'Transitional flow: friction less certain' : pl.regime === 'laminar' ? 'Laminar flow' : null);
+  html += row('Pipe + fittings', f(pl.head, 2), 'ft', `${f(len, 0)} ft pipe + ${f(fitLen, 1)} ft fittings (${esc(fitNote)})`);
+  comps.forEach((c) => { html += row(c.name, f(c.h, 2), 'ft', `${f(c.v, 2)} ${c.unit === 'cv' ? 'Cv' : c.unit}${c.unit === 'cv' ? ` at ${f(S.gpm, 2)} GPM` : ''}`); });
+  html += row('Head the loop needs', f(S.head, 1), 'ft', m > 0 ? `${f(raw, 2)} ft + ${f(m, 0)}% margin` : 'No margin added');
+  $('res-h').innerHTML = html;
+  $('badge-h').textContent = f(S.head, 1) + ' ft';
+  report.h = [`Head: ${mat.name} ${size} (ID ${f(idIn, 3)} in), longest circuit ${f(len, 0)} ft + ${f(fitLen, 1)} ft fittings (${fitNote})`,
+    `  Velocity ${f(pl.velocity, 2)} ft/s · friction ${f(pl.per100, 2)} ft/100 ft (${pl.regime}, Re ${f(pl.re, 0)}) · pipe + fittings ${f(pl.head, 2)} ft`]
+    .concat(comps.map((c) => `  ${c.name}: ${f(c.h, 2)} ft (${f(c.v, 2)} ${c.unit === 'cv' ? 'Cv' : c.unit})`))
+    .concat([`  Head the loop needs: ${f(S.head, 1)} ft${m > 0 ? ` (${f(raw, 2)} ft + ${f(m, 0)}% margin)` : ''}`]);
 }
 
-/* ══════════════════════════════════════════════════════════════
-   TAB 4 — PUMP CURVE
-   ══════════════════════════════════════════════════════════════ */
-// Initial pump points
-STATE.pumpPoints = [
-  { q: '', h: '' },
-  { q: '', h: '' },
-  { q: '', h: '' }
-];
-
-function renderPumpPoints() {
-  var container = document.getElementById('pumpPointsList');
-  container.innerHTML = '';
-  STATE.pumpPoints.forEach(function(pt, i) {
-    var row = document.createElement('div');
-    row.className = 'pump-point-row';
-    row.innerHTML =
-      '<div class="iw"><input type="number" class="pp-q" data-idx="' + i + '" inputmode="decimal" placeholder="GPM" value="' + (pt.q||'') + '"><span class="iw-unit">GPM</span></div>' +
-      '<div class="iw"><input type="number" class="pp-h" data-idx="' + i + '" inputmode="decimal" placeholder="ft head" value="' + (pt.h||'') + '"><span class="iw-unit">ft</span></div>' +
-      '<button class="pump-point-del" data-idx="' + i + '">✕</button>';
-    container.appendChild(row);
-  });
-  container.querySelectorAll('.pp-q').forEach(function(el) {
-    el.addEventListener('input', function() { STATE.pumpPoints[parseInt(this.dataset.idx)].q = this.value; calcPump(); });
-  });
-  container.querySelectorAll('.pp-h').forEach(function(el) {
-    el.addEventListener('input', function() { STATE.pumpPoints[parseInt(this.dataset.idx)].h = this.value; calcPump(); });
-  });
-  container.querySelectorAll('.pump-point-del').forEach(function(el) {
-    el.addEventListener('click', function() {
-      STATE.pumpPoints.splice(parseInt(this.dataset.idx), 1);
-      renderPumpPoints(); calcPump();
-    });
-  });
+function calcCheck() {
+  S.meas = null; report.c = null;
+  const out = val('c-out'), sup = val('c-sup'), ret = val('c-ret');
+  bad('c-out', out !== null && !pos(out)); bad('c-sup', Number.isNaN(sup)); bad('c-ret', Number.isNaN(ret));
+  if (out === null && sup === null && ret === null) { $('res-c').innerHTML = empty('Enter output, supply and return.'); $('badge-c').textContent = ''; return; }
+  if (!pos(out) || sup === null || ret === null || Number.isNaN(sup) || Number.isNaN(ret)) { $('res-c').innerHTML = empty('Enter output, supply and return.'); $('badge-c').textContent = ''; return; }
+  const avg = (sup + ret) / 2;
+  const p = props(fluid, fluid === 'water' ? 0 : (val('fl-conc') ?? NaN), avg);
+  if (!p.ok) { $('res-c').innerHTML = empty('Fluid properties at ' + f(avg, 0) + ' °F: ' + p.reason + '. Set the fluid above.'); $('badge-c').textContent = ''; return; }
+  const m = H.gpmFromMeasuredSplit(out, sup, ret, p);
+  if (!m) { $('res-c').innerHTML = empty('Supply and return are the same; the split must be greater than zero.'); $('badge-c').textContent = ''; return; }
+  S.meas = m.gpm;
+  let html = row('Actual flow', f(m.gpm, 2), 'GPM', `${f(out, 0)} Btu/h ÷ (${f(H.flowFactor(p), 0)} × ${f(m.deltaT, 1)} °F split)`);
+  const lines = [`Check by heat: ${f(out, 0)} Btu/h output, supply ${f(sup, 0)} °F, return ${f(ret, 0)} °F → ${f(m.gpm, 2)} GPM actual`];
+  if (pos(S.gpm)) {
+    const pct = m.gpm / S.gpm * 100;
+    html += row('vs flow the loop needs', f(pct, 0), '%', `Needs <b>${f(S.gpm, 2)} GPM</b> (from the flow card)`, pct < 90 ? 'Below required flow' : pct > 115 ? 'Above required flow' : null);
+    lines.push(`  ${f(pct, 0)}% of the ${f(S.gpm, 2)} GPM the loop needs`);
+  }
+  if (flowMode === 'load' && pos(val('q-dt'))) {
+    html += row('Measured split vs design ΔT', `${f(m.deltaT, 1)} / ${f(val('q-dt'), 0)}`, '°F', 'A wider split than design at full output means less flow than design.');
+  }
+  $('res-c').innerHTML = html;
+  $('badge-c').textContent = f(m.gpm, 1) + ' GPM';
+  report.c = lines;
 }
-renderPumpPoints();
 
-document.getElementById('btnAddPoint').addEventListener('click', function() {
-  if (STATE.pumpPoints.length >= 5) return;
-  STATE.pumpPoints.push({ q: '', h: '' });
-  renderPumpPoints(); calcPump();
-});
-
-document.getElementById('bepGPM').addEventListener('input', function() { STATE.bepGPM = parseFloat(this.value); calcPump(); });
-document.getElementById('pumpEff').addEventListener('input', calcHead);
+function plot(curve, duty, op, meas) {
+  const svg = $('plot');
+  // SVG elements don't reflect the .hidden property to the attribute; toggle the attribute.
+  $('plotKey').hidden = !curve;
+  if (!curve) { svg.setAttribute('hidden', ''); return; }
+  const W = 340, Hh = 220, L = 38, R = 10, T = 10, B = 30;
+  const qMax = Math.max(curve.maxGpm * 1.15, duty ? duty.gpm * 1.2 : 0, op && op.ok ? op.gpm * 1.1 : 0, meas ? meas.gpm * 1.1 : 0, 1);
+  const hMax = Math.max(curve.a * 1.1, duty ? duty.head * 1.2 : 0, 1);
+  const x = (q) => L + (q / qMax) * (W - L - R), y = (h) => T + (1 - h / hMax) * (Hh - T - B);
+  const path = (fn, q0, q1) => { let d = ''; for (let i = 0; i <= 40; i++) { const q = q0 + (q1 - q0) * i / 40, h = fn(q); if (h < 0 || h > hMax * 1.05) continue; d += (d ? 'L' : 'M') + x(q).toFixed(1) + ' ' + y(h).toFixed(1); } return d; };
+  let s = `<line x1="${L}" y1="${T}" x2="${L}" y2="${Hh - B}" stroke="var(--border)"/><line x1="${L}" y1="${Hh - B}" x2="${W - R}" y2="${Hh - B}" stroke="var(--border)"/>`;
+  s += `<text x="${L}" y="${Hh - 8}">0</text><text x="${W - R}" y="${Hh - 8}" text-anchor="end">${f(qMax, 0)} GPM</text><text x="4" y="${T + 10}">${f(hMax, 0)} ft</text>`;
+  s += `<path d="${path(curve.head, 0, curve.maxGpm)}" fill="none" stroke="var(--orange-hi)" stroke-width="2.5"/>`;
+  s += `<path d="${path(curve.head, curve.maxGpm, qMax)}" fill="none" stroke="var(--orange-hi)" stroke-width="2" stroke-dasharray="5 4"/>`;
+  curve.points.forEach((p) => { s += `<circle cx="${x(p.gpm)}" cy="${y(p.head)}" r="3.5" fill="var(--orange-hi)"/>`; });
+  if (duty) {
+    s += `<path d="${path((q) => duty.k * q * q, 0, qMax)}" fill="none" stroke="var(--text-dim)" stroke-width="2"/>`;
+    s += `<rect x="${x(duty.gpm) - 5}" y="${y(duty.head) - 5}" width="10" height="10" fill="none" stroke="var(--text)" stroke-width="2"/>`;
+  }
+  if (op && op.ok) s += `<circle cx="${x(op.gpm)}" cy="${y(op.head)}" r="7" fill="none" stroke="var(--text)" stroke-width="2.5"/>`;
+  if (meas) s += `<line x1="${x(meas.gpm)}" y1="${y(meas.head) - 8}" x2="${x(meas.gpm)}" y2="${y(meas.head) + 8}" stroke="var(--text)" stroke-width="3"/>`;
+  svg.innerHTML = s; svg.removeAttribute('hidden');
+}
 
 function calcPump() {
-  var warns = [];
-  STATE.pumpCoeffs = null;
-  STATE.opGPM = NaN;
-  STATE.opHead = NaN;
-
-  // Parse points
-  var pts = [];
-  STATE.pumpPoints.forEach(function(p) {
-    var q = parseFloat(p.q), h = parseFloat(p.h);
-    if (!isNaN(q) && !isNaN(h) && q >= 0 && h >= 0) pts.push({ q: q, h: h });
-  });
-
-  // Validation
-  if (pts.length < 3) {
-    warns.push({ id:'W10', sev:'error', msg:'Minimum 3 valid pump curve points required.' });
-    setRow('FitQuality','dim'); setRow('OpGPM','dim'); setRow('OpHead','dim'); setRow('DevDesign','dim'); setRow('DevBEP','dim');
-    renderWarnings('pumpWarnings', warns);
-    renderWarnings('pumpWarnings2', []);
-    drawCurves();
-    return;
+  report.p = null;
+  const pts = [];
+  for (let i = 0; i < N_CURVE; i++) {
+    const q = val('cv-q-' + i), h = val('cv-h-' + i);
+    bad('cv-q-' + i, Number.isNaN(q) || (q !== null && q < 0)); bad('cv-h-' + i, Number.isNaN(h) || (h !== null && h < 0));
+    if (q !== null && h !== null && Number.isFinite(q) && Number.isFinite(h)) pts.push({ gpm: q, head: h });
   }
-
-  // Sort by flow
-  pts.sort(function(a,b){ return a.q - b.q; });
-
-  // Strictly increasing flow
-  for (var i = 1; i < pts.length; i++) {
-    if (pts[i].q <= pts[i-1].q) {
-      warns.push({ id:'W11', sev:'error', msg:'Pump curve flow points must be strictly increasing.' });
-      setRow('FitQuality','high','INVALID','Flow points not strictly increasing');
-      setRow('OpGPM','dim'); setRow('OpHead','dim'); setRow('DevDesign','dim'); setRow('DevBEP','dim');
-      renderWarnings('pumpWarnings', warns);
-      drawCurves();
-      return;
+  const dp = val('p-dp'); bad('p-dp', dp !== null && !pos(dp));
+  if (!pts.length) { $('res-p').innerHTML = empty('Enter points from the manufacturer\'s curve.'); $('badge-p').textContent = ''; plot(null); return; }
+  const curve = H.fitPumpCurve(pts);
+  if (!curve.ok) { $('res-p').innerHTML = empty(curve.reason.charAt(0).toUpperCase() + curve.reason.slice(1) + '.'); $('badge-p').textContent = ''; plot(null); return; }
+  let html = row('Curve', `${curve.points.length} points`, '', `${curve.points.map((p) => `${f(p.gpm, 1)} GPM @ ${f(p.head, 1)} ft`).join(' · ')}<br>Fit within ${f(curve.rms, 2)} ft of the points entered`);
+  const lines = ['Pump curve (from submittal): ' + curve.points.map((p) => `${f(p.gpm, 1)} GPM @ ${f(p.head, 1)} ft`).join(', ')];
+  let duty = null, op = null, meas = null;
+  if (pos(S.gpm) && pos(S.head)) {
+    duty = { gpm: S.gpm, head: S.head, k: S.head / (S.gpm * S.gpm) };
+    op = H.operatingPoint(curve, S.gpm, S.head);
+    if (op && op.ok) {
+      const pumpAtDuty = curve.head(S.gpm);
+      html += row('Operating point', `${f(op.gpm, 2)} GPM @ ${f(op.head, 1)}`, 'ft', `Where this pump meets the system curve through the duty point (${f(S.gpm, 2)} GPM @ ${f(S.head, 1)} ft)`, op.extrapolated ? 'Outside the points entered: extend the curve' : null);
+      html += row('Pump head at design flow', f(pumpAtDuty, 1), 'ft', `Loop needs <b>${f(S.head, 1)} ft</b> at ${f(S.gpm, 2)} GPM`, pumpAtDuty < S.head ? 'Below the duty point' : null);
+      lines.push(`  Operating point ${f(op.gpm, 2)} GPM @ ${f(op.head, 1)} ft${op.extrapolated ? ' (outside entered points)' : ''}; pump gives ${f(pumpAtDuty, 1)} ft at the ${f(S.gpm, 2)} GPM duty flow (needs ${f(S.head, 1)} ft)`);
+    } else if (op) html += empty(op.reason.charAt(0).toUpperCase() + op.reason.slice(1) + '.');
+  } else html += empty('Complete the flow and head cards to find the operating point.');
+  if (pos(dp)) {
+    if (!S.fl) html += empty('Set the fluid to convert psi to feet.');
+    else {
+      const hd = H.headFromDeltaP(dp, S.fl.sg), at = H.gpmAtHead(curve, hd);
+      if (at) {
+        meas = { gpm: at.gpm, head: hd };
+        html += row('Flow from measured ΔP', f(at.gpm, 2), 'GPM', `${f(dp, 2)} psi = ${f(hd, 1)} ft at SG ${f(S.fl.sg, 3)}, read off the curve`, at.extrapolated ? 'Outside the points entered' : null);
+        lines.push(`  Measured ΔP ${f(dp, 2)} psi = ${f(hd, 1)} ft → ${f(at.gpm, 2)} GPM on the curve${at.extrapolated ? ' (outside entered points)' : ''}`);
+      } else html += empty(`${f(hd, 1)} ft is above this curve's shutoff head; check the gauges and the speed setting.`);
     }
   }
-
-  // Monotonically decreasing head (warn, not hard reject if user overrides — but we warn)
-  var nonMono = false;
-  for (var j = 1; j < pts.length; j++) {
-    if (pts[j].h >= pts[j-1].h) { nonMono = true; break; }
-  }
-  if (nonMono) {
-    warns.push({ id:'W12', sev:'error', msg:'Pump head should decrease monotonically with increasing flow. Verify manufacturer data.' });
-  }
-
-  // Quadratic fit
-  var fit = quadraticFit(pts);
-  if (!fit) {
-    warns.push({ id:'W13', sev:'error', msg:'Pump curve regression failed — singular matrix. Check for duplicate flow values.' });
-    setRow('FitQuality','high','FAILED','Regression error');
-    renderWarnings('pumpWarnings', warns);
-    drawCurves();
-    return;
-  }
-
-  STATE.pumpCoeffs = fit;
-
-  // Fit quality
-  var fitState = fit.rmse < 1 ? 'ok' : fit.rmse < 5 ? 'warn' : 'high';
-  if (fit.rmse >= 5) warns.push({ id:'W13', sev:'warn', msg:'Pump curve fit RMSE = ' + fit.rmse.toFixed(2) + ' ft — high fit error. Verify data points.' });
-  setRow('FitQuality', fitState,
-    'RMSE ' + fit.rmse.toFixed(3) + ' ft',
-    fit.rmse < 1 ? 'Good fit' : fit.rmse < 5 ? 'Acceptable fit' : 'Poor fit — verify points');
-
-  // System / pump intersection — bisection
-  var warns2 = [];
-  if (!isNaN(STATE.tdh_raw) && !isNaN(STATE.q_design) && STATE.q_design > 0) {
-    var H_static = STATE.loopType === 'open' && !isNaN(STATE.staticHead) ? STATE.staticHead : 0;
-    var k_sys = (STATE.tdh_raw - H_static) / (STATE.q_design * STATE.q_design);
-    if (k_sys < 0) k_sys = 0;
-
-    var qMax = pts[pts.length-1].q * 1.5;
-    var opQ = bisectionIntersect(fit, H_static, k_sys, 0.01, qMax, 0.001);
-
-    if (opQ === null) {
-      warns2.push({ id:'W14', sev:'error', msg:'No system/pump curve intersection found in evaluated range (0–' + qMax.toFixed(1) + ' GPM). Check pump selection.' });
-      setRow('OpGPM','high','NO INTERSECTION','Pump may be undersized or oversized');
-      setRow('OpHead','dim'); setRow('DevDesign','dim'); setRow('DevBEP','dim');
-    } else {
-      STATE.opGPM  = opQ;
-      var opH = fit.a*opQ*opQ + fit.b*opQ + fit.c;
-      STATE.opHead = opH;
-
-      setRow('OpGPM', 'live', opQ.toFixed(2) + ' GPM', 'Bisection intersection — ASHRAE Fund. Ch. 13');
-      setRow('OpHead', 'live', opH.toFixed(2) + ' ft', 'Head at operating point');
-
-      // Deviation from design
-      var devDes = (opQ - STATE.q_design) / STATE.q_design * 100;
-      var devDesState = Math.abs(devDes) < 10 ? 'ok' : 'warn';
-      if (Math.abs(devDes) > 10) warns2.push({ id:'W18', sev:'warn',
-        msg:'Operating point ' + devDes.toFixed(1) + '% from design GPM. Consider re-selection.' });
-      setRow('DevDesign', devDesState,
-        (devDes >= 0 ? '+' : '') + devDes.toFixed(1) + '%',
-        'Operating ' + opQ.toFixed(2) + ' vs. design ' + STATE.q_design.toFixed(2) + ' GPM');
-
-      // BEP proximity
-      if (!isNaN(STATE.bepGPM) && STATE.bepGPM > 0) {
-        var devBEP = (opQ - STATE.bepGPM) / STATE.bepGPM * 100;
-        var bepState = Math.abs(devBEP) <= 15 ? 'ok' : 'warn';
-        if (Math.abs(devBEP) > 15) warns2.push({ id:'W15', sev:'warn',
-          msg:'Operating point ' + Math.abs(devBEP).toFixed(1) + '% from BEP. Risk of vibration, wear, and reduced efficiency. ASHRAE 90.1-2022 §10.4.' });
-        setRow('DevBEP', bepState,
-          (devBEP >= 0 ? '+' : '') + devBEP.toFixed(1) + '%',
-          Math.abs(devBEP) <= 15 ? 'Within ±15% of BEP — ASHRAE 90.1 §10.4' : 'Outside ±15% BEP — review pump selection');
-      } else {
-        setRow('DevBEP', 'dim', '—', 'Enter BEP GPM on Pump tab');
-      }
-    }
-  } else {
-    setRow('OpGPM','dim','—','Complete Tabs 1–3 first');
-    setRow('OpHead','dim'); setRow('DevDesign','dim'); setRow('DevBEP','dim');
-  }
-
-  renderWarnings('pumpWarnings', warns);
-  renderWarnings('pumpWarnings2', warns2);
-  drawCurves();
+  $('res-p').innerHTML = html;
+  $('badge-p').textContent = op && op.ok ? `${f(op.gpm, 1)} GPM` : `${curve.points.length} pts`;
+  plot(curve, duty, op, meas);
+  report.p = lines;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   CURVE CANVAS DRAWING
-   ══════════════════════════════════════════════════════════════ */
-function drawCurves() {
-  var canvas = document.getElementById('curveCanvas');
-  var ctx = canvas.getContext('2d');
-  var W = canvas.offsetWidth, H = canvas.offsetHeight;
-  canvas.width = W; canvas.height = H;
-
-  var pad = { l: 48, r: 16, t: 16, b: 36 };
-  var cW = W - pad.l - pad.r;
-  var cH = H - pad.t - pad.b;
-
-  // Background
-  var isDark = !document.documentElement.dataset.theme || document.documentElement.dataset.theme !== 'light';
-  ctx.fillStyle = isDark ? '#1c1c1c' : '#c8c8c8';
-  ctx.fillRect(0, 0, W, H);
-
-  // Grid
-  ctx.strokeStyle = isDark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.1)';
-  ctx.lineWidth = 1;
-  for (var gi = 0; gi <= 5; gi++) {
-    var gx = pad.l + cW * gi / 5;
-    var gy = pad.t + cH * gi / 5;
-    ctx.beginPath(); ctx.moveTo(gx, pad.t); ctx.lineTo(gx, pad.t + cH); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(pad.l + cW, gy); ctx.stroke();
-  }
-
-  // Determine range
-  var pts = STATE.pumpPoints.filter(function(p){ return p.q !== '' && p.h !== ''; })
-    .map(function(p){ return { q: parseFloat(p.q), h: parseFloat(p.h) }; })
-    .filter(function(p){ return !isNaN(p.q) && !isNaN(p.h); });
-
-  if (pts.length < 1 && isNaN(STATE.q_design)) {
-    // Draw empty state text
-    ctx.fillStyle = isDark ? '#706050' : '#606060';
-    ctx.font = '12px Share Tech Mono, monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('Enter pump curve points to plot', W/2, H/2);
-    return;
-  }
-
-  var qMax = 10, hMax = 100;
-  if (pts.length > 0) {
-    qMax = Math.max.apply(null, pts.map(function(p){ return p.q; })) * 1.3;
-    hMax = Math.max.apply(null, pts.map(function(p){ return p.h; })) * 1.3;
-  }
-  if (!isNaN(STATE.q_design)) qMax = Math.max(qMax, STATE.q_design * 1.5);
-  if (!isNaN(STATE.tdh_design)) hMax = Math.max(hMax, STATE.tdh_design * 1.4);
-
-  function toX(q){ return pad.l + (q / qMax) * cW; }
-  function toY(h){ return pad.t + cH - (h / hMax) * cH; }
-
-  // Axes
-  ctx.strokeStyle = isDark ? '#3a3a3a' : '#a0a0a0';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t + cH); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(pad.l, pad.t + cH); ctx.lineTo(pad.l + cW, pad.t + cH); ctx.stroke();
-
-  // Axis labels
-  ctx.fillStyle = isDark ? '#706050' : '#606060';
-  ctx.font = '10px Share Tech Mono, monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('GPM', pad.l + cW/2, H - 4);
-  ctx.save(); ctx.translate(12, pad.t + cH/2); ctx.rotate(-Math.PI/2);
-  ctx.fillText('ft head', 0, 0); ctx.restore();
-
-  // Tick labels
-  ctx.font = '9px Share Tech Mono, monospace';
-  ctx.textAlign = 'center';
-  for (var ti = 0; ti <= 5; ti++) {
-    var qv = qMax * ti / 5;
-    ctx.fillText(qv.toFixed(0), toX(qv), pad.t + cH + 14);
-    var hv = hMax * (5 - ti) / 5;
-    ctx.textAlign = 'right';
-    ctx.fillText(hv.toFixed(0), pad.l - 4, toY(hv) + 3);
-    ctx.textAlign = 'center';
-  }
-
-  // System curve: H = H_static + k × Q²
-  if (!isNaN(STATE.q_design) && !isNaN(STATE.tdh_raw) && STATE.q_design > 0) {
-    var H_static = STATE.loopType === 'open' && !isNaN(STATE.staticHead) ? STATE.staticHead : 0;
-    var k_sys = STATE.tdh_raw > 0 ? (STATE.tdh_raw - H_static) / (STATE.q_design * STATE.q_design) : 0;
-    ctx.strokeStyle = '#4a9de8';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6,3]);
-    ctx.beginPath();
-    var first = true;
-    for (var sq = 0; sq <= qMax; sq += qMax/100) {
-      var sh = H_static + k_sys * sq * sq;
-      if (sh > hMax * 1.05) break;
-      if (first) { ctx.moveTo(toX(sq), toY(sh)); first = false; }
-      else ctx.lineTo(toX(sq), toY(sh));
-    }
-    ctx.stroke();
-    ctx.setLineDash([]);
-    // Label
-    ctx.fillStyle = '#4a9de8';
-    ctx.font = '9px Share Tech Mono, monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText('System', toX(qMax * 0.6), toY(H_static + k_sys * (qMax*0.6)*(qMax*0.6)) - 6);
-  }
-
-  // Pump curve
-  if (STATE.pumpCoeffs) {
-    var co = STATE.pumpCoeffs;
-    ctx.strokeStyle = '#c85a00';
-    ctx.lineWidth = 2.5;
-    ctx.setLineDash([]);
-    ctx.beginPath();
-    var pFirst = true;
-    for (var pq = 0; pq <= qMax; pq += qMax/200) {
-      var ph = co.a*pq*pq + co.b*pq + co.c;
-      if (ph < 0 || ph > hMax * 1.05) { pFirst = true; continue; }
-      if (pFirst) { ctx.moveTo(toX(pq), toY(ph)); pFirst = false; }
-      else ctx.lineTo(toX(pq), toY(ph));
-    }
-    ctx.stroke();
-    ctx.fillStyle = '#c85a00';
-    ctx.font = '9px Share Tech Mono, monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText('Pump', toX(qMax * 0.3), toY(co.a*(qMax*0.3)*(qMax*0.3) + co.b*(qMax*0.3) + co.c) - 6);
-  }
-
-  // Pump data points
-  if (pts.length > 0) {
-    pts.forEach(function(p) {
-      ctx.beginPath();
-      ctx.arc(toX(p.q), toY(p.h), 4, 0, Math.PI*2);
-      ctx.fillStyle = '#e86d10';
-      ctx.fill();
-    });
-  }
-
-  // Operating point
-  if (!isNaN(STATE.opGPM) && !isNaN(STATE.opHead)) {
-    var ox = toX(STATE.opGPM), oy = toY(STATE.opHead);
-    ctx.beginPath();
-    ctx.arc(ox, oy, 7, 0, Math.PI*2);
-    ctx.fillStyle = '#4a9a4a';
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    // Crosshairs
-    ctx.strokeStyle = 'rgba(74,154,74,.4)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3,3]);
-    ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, pad.t + cH); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(pad.l, oy); ctx.stroke();
-    ctx.setLineDash([]);
-    // Label
-    ctx.fillStyle = '#4a9a4a';
-    ctx.font = 'bold 9px Share Tech Mono, monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText(STATE.opGPM.toFixed(1) + ' GPM / ' + STATE.opHead.toFixed(1) + ' ft', ox + 8, oy - 4);
-  }
-
-  // Design point
-  if (!isNaN(STATE.q_design) && !isNaN(STATE.tdh_design)) {
-    ctx.beginPath();
-    ctx.arc(toX(STATE.q_design), toY(STATE.tdh_design), 5, 0, Math.PI*2);
-    ctx.fillStyle = '#4a9de8';
-    ctx.fill();
-    ctx.fillStyle = '#4a9de8';
-    ctx.font = '9px Share Tech Mono, monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText('Design', toX(STATE.q_design) - 8, toY(STATE.tdh_design) - 4);
-  }
-
-  // Legend
-  var lx = pad.l + 8, ly = pad.t + 12;
-  ctx.font = '9px Share Tech Mono, monospace';
-  ctx.textAlign = 'left';
-  ctx.strokeStyle = '#4a9de8'; ctx.lineWidth = 2; ctx.setLineDash([4,2]);
-  ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx+18, ly); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = isDark ? '#b0a090' : '#3a3a3a';
-  ctx.fillText('System', lx+22, ly+3);
-  ctx.strokeStyle = '#c85a00'; ctx.lineWidth = 2.5;
-  ctx.beginPath(); ctx.moveTo(lx, ly+14); ctx.lineTo(lx+18, ly+14); ctx.stroke();
-  ctx.fillText('Pump', lx+22, ly+17);
+function bar() {
+  $('bar-duty').textContent = pos(S.gpm) && pos(S.head) ? `${f(S.gpm, 1)} GPM @ ${f(S.head, 1)} ft` : pos(S.gpm) ? `${f(S.gpm, 1)} GPM @ —` : '—';
+  $('bar-meas').textContent = pos(S.meas) ? `${f(S.meas, 1)} GPM` : '—';
 }
 
-/* ══════════════════════════════════════════════════════════════
-   REPORT GENERATION
-   ══════════════════════════════════════════════════════════════ */
-function generateReport() {
-  var ts = new Date().toLocaleString();
-  var fp = STATE.fluidProps;
-  var fluidLabel = STATE.fluidType === 'water' ? 'Water'
-    : STATE.fluidType === 'eg' ? 'Ethylene Glycol ' + STATE.glycolPct + '%'
-    : 'Propylene Glycol ' + STATE.glycolPct + '%';
+function renderAll() { S = {}; report = {}; calcFluid(); calcFlow(); calcHead(); calcCheck(); calcPump(); bar(); save(); }
 
-  var lines = [
-    '══════════════════════════════════════════════════',
-    ' PUMP SIZING / SYSTEM HEAD — FIELD REPORT',
-    ' ' + ts,
-    '══════════════════════════════════════════════════',
-    '',
-    '── DESIGN BASIS ───────────────────────────────',
-    'Calculator Type : Pump Sizing / System Head',
-    'NOTE: Does not evaluate NPSHa, cavitation,',
-    '      suction conditions, or impeller trim.',
-    '',
-    '── USER INPUTS ────────────────────────────────',
-    'Fluid           : ' + fluidLabel,
-    'Fluid Temp      : ' + STATE.fluidTempF + ' °F',
-    'BTU Load        : ' + (isNaN(STATE.btuLoad) ? '—' : STATE.btuLoad.toLocaleString() + ' BTU/hr'),
-    'Delta T         : ' + STATE.deltaT + ' °F',
-    'GPM Override    : ' + (isNaN(STATE.knownGPM) || STATE.knownGPM <= 0 ? 'None (BTU calc used)' : STATE.knownGPM + ' GPM'),
-    'Pipe Material   : ' + (PIPE_DATA[STATE.pipeMaterial] ? PIPE_DATA[STATE.pipeMaterial].label : '—'),
-    'Pipe Size       : ' + (STATE.pipeSize ? STATE.pipeSize.nom + ' (ID ' + STATE.pipeSize.id_in + '")' : '—'),
-    'Length Horiz    : ' + (isNaN(STATE.lengthH) ? '—' : STATE.lengthH + ' ft'),
-    'Length Vert     : ' + (isNaN(STATE.lengthV) ? '—' : STATE.lengthV + ' ft'),
-    'Loop Type       : ' + (STATE.loopType === 'closed' ? 'Closed Loop' : 'Open System'),
-    'Static Head     : ' + (STATE.loopType === 'open' && !isNaN(STATE.staticHead) ? STATE.staticHead + ' ft' : 'N/A (closed loop)'),
-    'Safety Margin   : ' + STATE.safetyMargin + '%',
-    '',
-    '── DERIVED DESIGN BASIS ───────────────────────',
-    'Active Design GPM : ' + (isNaN(STATE.q_design) ? '—' : STATE.q_design.toFixed(2) + ' GPM'),
-    'Source            : ' + (!isNaN(STATE.knownGPM) && STATE.knownGPM > 0 ? 'GPM override (Tab 1 authority)' : 'BTU/hr ÷ (500 × ΔT × Cp × ρ_factor)'),
-    '',
-    '── FLUID PROPERTIES (ASHRAE Fund. 2021, Ch. 31) ──',
-    'Specific Heat   : ' + (fp && fp.valid ? fp.cp.toFixed(4) + ' BTU/lb·°F' : '—'),
-    'Density         : ' + (fp && fp.valid ? fp.rho.toFixed(2) + ' lb/ft³' : '—'),
-    'Viscosity       : ' + (fp && fp.valid ? fp.mu_cP.toFixed(3) + ' cP  (' + fp.mu_lbfts.toFixed(6) + ' lb/ft·s)' : '—'),
-    'Interp. Method  : Bilinear, ASHRAE Ch. 31 Tables 2 & 3',
-    '',
-    '── PIPE HYDRAULICS (ASHRAE Fund. 2021, Ch. 22) ───',
-    'Inside Diameter : ' + (STATE.pipeSize ? STATE.pipeSize.id_in + '" (' + inchToFt(STATE.pipeSize.id_in).toFixed(4) + ' ft)' : '—'),
-    'Roughness (ε)   : ' + (STATE.pipeMaterial && PIPE_DATA[STATE.pipeMaterial] ? PIPE_DATA[STATE.pipeMaterial].roughness_ft + ' ft' : '—'),
-    'Velocity        : ' + (isNaN(STATE.velocity) ? '—' : STATE.velocity.toFixed(3) + ' ft/s'),
-    'Reynolds No.    : ' + (isNaN(STATE.Re) ? '—' : STATE.Re.toFixed(0)),
-    'Flow Regime     : ' + (isNaN(STATE.Re) ? '—' : STATE.Re < 2300 ? 'Laminar' : STATE.Re <= 4000 ? 'Transitional' : 'Turbulent'),
-    'Friction Factor : ' + (isNaN(STATE.f) ? '— (withheld)' : STATE.f.toFixed(5) + ' (Colebrook-White, ASHRAE Ch. 22 Eq. 6)'),
-    'Pipe Friction   : ' + (isNaN(STATE.hfPipe) ? '—' : STATE.hfPipe.toFixed(3) + ' ft  (' + (STATE.hfPipePSI||0).toFixed(3) + ' PSI)'),
-    '',
-    '── HEAD ANALYSIS (ASHRAE Fund. 2021, Ch. 13) ─────',
-    'Pipe Friction   : ' + (isNaN(STATE.hfPipe) ? '—' : STATE.hfPipe.toFixed(3) + ' ft'),
-    'Fitting Friction: ' + (isNaN(STATE.hfFittings) ? '—' : STATE.hfFittings.toFixed(3) + ' ft') + ' (ASHRAE Ch. 22 Table 7)',
-    'Component Losses: ' + (isNaN(STATE.hfCustom) || STATE.hfCustom === 0 ? '0 ft' : STATE.hfCustom.toFixed(3) + ' ft') + ' (manufacturer data @ design flow)',
-    'Static Head     : ' + (STATE.loopType === 'closed' ? '0 ft (closed loop — excluded)' : (!isNaN(STATE.staticHead) ? STATE.staticHead.toFixed(1) + ' ft' : '—')),
-    'TDH (Raw)       : ' + (isNaN(STATE.tdh_raw) ? '—' : STATE.tdh_raw.toFixed(3) + ' ft'),
-    'TDH (Design)    : ' + (isNaN(STATE.tdh_design) ? '—' : STATE.tdh_design.toFixed(3) + ' ft  (+' + STATE.safetyMargin + '% margin)'),
-  ];
-
-  if (!isNaN(STATE.opGPM)) {
-    lines = lines.concat([
-      '',
-      '── PUMP OPERATING POINT ───────────────────────',
-      'Operating GPM   : ' + STATE.opGPM.toFixed(2) + ' GPM',
-      'Operating Head  : ' + STATE.opHead.toFixed(2) + ' ft',
-      'Design Deviation: ' + ((STATE.opGPM - STATE.q_design)/STATE.q_design*100).toFixed(1) + '%',
-      'BEP GPM         : ' + (isNaN(STATE.bepGPM) ? '—' : STATE.bepGPM + ' GPM'),
-      'BEP Deviation   : ' + (isNaN(STATE.bepGPM) ? '—' : ((STATE.opGPM - STATE.bepGPM)/STATE.bepGPM*100).toFixed(1) + '%'),
-      'Intersection    : Bisection method — ASHRAE Fund. Ch. 13',
-    ]);
-  }
-
-  lines = lines.concat([
-    '',
-    '── FORMULA REFERENCES ─────────────────────────',
-    'Flow        : GPM = BTU/hr ÷ (500 × ΔT × Cp × ρ_factor)',
-    '              ASHRAE Fundamentals 2021, Ch. 13',
-    'Fluid Props : Bilinear interpolation — ASHRAE Fund. Ch. 31',
-    'Velocity    : V = GPM × 0.4085 ÷ D_in² — Crane TP-410',
-    'Reynolds    : Re = V × D × ρ ÷ μ',
-    'Friction f  : 64/Re (laminar) or Colebrook-White (turbulent)',
-    '              ASHRAE Fundamentals 2021, Ch. 22, Eq. 6',
-    'Head Loss   : hf = f × (L/D) × V²/(2g)',
-    '              ASHRAE Fundamentals 2021, Ch. 22, Eq. 1',
-    'Fittings    : Equivalent length — ASHRAE Fund. Ch. 22, Table 7',
-    'HHP         : GPM × TDH × SG ÷ 3960 — Hydraulics Institute',
-    'Sys. Curve  : H = H_static + k×Q² — ASHRAE Fund. Ch. 13',
-    'Pump Curve  : Quadratic regression — least squares',
-    'Op. Point   : Bisection root finding',
-    'BEP Prox.   : ±15% — ASHRAE 90.1-2022, §10.4',
-    '',
-    '══════════════════════════════════════════════════',
-    ' Generated by om3ni.github.io/project-hermes',
-    ' Pump Sizing / System Head Calculator — v1',
-    ' Deferred: NPSHa, cavitation, impeller trim,',
-    '           motor power, variable speed curves',
-    '══════════════════════════════════════════════════'
-  ]);
-
-  return lines.join('\n');
+/* ── Persistence (this visit) ────────────────────────────────────── */
+const FIELDS = () => [...document.querySelectorAll('main input, main select, main textarea')];
+function save() { try { const d = { fluid, flowMode, fitMode }; FIELDS().forEach((e) => { d[e.id] = e.value; }); sessionStorage.setItem(STORE, JSON.stringify(d)); } catch (e) {} }
+function restore() {
+  try {
+    const d = JSON.parse(sessionStorage.getItem(STORE) || 'null'); if (!d) return;
+    if (d.fluid) fluid = d.fluid; if (d.flowMode) flowMode = d.flowMode; if (d.fitMode) fitMode = d.fitMode;
+    if (d['h-mat']) $('h-mat').value = d['h-mat'];
+    fillSizes(d['h-size']);
+    FIELDS().forEach((e) => { if (e.id in d && e.id !== 'h-mat' && e.id !== 'h-size') e.value = d[e.id]; });
+  } catch (e) {}
 }
 
-document.getElementById('btnHeadReport').addEventListener('click', function() {
-  document.getElementById('reportText').textContent = generateReport();
-  document.getElementById('reportModal').classList.add('open');
-});
-document.getElementById('btnPumpReport').addEventListener('click', function() {
-  document.getElementById('reportText').textContent = generateReport();
-  document.getElementById('reportModal').classList.add('open');
-});
-document.getElementById('modalClose').addEventListener('click', function() {
-  document.getElementById('reportModal').classList.remove('open');
-});
-document.getElementById('reportModal').addEventListener('click', function(e) {
-  if (e.target === this) this.classList.remove('open');
-});
-document.getElementById('btnCopy').addEventListener('click', function() {
-  var text = document.getElementById('reportText').textContent;
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(showToast);
-  } else {
-    var ta = document.createElement('textarea');
-    ta.value = text; document.body.appendChild(ta);
-    ta.select(); document.execCommand('copy');
-    document.body.removeChild(ta); showToast();
-  }
-});
-document.getElementById('btnPrint').addEventListener('click', function() {
-  var text = document.getElementById('reportText').textContent;
-  var w = window.open('','_blank');
-  w.document.write('<html><head><title>Pump Sizing Report</title><style>');
-  w.document.write('body{font-family:monospace;font-size:12px;padding:24px;white-space:pre;color:#000;background:#fff;line-height:1.6}');
-  w.document.write('<\/style><\/head><body>' + text.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '<\/body><\/html>');
-  w.document.close(); w.print();
-});
-
-function showToast() {
-  var t = document.getElementById('toast');
-  t.classList.add('show');
-  setTimeout(function(){ t.classList.remove('show'); }, 1800);
+/* ── Report ──────────────────────────────────────────────────────── */
+function buildReport() {
+  const out = ['PUMP SIZING REPORT — Hermes', new Date().toLocaleString(), 'Closed hydronic loop', ''];
+  ['fl', 'q'].forEach((k) => { if (report[k]) out.push(report[k]); });
+  if (report.h) out.push(...report.h);
+  if (pos(S.gpm) && pos(S.head)) out.push('', `DUTY POINT: ${f(S.gpm, 2)} GPM at ${f(S.head, 1)} ft of head`);
+  if (report.c) out.push('', ...report.c);
+  if (report.p) out.push('', ...report.p);
+  const n = $('notes').value.trim(); if (n) out.push('', 'Notes:', n);
+  out.push('', 'Friction: Darcy-Weisbach with Colebrook (Churchill in the transitional range). Fittings: Crane TP-410 L/D or a +50% allowance as stated.',
+    'Reference values. Select pumps from the manufacturer\'s data for the actual pump and speed setting.');
+  return out.join('\n');
 }
+$('btnReport').addEventListener('click', () => { $('reportText').textContent = buildReport(); $('reportDlg').showModal(); });
+$('btnCloseReport').addEventListener('click', () => $('reportDlg').close());
+$('btnCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('reportText').textContent); $('btnCopy').textContent = 'Copied'; setTimeout(() => { $('btnCopy').textContent = 'Copy'; }, 1500); } catch (e) {} });
+$('btnSave').addEventListener('click', () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([$('reportText').textContent], { type: 'text/plain' })); a.download = 'pump-report-' + new Date().toISOString().slice(0, 10) + '.txt'; a.click(); URL.revokeObjectURL(a.href); });
+$('btnClear').addEventListener('click', () => { if (!confirm('Clear all inputs on this page?')) return; FIELDS().forEach((e) => { if (e.tagName === 'SELECT') e.selectedIndex = 0; else e.value = ''; }); fillSizes(''); renderAll(); });
 
-/* ── Tab switching ── */
-var tabs = document.querySelectorAll('.tab');
-var panels = document.querySelectorAll('.panel');
-tabs.forEach(function(t) {
-  t.addEventListener('click', function() {
-    tabs.forEach(function(x){ x.classList.remove('active'); });
-    panels.forEach(function(x){ x.classList.remove('active'); });
-    t.classList.add('active');
-    document.getElementById('panel-' + t.dataset.tab).classList.add('active');
-    if (t.dataset.tab === 'pump') { setTimeout(drawCurves, 50); }
-  });
-});
+/* ── Wiring ──────────────────────────────────────────────────────── */
+document.querySelectorAll('#fluidSeg button').forEach((b) => b.addEventListener('click', () => { fluid = b.dataset.fluid; renderAll(); }));
+document.querySelectorAll('#flowSeg button').forEach((b) => b.addEventListener('click', () => { flowMode = b.dataset.flow; renderAll(); }));
+document.querySelectorAll('#fitSeg button').forEach((b) => b.addEventListener('click', () => { fitMode = b.dataset.fit; renderAll(); }));
+$('h-mat').addEventListener('change', () => { fillSizes(); renderAll(); });
+document.querySelector('main').addEventListener('input', renderAll);
+document.querySelector('main').addEventListener('change', renderAll);
 
-/* ── Window resize redraws canvas ── */
-window.addEventListener('resize', function() {
-  if (document.getElementById('panel-pump').classList.contains('active')) drawCurves();
-});
-
-/* ── Initial state ── */
-calcFlow();
-
-
-// Favorites
-(function(){
-  var KEY='hermes_favorites';
-  var id=location.pathname.split('/').pop().replace('.html','');
-  var title=document.title.split('·')[0].trim();
-  var tierEl=document.querySelector('.hdr-tier');
-  var tier=tierEl?(tierEl.classList.contains('t1')?'t1':tierEl.classList.contains('t3')?'t3':'t2'):'t2';
-  var btn=document.getElementById('favBtn');
-  if(!btn)return;
-  function getFavs(){try{return JSON.parse(localStorage.getItem(KEY))||[];}catch(e){return[];}}
-  function isFav(){return getFavs().some(function(f){return f.id===id;});}
-  function sync(){btn.textContent=isFav()?'★':'☆';btn.classList.toggle('on',isFav());}
-  window.toggleFav=function(){
-    var favs=getFavs();var idx=-1;
-    for(var i=0;i<favs.length;i++){if(favs[i].id===id){idx=i;break;}}
-    if(idx!==-1)favs.splice(idx,1);
-    else favs.push({id:id,title:title,tier:tier,label:title,type:'calc'});
-    localStorage.setItem(KEY,JSON.stringify(favs));sync();
-    try{if(window.parent!==window)window.parent.postMessage({type:'hermes-fav-toggle'},'*');}catch(e){}
-  };
-  sync();
-})();
+$('h-mat').value = 'copperL'; fillSizes('');
+restore();
+renderAll();
 </script>
 </body>
 </html>

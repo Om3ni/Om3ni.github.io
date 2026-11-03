@@ -16,13 +16,13 @@ Detailed reports, with exact reproductions, file:line causes, suggested fixes, w
 | Ventilation Sizing | **BROKEN** | 2 | 2 | 4 | 3 | yes |
 | MCA / MOCP | **BROKEN** | 1 | 0 | 5 | 3 | yes |
 | Combustion Air | **BROKEN** | 1 | 0 | 4 | 2 | yes |
-| Pump Sizing | **BROKEN** (glycol, CPVC, operating point) | 0 | 4 | 7 | 6 | yes |
+| Pump Sizing | **BROKEN** (glycol, CPVC, operating point) — redesigned and released 2026-11 | 0 | 4 | 7 | 6 | yes (redesign) |
 | Long Line Set | **BROKEN** | 0 | 3 | 3 | 3 | hidden |
 | Line Set Charge | **BROKEN** | 0 | 2 | 2 | 2 | yes |
 | Belt Length | **BROKEN** | 0 | 1 | 5 | 3 | yes |
 | Belt Deflection | **BROKEN** | 0 | 1 | 2 | 3 | yes |
 | Enthalpy | **BROKEN** | 0 | 1 | 2 | 2 | hidden |
-| Motor Analysis | RISKY | 0 | 3 | 11 | 6 | yes |
+| Motor Analysis | RISKY — redesigned and released 2026-11 | 0 | 3 | 11 | 6 | yes (redesign) |
 | Refrigeration Analysis | RISKY | 0 | 2 | 6 | 5 | yes |
 | Wire & Breaker | RISKY (oversizes) | 0 | 1 | 6 | 5 | yes |
 | Capacitor | RISKY | 0 | 1 | 3 | 3 | yes |

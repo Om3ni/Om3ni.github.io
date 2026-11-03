@@ -1,2234 +1,535 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Motor Analysis · HVAC Tools</title>
 <link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="shared/tool.css">
+<script>try { var th = localStorage.getItem('sl_theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}</script>
 <style>
-/* ── Motor-specific styles ── */
-
-/* Textarea for notes */
-.iw textarea {
-  width: 100%; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 3px; color: var(--text); font-family: var(--mono);
-  font-size: .85rem; padding: 10px 11px; outline: none; resize: none;
-  transition: border-color .15s; line-height: 1.5;
-  -webkit-appearance: none; appearance: none;
-}
-.iw textarea:focus { border-color: var(--orange); }
-
-/* ── Checklist ── */
-.checklist { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-.check-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 3px; cursor: pointer; transition: border-color .12s;
-}
-.check-item:active { border-color: var(--orange-lo); }
-.check-item input[type="checkbox"] { display: none; }
-.check-box {
-  width: 18px; height: 18px; border: 1px solid var(--border); border-radius: 2px;
-  background: var(--bg); flex-shrink: 0; display: flex; align-items: center;
-  justify-content: center; transition: all .12s;
-}
-.check-item.checked .check-box {
-  background: var(--orange-dim); border-color: var(--orange);
-}
-.check-item.checked .check-box::after {
-  content: '✓'; font-size: .75rem; color: var(--orange-hi);
-}
-.check-lbl { font-family: var(--mono); font-size: .75rem; color: var(--text-mute); letter-spacing: .03em; line-height: 1.4; }
-.check-item.checked .check-lbl { color: var(--text-dim); }
-
-/* ── Phase toggle ── */
-.phase-toggle {
-  display: flex; gap: 0; margin-bottom: 10px;
-  border: 1px solid var(--border); border-radius: 3px; overflow: hidden;
-}
-.phase-toggle .pt-btn {
-  flex: 1; padding: 8px 0; text-align: center; cursor: pointer;
-  font-family: var(--ui); font-weight: 600; font-size: .75rem;
-  letter-spacing: .08em; text-transform: uppercase;
-  color: var(--text-mute); background: var(--surface2);
-  border: none; transition: all .12s;
-}
-.phase-toggle .pt-btn + .pt-btn { border-left: 1px solid var(--border); }
-.phase-toggle .pt-btn.active {
-  background: var(--orange-dim); color: var(--orange-hi);
-}
-
-/* ── Motor result status: .bad and .warn ── */
-.result-row.bad  { border-color: var(--red-hi); background: var(--red-dim); }
-.rr-val.bad      { color: var(--red-hi); }
-.result-row.warn { border-color: var(--yellow-hi); background: var(--yellow-dim); }
-.rr-val.warn     { color: var(--yellow-hi); }
+#typeSeg button { flex: 1 1 30%; }
+.ir-sep { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 10px; font-size: .95rem; color: var(--text-dim); }
+.ir-sep input { width: 22px; height: 22px; accent-color: var(--orange); }
+.t-howto ul, .t-howto ol { margin: 6px 0 0; padding-left: 20px; font-size: .95rem; line-height: 1.5; color: var(--text-dim); }
+.t-howto li { margin-top: 6px; }
+.t-disclaim { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--orange-lo); border-left: 4px solid var(--orange); border-radius: 8px; background: var(--orange-dim); font-size: .95rem; line-height: 1.5; color: var(--text); }
+.t-disclaim a { color: var(--orange-hi); font-weight: 700; }
+[data-theme="light"] .t-disclaim a { color: #9a4000; }
+.t-howto b { color: var(--text); }
+[hidden] { display: none !important; }
 </style>
 </head>
 <body>
-
 <header>
   <a class="hdr-home" href="../index.html" title="Project home">⌂</a>
   <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
   <div class="hdr-titles">
     <div class="hdr-title">Motor Analysis</div>
-    <div class="hdr-sub">PSC · 3-Phase · ECM · Compressor</div>
+    <div class="hdr-sub">Insulation · Windings · Load · Supply</div>
   </div>
-  <button class="hdr-fav" id="favBtn" title="Favorite" onclick="toggleFav()">☆</button>
+  <button class="hdr-fav" id="favBtn" title="Favorite" aria-label="Favorite">☆</button>
 </header>
 
-<div class="tabs">
-  <div class="tab active" data-tab="psc">PSC</div>
-  <div class="tab" data-tab="three">3-Phase</div>
-  <div class="tab" data-tab="ecm">ECM</div>
-  <div class="tab" data-tab="comp">Compressor</div>
-</div>
+<main class="t-wrap">
+  <p class="t-intro">Readings are compared with the reference shown beside each one. The reference and its source are printed so you can judge the result against the job; nothing here declares a fault.</p>
 
-<!-- ══════════════════════════════════════════════
-     PSC TAB
-══════════════════════════════════════════════ -->
-<div class="panel active" id="panel-psc">
-
-  <!-- Nameplate -->
-  <label class="fl">Nameplate</label>
-  <div class="input-pair">
-    <div>
-      <label class="fl" for="psc-np-volts">Rated Voltage</label>
-      <div class="iw">
-        <input type="number" id="psc-np-volts" inputmode="decimal" placeholder="230" step="1">
-        <span class="iw-unit">V</span>
-      </div>
-    </div>
-    <div>
-      <label class="fl" for="psc-np-fla">Full Load Amps</label>
-      <div class="iw">
-        <input type="number" id="psc-np-fla" inputmode="decimal" placeholder="4.2" step="0.1">
-        <span class="iw-unit">FLA</span>
-      </div>
-    </div>
-  </div>
-  <div class="input-pair">
-    <div>
-      <label class="fl" for="psc-np-hp">Horsepower</label>
-      <div class="iw">
-        <input type="number" id="psc-np-hp" inputmode="decimal" placeholder="0.5" step="0.1">
-        <span class="iw-unit">HP</span>
-      </div>
-    </div>
-    <div>
-      <label class="fl" for="psc-np-sf">Service Factor</label>
-      <div class="iw">
-        <input type="number" id="psc-np-sf" inputmode="decimal" placeholder="1.0" step="0.05">
-        <span class="iw-unit">SF</span>
-      </div>
-    </div>
+  <span class="t-lbl" id="typeLbl">Motor type</span>
+  <div class="t-seg" id="typeSeg" role="group" aria-labelledby="typeLbl">
+    <button type="button" data-type="psc">PSC motor</button>
+    <button type="button" data-type="m3">3-phase motor</button>
+    <button type="button" data-type="ecm">ECM</button>
+    <button type="button" data-type="c1">Compressor 1Φ</button>
+    <button type="button" data-type="c3">Compressor 3Φ</button>
   </div>
 
-  <!-- Running -->
-  <div class="sec">
-    <div class="sec-lbl">Running</div>
-    <div class="input-pair">
-      <div>
-        <label class="fl" for="psc-run-volts">Supply Voltage</label>
-        <div class="iw">
-          <input type="number" id="psc-run-volts" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">V</span>
-        </div>
+  <!-- ECM: run without a tester (shown for ECM only) -->
+  <details class="t-card" id="ecm-howto" data-type-only="ecm">
+    <summary><h2 class="t-title">Run an ECM without a tester</h2></summary>
+    <div class="t-body t-howto">
+      <div class="t-disclaim" role="note">
+        <b>Use the right tool first.</b> We always recommend appropriate test equipment for checking electrical equipment of any kind. Where an ECM tester fits the motor, use it: <a href="https://trutechtools.com/search.php?search_query=ecm+tester" target="_blank" rel="noopener">ECM testers at TruTech Tools</a>. The method below is a fallback for when no tester is available, and only for constant-torque motors. Line voltage is present during the test; work within your training and qualifications.
       </div>
-      <div>
-        <label class="fl" for="psc-run-amps">Running Amps</label>
-        <div class="iw">
-          <input type="number" id="psc-run-amps" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">A</span>
-        </div>
-      </div>
+      <p class="t-purpose"><b>First, which ECM is it?</b> Look at the connectors on the motor.</p>
+      <ul>
+        <li><b>Constant torque</b> (Genteq X13 and similar): one terminal block with <b>C L G N</b> and speed taps <b>1–5</b>. This method applies. Genteq's ECM tester is not designed for these.</li>
+        <li><b>Variable speed</b> (Genteq 2.0 / 2.3 / Eon, or 3.0 with a 4-pin plug): a separate 5-pin power plug and a 16-pin control plug. This method does <b>not</b> apply. Genteq directs these to its TECINspect tester. Never put line voltage on the 16-pin plug.</li>
+      </ul>
+      <p class="t-purpose" style="margin-top:12px"><b>Constant-torque motor: run it on one tap with a 9 V battery</b></p>
+      <ol>
+        <li>Power off at the disconnect and wait 5 minutes before handling connectors (the motor's capacitors need to discharge).</li>
+        <li>Unplug the low-voltage signal wire(s) from the speed taps.</li>
+        <li>Find a tap the equipment actually uses (wiring diagram, or where the wire was). A tap with no program won't run the motor; that's normal, so try another.</li>
+        <li>With insulated clip leads, connect the battery: <b>negative (−) to C</b>, <b>positive (+) to the tap</b>. A fresh 9 V battery is inside the motor's DC signal range of 9–23 V; a weak one may not be. 24 VAC from the unit's transformer works the same way (common to C, R to the tap).</li>
+        <li>Restore power with hands clear. Line voltage must be at L and N: within ±10% of the motor's rated 115, 230, 277 or 460 V. The X13 is voltage-specific.</li>
+        <li>The motor should start on that tap within a few seconds. Rocking back and forth at start-up is normal.</li>
+        <li>Power off and wait before removing the clips. Reconnect the signal wires.</li>
+      </ol>
+      <p class="t-purpose" style="margin-top:10px"><b>What the result points to (Genteq's sequence)</b></p>
+      <ul>
+        <li><b>Runs on the battery but not on a system call:</b> the motor responds to a signal, so follow the call back: thermostat, board output and wiring to the tap.</li>
+        <li><b>Correct line voltage at L–N, signal on a programmed tap, and it still doesn't run:</b> Genteq's guide moves on to motor / control replacement for this model.</li>
+      </ul>
+      <p class="t-hint">Speed taps take low-voltage signal only (24 VAC or 9–23 VDC); line voltage on a tap destroys the control. Source: Genteq (Regal) ECM Service Guide G9971, rev. 4-10-14: Model X13 diagnostics and Figures 9–10; safety warnings on page 1. Other makers' constant-torque motors are similar; check their literature.</p>
     </div>
+  </details>
+
+  <!-- NAMEPLATE -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Nameplate</h2></div>
+    <div class="t-body">
+      <p class="t-purpose">Sets the references the readings below are compared with.</p>
+      <div class="t-grid c2">
+        <label class="t-f"><span>Rated volts</span><span class="t-in"><input id="np-volts" type="text" inputmode="decimal" autocomplete="off"><span class="u">V</span></span></label>
+        <label class="t-f" data-for="motor"><span>FLA</span><span class="t-in"><input id="np-fla" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+        <label class="t-f" data-for="motor"><span>Service factor <span class="opt">optional</span></span><span class="t-in"><input id="np-sf" type="number" inputmode="decimal" step="any"><span class="u">SF</span></span></label>
+        <label class="t-f" data-for="comp"><span>RLA</span><span class="t-in"><input id="np-rla" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+        <label class="t-f" data-for="comp"><span>MCC <span class="opt">optional</span></span><span class="t-in"><input id="np-mcc" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+      </div>
+      <p class="t-hint">Dual-rated nameplates: enter both, e.g. 208-230. <span data-for="motor">A blank service factor is treated as 1.0.</span><span data-for="comp"> MCC (max continuous current) is on the compressor label or spec sheet.</span></p>
+    </div>
+  </section>
+
+  <!-- INSULATION -->
+  <details class="t-card" id="card-ir" open>
+    <summary><h2 class="t-title">Insulation to ground</h2><span class="t-badge" id="badge-ir"></span></summary>
+    <div class="t-body">
+      <p class="t-purpose">Megger each terminal to ground with the motor disconnected.</p>
+      <div class="t-grid c3">
+        <label class="t-f"><span id="lbl-ir-g1">C–G</span><span class="t-in"><input id="ir-g1" type="number" inputmode="decimal" step="any"><span class="u">MΩ</span></span></label>
+        <label class="t-f"><span id="lbl-ir-g2">R–G</span><span class="t-in"><input id="ir-g2" type="number" inputmode="decimal" step="any"><span class="u">MΩ</span></span></label>
+        <label class="t-f"><span id="lbl-ir-g3">S–G</span><span class="t-in"><input id="ir-g3" type="number" inputmode="decimal" step="any"><span class="u">MΩ</span></span></label>
+      </div>
+      <div class="t-grid c3">
+        <label class="t-f"><span>Winding temp <span class="opt">opt.</span></span><span class="t-in"><input id="ir-temp" type="number" inputmode="decimal" step="any"><span class="u">°F</span></span></label>
+        <label class="t-f"><span>Test volts <span class="opt">opt.</span></span><span class="t-in"><input id="ir-testv" type="number" inputmode="decimal" step="any"><span class="u">V</span></span></label>
+        <label class="t-f"><span>Mfr minimum <span class="opt">opt.</span></span><span class="t-in"><input id="ir-mfr" type="number" inputmode="decimal" step="any"><span class="u">MΩ</span></span></label>
+      </div>
+      <label class="ir-sep" data-for="m3"><input type="checkbox" id="ir-sep"> 6/9/12-lead motor, winding connections separated</label>
+      <div class="t-grid c3" id="ir-pp" hidden>
+        <label class="t-f"><span>T1–T2</span><span class="t-in"><input id="ir-p12" type="number" inputmode="decimal" step="any"><span class="u">MΩ</span></span></label>
+        <label class="t-f"><span>T2–T3</span><span class="t-in"><input id="ir-p23" type="number" inputmode="decimal" step="any"><span class="u">MΩ</span></span></label>
+        <label class="t-f"><span>T1–T3</span><span class="t-in"><input id="ir-p13" type="number" inputmode="decimal" step="any"><span class="u">MΩ</span></span></label>
+      </div>
+      <p class="t-hint">Over range? Enter the meter's maximum. Phase-to-phase insulation only applies to separated multi-lead windings; on a 3-terminal motor or compressor it measures the winding copper.</p>
+      <div class="t-res" id="res-ir"></div>
+    </div>
+  </details>
+
+  <!-- WINDINGS -->
+  <details class="t-card" id="card-w" open>
+    <summary><h2 class="t-title">Winding resistance</h2><span class="t-badge" id="badge-w"></span></summary>
+    <div class="t-body">
+      <div data-wmode="crs">
+        <p class="t-purpose">Number the three terminals 1, 2, 3 however you like, then read across each pair. Zero your leads first.</p>
+        <div class="t-grid c3">
+          <label class="t-f"><span>1 – 2</span><span class="t-in"><input id="w-12" type="number" inputmode="decimal" step="any"><span class="u">Ω</span></span></label>
+          <label class="t-f"><span>1 – 3</span><span class="t-in"><input id="w-13" type="number" inputmode="decimal" step="any"><span class="u">Ω</span></span></label>
+          <label class="t-f"><span>2 – 3</span><span class="t-in"><input id="w-23" type="number" inputmode="decimal" step="any"><span class="u">Ω</span></span></label>
+        </div>
+        <div class="t-grid c2">
+          <label class="t-f"><span>Spec run Ω <span class="opt">optional</span></span><span class="t-in"><input id="w-spec-run" type="number" inputmode="decimal" step="any"><span class="u">Ω</span></span></label>
+          <label class="t-f"><span>Spec start Ω <span class="opt">optional</span></span><span class="t-in"><input id="w-spec-start" type="number" inputmode="decimal" step="any"><span class="u">Ω</span></span></label>
+        </div>
+        <p class="t-hint">An open winding reads OL and can't be entered. The add-up check confirms the readings and terminals; it can't detect shorted turns. Comparing with the manufacturer's resistance spec can.</p>
+      </div>
+      <div data-wmode="bal">
+        <p class="t-purpose">Read across each pair of leads. Zero your leads first.</p>
+        <div class="t-grid c3">
+          <label class="t-f"><span>T1–T2</span><span class="t-in"><input id="wb-12" type="number" inputmode="decimal" step="any"><span class="u">Ω</span></span></label>
+          <label class="t-f"><span>T2–T3</span><span class="t-in"><input id="wb-23" type="number" inputmode="decimal" step="any"><span class="u">Ω</span></span></label>
+          <label class="t-f"><span>T1–T3</span><span class="t-in"><input id="wb-13" type="number" inputmode="decimal" step="any"><span class="u">Ω</span></span></label>
+        </div>
+        <div class="t-grid c2">
+          <label class="t-f"><span>Spec Ω <span class="opt">optional</span></span><span class="t-in"><input id="wb-spec" type="number" inputmode="decimal" step="any"><span class="u">Ω</span></span></label>
+        </div>
+      </div>
+      <div class="t-res" id="res-w"></div>
+    </div>
+  </details>
+
+  <!-- RUNNING LOAD -->
+  <details class="t-card" id="card-ld" open>
+    <summary><h2 class="t-title">Running load</h2><span class="t-badge" id="badge-ld"></span></summary>
+    <div class="t-body">
+      <p class="t-purpose" id="ld-purpose">Running amps at operating conditions.</p>
+      <div class="t-grid c3">
+        <label class="t-f"><span id="lbl-ld-a1">Amps</span><span class="t-in"><input id="ld-a1" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+        <label class="t-f" data-legs="3"><span>L2</span><span class="t-in"><input id="ld-a2" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+        <label class="t-f" data-legs="3"><span>L3</span><span class="t-in"><input id="ld-a3" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+      </div>
+      <div class="t-res" id="res-ld"></div>
+    </div>
+  </details>
+
+  <!-- SUPPLY -->
+  <details class="t-card" id="card-sv" open>
+    <summary><h2 class="t-title">Supply voltage</h2><span class="t-badge" id="badge-sv"></span></summary>
+    <div class="t-body">
+      <p class="t-purpose">Measured at the unit while running.</p>
+      <div class="t-grid c3">
+        <label class="t-f"><span id="lbl-sv-1">Volts</span><span class="t-in"><input id="sv-1" type="number" inputmode="decimal" step="any"><span class="u">V</span></span></label>
+        <label class="t-f" data-legs="3"><span>L2–L3</span><span class="t-in"><input id="sv-2" type="number" inputmode="decimal" step="any"><span class="u">V</span></span></label>
+        <label class="t-f" data-legs="3"><span>L1–L3</span><span class="t-in"><input id="sv-3" type="number" inputmode="decimal" step="any"><span class="u">V</span></span></label>
+      </div>
+      <div class="t-res" id="res-sv"></div>
+    </div>
+  </details>
+
+  <!-- RUN CAPACITOR -->
+  <details class="t-card" id="card-cap" data-cap open>
+    <summary><h2 class="t-title">Run capacitor</h2><span class="t-badge" id="badge-cap"></span></summary>
+    <div class="t-body">
+      <p class="t-purpose">Discharge the capacitor, then measure µF with it disconnected.</p>
+      <div class="t-grid c3">
+        <label class="t-f"><span>Rated</span><span class="t-in"><input id="cap-rated" type="number" inputmode="decimal" step="any"><span class="u">µF</span></span></label>
+        <label class="t-f"><span>Tolerance</span><span class="t-in"><input id="cap-tol" type="number" inputmode="decimal" step="any"><span class="u">±%</span></span></label>
+        <label class="t-f"><span>Measured</span><span class="t-in"><input id="cap-meas" type="number" inputmode="decimal" step="any"><span class="u">µF</span></span></label>
+      </div>
+      <p class="t-hint">Tolerance is printed on the can (commonly ±5%, ±6% or ±10%). Or check it running: amps through the start winding and volts across the capacitor.</p>
+      <div class="t-grid c2">
+        <label class="t-f"><span>Start-winding amps <span class="opt">opt.</span></span><span class="t-in"><input id="cap-amps" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+        <label class="t-f"><span>Volts across cap <span class="opt">opt.</span></span><span class="t-in"><input id="cap-volts" type="number" inputmode="decimal" step="any"><span class="u">V</span></span></label>
+      </div>
+      <div class="t-res" id="res-cap"></div>
+    </div>
+  </details>
+
+  <!-- NOTES -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Notes</h2></div>
+    <div class="t-body">
+      <label class="t-f"><span class="opt" style="text-transform:none;letter-spacing:0">Model, serial, observations</span><span class="t-in"><textarea id="notes"></textarea></span></label>
+    </div>
+  </section>
+
+  <div class="t-actions">
+    <button type="button" class="t-btn primary" id="btnReport">Service report</button>
+    <button type="button" class="t-btn" id="btnClear">Clear all</button>
   </div>
-
-  <!-- Capacitor -->
-  <div class="sec">
-    <div class="sec-lbl">Run Capacitor</div>
-    <div class="input-pair">
-      <div>
-        <label class="fl" for="psc-cap-rated">Rated</label>
-        <div class="iw">
-          <input type="number" id="psc-cap-rated" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MFD</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="psc-cap-meas">Measured</label>
-        <div class="iw">
-          <input type="number" id="psc-cap-meas" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MFD</span>
-        </div>
-      </div>
-    </div>
-    <div class="hint">Tolerance: ±6% of rated. Capacitor must be discharged before measuring.</div>
-  </div>
-
-  <!-- Winding Resistance -->
-  <div class="sec">
-    <div class="sec-lbl">Winding Resistance</div>
-    <div class="input-trio">
-      <div>
-        <label class="fl" for="psc-w-cr">C — R</label>
-        <div class="iw">
-          <input type="number" id="psc-w-cr" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">Ω</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="psc-w-cs">C — S</label>
-        <div class="iw">
-          <input type="number" id="psc-w-cs" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">Ω</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="psc-w-rs">R — S</label>
-        <div class="iw">
-          <input type="number" id="psc-w-rs" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">Ω</span>
-        </div>
-      </div>
-    </div>
-    <div class="readout">
-      <span class="readout-lbl">C-R + C-S (should ≈ R-S)</span>
-      <span class="readout-val" id="psc-w-sum">--</span>
-    </div>
-    <div class="hint">R-S should equal C-R + C-S within ~5%. Large deviation indicates open or shorted winding.</div>
-  </div>
-
-  <!-- Megger -->
-  <div class="sec">
-    <div class="sec-lbl">Insulation Resistance</div>
-    <div class="fg">
-      <label class="fl" for="psc-meg-v">Test Voltage</label>
-      <div class="iw">
-        <input type="number" id="psc-meg-v" inputmode="decimal" placeholder="500" step="100">
-        <span class="iw-unit">V</span>
-      </div>
-    </div>
-    <label class="fl">Winding to Ground</label>
-    <div class="input-trio">
-      <div>
-        <label class="fl" for="psc-meg-cg">C — G</label>
-        <div class="iw">
-          <input type="number" id="psc-meg-cg" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="psc-meg-rg">R — G</label>
-        <div class="iw">
-          <input type="number" id="psc-meg-rg" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="psc-meg-sg">S — G</label>
-        <div class="iw">
-          <input type="number" id="psc-meg-sg" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-    </div>
-    <label class="fl">Winding to Winding</label>
-    <div class="input-trio">
-      <div>
-        <label class="fl" for="psc-meg-cr">C — R</label>
-        <div class="iw">
-          <input type="number" id="psc-meg-cr" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="psc-meg-cs">C — S</label>
-        <div class="iw">
-          <input type="number" id="psc-meg-cs" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="psc-meg-rs">R — S</label>
-        <div class="iw">
-          <input type="number" id="psc-meg-rs" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-    </div>
-    <div class="hint">IEEE 43 floor: 1 MΩ per kV rated voltage, minimum 1 MΩ. All readings should be well above floor.</div>
-  </div>
-
-  <!-- Notes -->
-  <div class="sec">
-    <div class="sec-lbl">Notes</div>
-    <div class="iw">
-      <textarea id="psc-notes" rows="3" placeholder="Observations, anomalies, battery check..."></textarea>
-    </div>
-  </div>
-
-  <!-- Results -->
-  <div class="results">
-
-    <div class="result-sec-hdr">Running</div>
-    <div class="result-row dim" id="psc-r-volts">
-      <div class="rr-left"><span class="rr-label">Supply Voltage</span></div>
-      <span class="rr-val" id="psc-rv-volts">--</span>
-    </div>
-    <div class="result-row dim" id="psc-r-amps">
-      <div class="rr-left">
-        <span class="rr-label">Running Amps</span>
-        <span class="rr-sub" id="psc-rv-amps-sub"></span>
-      </div>
-      <span class="rr-val" id="psc-rv-amps">--</span>
-    </div>
-    <div class="result-row dim" id="psc-r-amp-pct">
-      <div class="rr-left">
-        <span class="rr-label">% of FLA</span>
-        <span class="rr-sub" id="psc-rv-sf-ceiling"></span>
-      </div>
-      <span class="rr-val" id="psc-rv-amp-pct">--</span>
-    </div>
-
-    <div class="result-sec-hdr">Capacitor</div>
-    <div class="result-row dim" id="psc-r-cap">
-      <div class="rr-left">
-        <span class="rr-label">MFD Deviation</span>
-        <span class="rr-sub">±6% tolerance</span>
-      </div>
-      <span class="rr-val" id="psc-rv-cap">--</span>
-    </div>
-
-    <div class="result-sec-hdr">Windings</div>
-    <div class="result-row dim" id="psc-r-wind">
-      <div class="rr-left">
-        <span class="rr-label">Balance Check</span>
-        <span class="rr-sub">C-R + C-S vs R-S</span>
-      </div>
-      <span class="rr-val" id="psc-rv-wind">--</span>
-    </div>
-
-    <div class="result-sec-hdr">Insulation — Winding to Ground</div>
-    <div class="result-row dim" id="psc-r-meg-cg">
-      <div class="rr-left"><span class="rr-label">C — Ground</span><span class="rr-sub" id="psc-rv-meg-cg-sub"></span></div>
-      <span class="rr-val" id="psc-rv-meg-cg">--</span>
-    </div>
-    <div class="result-row dim" id="psc-r-meg-rg">
-      <div class="rr-left"><span class="rr-label">R — Ground</span><span class="rr-sub" id="psc-rv-meg-rg-sub"></span></div>
-      <span class="rr-val" id="psc-rv-meg-rg">--</span>
-    </div>
-    <div class="result-row dim" id="psc-r-meg-sg">
-      <div class="rr-left"><span class="rr-label">S — Ground</span><span class="rr-sub" id="psc-rv-meg-sg-sub"></span></div>
-      <span class="rr-val" id="psc-rv-meg-sg">--</span>
-    </div>
-    <div class="result-row dim" id="psc-r-meg-lowest">
-      <div class="rr-left"><span class="rr-label">Lowest Reading</span><span class="rr-sub" id="psc-rv-meg-floor-sub"></span></div>
-      <span class="rr-val" id="psc-rv-meg-lowest">--</span>
-    </div>
-
-    <div class="result-sec-hdr">Insulation — Winding to Winding</div>
-    <div class="result-row dim" id="psc-r-meg-cr">
-      <div class="rr-left"><span class="rr-label">C — R</span></div>
-      <span class="rr-val" id="psc-rv-meg-cr">--</span>
-    </div>
-    <div class="result-row dim" id="psc-r-meg-cs">
-      <div class="rr-left"><span class="rr-label">C — S</span></div>
-      <span class="rr-val" id="psc-rv-meg-cs">--</span>
-    </div>
-    <div class="result-row dim" id="psc-r-meg-rs">
-      <div class="rr-left"><span class="rr-label">R — S</span></div>
-      <span class="rr-val" id="psc-rv-meg-rs">--</span>
-    </div>
-
-  </div>
-
-
-</div>
-
-<!-- ══════════════════════════════════════════════
-     3-PHASE TAB
-══════════════════════════════════════════════ -->
-<div class="panel" id="panel-three">
-
-  <!-- Nameplate -->
-  <label class="fl">Nameplate</label>
-  <div class="input-pair">
-    <div>
-      <label class="fl" for="tph-np-volts">Rated Voltage</label>
-      <div class="iw">
-        <input type="number" id="tph-np-volts" inputmode="decimal" placeholder="460" step="1">
-        <span class="iw-unit">V</span>
-      </div>
-    </div>
-    <div>
-      <label class="fl" for="tph-np-fla">Full Load Amps</label>
-      <div class="iw">
-        <input type="number" id="tph-np-fla" inputmode="decimal" placeholder="--" step="0.1">
-        <span class="iw-unit">FLA</span>
-      </div>
-    </div>
-  </div>
-  <div class="input-pair">
-    <div>
-      <label class="fl" for="tph-np-hp">Horsepower</label>
-      <div class="iw">
-        <input type="number" id="tph-np-hp" inputmode="decimal" placeholder="--" step="0.1">
-        <span class="iw-unit">HP</span>
-      </div>
-    </div>
-    <div>
-      <label class="fl" for="tph-np-sf">Service Factor</label>
-      <div class="iw">
-        <input type="number" id="tph-np-sf" inputmode="decimal" placeholder="1.15" step="0.05">
-        <span class="iw-unit">SF</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Running -->
-  <div class="sec">
-    <div class="sec-lbl">Running Amps</div>
-    <div class="input-trio">
-      <div>
-        <label class="fl" for="tph-a-l1">L1</label>
-        <div class="iw">
-          <input type="number" id="tph-a-l1" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">A</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="tph-a-l2">L2</label>
-        <div class="iw">
-          <input type="number" id="tph-a-l2" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">A</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="tph-a-l3">L3</label>
-        <div class="iw">
-          <input type="number" id="tph-a-l3" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">A</span>
-        </div>
-      </div>
-    </div>
-    <div class="readout">
-      <span class="readout-lbl">Average Amps</span>
-      <span class="readout-val" id="tph-avg-amps-disp">--</span>
-    </div>
-  </div>
-
-  <!-- Supply Voltage -->
-  <div class="sec">
-    <div class="sec-lbl">Supply Voltage — Line to Line</div>
-    <div class="input-trio">
-      <div>
-        <label class="fl" for="tph-v-l1l2">L1 — L2</label>
-        <div class="iw">
-          <input type="number" id="tph-v-l1l2" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">V</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="tph-v-l2l3">L2 — L3</label>
-        <div class="iw">
-          <input type="number" id="tph-v-l2l3" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">V</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="tph-v-l1l3">L1 — L3</label>
-        <div class="iw">
-          <input type="number" id="tph-v-l1l3" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">V</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Winding Resistance -->
-  <div class="sec">
-    <div class="sec-lbl">Winding Resistance</div>
-    <div class="input-trio">
-      <div>
-        <label class="fl" for="tph-w-t1t2">T1 — T2</label>
-        <div class="iw">
-          <input type="number" id="tph-w-t1t2" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">Ω</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="tph-w-t2t3">T2 — T3</label>
-        <div class="iw">
-          <input type="number" id="tph-w-t2t3" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">Ω</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="tph-w-t1t3">T1 — T3</label>
-        <div class="iw">
-          <input type="number" id="tph-w-t1t3" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">Ω</span>
-        </div>
-      </div>
-    </div>
-    <div class="hint">All three readings should be within 5% of each other. Significant deviation indicates winding fault.</div>
-  </div>
-
-  <!-- Megger -->
-  <div class="sec">
-    <div class="sec-lbl">Insulation Resistance</div>
-    <div class="fg">
-      <label class="fl" for="tph-meg-v">Test Voltage</label>
-      <div class="iw">
-        <input type="number" id="tph-meg-v" inputmode="decimal" placeholder="500" step="100">
-        <span class="iw-unit">V</span>
-      </div>
-    </div>
-    <label class="fl">Winding to Ground</label>
-    <div class="input-trio">
-      <div>
-        <label class="fl" for="tph-meg-t1g">T1 — G</label>
-        <div class="iw">
-          <input type="number" id="tph-meg-t1g" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="tph-meg-t2g">T2 — G</label>
-        <div class="iw">
-          <input type="number" id="tph-meg-t2g" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="tph-meg-t3g">T3 — G</label>
-        <div class="iw">
-          <input type="number" id="tph-meg-t3g" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-    </div>
-    <label class="fl">Phase to Phase</label>
-    <div class="input-trio">
-      <div>
-        <label class="fl" for="tph-meg-t1t2">T1 — T2</label>
-        <div class="iw">
-          <input type="number" id="tph-meg-t1t2" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="tph-meg-t2t3">T2 — T3</label>
-        <div class="iw">
-          <input type="number" id="tph-meg-t2t3" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="tph-meg-t1t3">T1 — T3</label>
-        <div class="iw">
-          <input type="number" id="tph-meg-t1t3" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-    </div>
-    <div class="hint">IEEE 43 floor: 1 MΩ per kV rated voltage, minimum 1 MΩ. All readings should be well above floor.</div>
-  </div>
-
-  <!-- Notes -->
-  <div class="sec">
-    <div class="sec-lbl">Notes</div>
-    <div class="iw">
-      <textarea id="tph-notes" rows="3" placeholder="Observations, anomalies, battery check..."></textarea>
-    </div>
-  </div>
-
-  <!-- Results -->
-  <div class="results">
-
-    <div class="result-sec-hdr">Running Amps</div>
-    <div class="result-row dim" id="tph-r-avg-amps">
-      <div class="rr-left">
-        <span class="rr-label">Average Amps</span>
-        <span class="rr-sub" id="tph-rv-amps-sub"></span>
-      </div>
-      <span class="rr-val" id="tph-rv-avg-amps">--</span>
-    </div>
-    <div class="result-row dim" id="tph-r-amp-pct">
-      <div class="rr-left">
-        <span class="rr-label">% of FLA</span>
-        <span class="rr-sub" id="tph-rv-sf-ceiling"></span>
-      </div>
-      <span class="rr-val" id="tph-rv-amp-pct">--</span>
-    </div>
-    <div class="result-row dim" id="tph-r-amp-imbal">
-      <div class="rr-left">
-        <span class="rr-label">Current Imbalance</span>
-        <span class="rr-sub">NEMA: &gt;10% indicates voltage or winding issue</span>
-      </div>
-      <span class="rr-val" id="tph-rv-amp-imbal">--</span>
-    </div>
-
-    <div class="result-sec-hdr">Supply Voltage</div>
-    <div class="result-row dim" id="tph-r-avg-volts">
-      <div class="rr-left"><span class="rr-label">Average L-L</span></div>
-      <span class="rr-val" id="tph-rv-avg-volts">--</span>
-    </div>
-    <div class="result-row dim" id="tph-r-volt-imbal">
-      <div class="rr-left">
-        <span class="rr-label">Voltage Unbalance</span>
-        <span class="rr-sub">NEMA: &gt;1% causes ~6× current unbalance</span>
-      </div>
-      <span class="rr-val" id="tph-rv-volt-imbal">--</span>
-    </div>
-    <div class="result-row dim" id="tph-r-vdev">
-      <div class="rr-left">
-        <span class="rr-label">Deviation from Rated</span>
-        <span class="rr-sub">Average L-L vs nameplate</span>
-      </div>
-      <span class="rr-val" id="tph-rv-vdev">--</span>
-    </div>
-
-    <div class="result-sec-hdr">Windings</div>
-    <div class="result-row dim" id="tph-r-wind">
-      <div class="rr-left">
-        <span class="rr-label">Resistance Balance</span>
-        <span class="rr-sub">Max deviation from average</span>
-      </div>
-      <span class="rr-val" id="tph-rv-wind">--</span>
-    </div>
-
-    <div class="result-sec-hdr">Insulation — Winding to Ground</div>
-    <div class="result-row dim" id="tph-r-meg-t1g">
-      <div class="rr-left"><span class="rr-label">T1 — Ground</span></div>
-      <span class="rr-val" id="tph-rv-meg-t1g">--</span>
-    </div>
-    <div class="result-row dim" id="tph-r-meg-t2g">
-      <div class="rr-left"><span class="rr-label">T2 — Ground</span></div>
-      <span class="rr-val" id="tph-rv-meg-t2g">--</span>
-    </div>
-    <div class="result-row dim" id="tph-r-meg-t3g">
-      <div class="rr-left"><span class="rr-label">T3 — Ground</span></div>
-      <span class="rr-val" id="tph-rv-meg-t3g">--</span>
-    </div>
-    <div class="result-row dim" id="tph-r-meg-lowest">
-      <div class="rr-left"><span class="rr-label">Lowest Reading</span><span class="rr-sub" id="tph-rv-meg-floor-sub"></span></div>
-      <span class="rr-val" id="tph-rv-meg-lowest">--</span>
-    </div>
-
-    <div class="result-sec-hdr">Insulation — Phase to Phase</div>
-    <div class="result-row dim" id="tph-r-meg-t1t2">
-      <div class="rr-left"><span class="rr-label">T1 — T2</span></div>
-      <span class="rr-val" id="tph-rv-meg-t1t2">--</span>
-    </div>
-    <div class="result-row dim" id="tph-r-meg-t2t3">
-      <div class="rr-left"><span class="rr-label">T2 — T3</span></div>
-      <span class="rr-val" id="tph-rv-meg-t2t3">--</span>
-    </div>
-    <div class="result-row dim" id="tph-r-meg-t1t3">
-      <div class="rr-left"><span class="rr-label">T1 — T3</span></div>
-      <span class="rr-val" id="tph-rv-meg-t1t3">--</span>
-    </div>
-
-  </div>
-
-
-</div>
-
-<!-- ══════════════════════════════════════════════
-     ECM TAB
-══════════════════════════════════════════════ -->
-<div class="panel" id="panel-ecm">
-
-  <!-- Nameplate -->
-  <label class="fl">Nameplate</label>
-  <div class="input-pair">
-    <div>
-      <label class="fl" for="ecm-np-volts">Rated Voltage</label>
-      <div class="iw">
-        <input type="number" id="ecm-np-volts" inputmode="decimal" placeholder="230" step="1">
-        <span class="iw-unit">V</span>
-      </div>
-    </div>
-    <div>
-      <label class="fl" for="ecm-np-hp">Horsepower</label>
-      <div class="iw">
-        <input type="number" id="ecm-np-hp" inputmode="decimal" placeholder="--" step="0.1">
-        <span class="iw-unit">HP</span>
-      </div>
-    </div>
-  </div>
-  <div class="fg">
-    <label class="fl" for="ecm-np-model">Module Model — Optional</label>
-    <div class="iw">
-      <input type="text" id="ecm-np-model" inputmode="text" placeholder="e.g. ECM2.3, X13, Evergreen">
-      <span class="iw-unit" style="font-size:.55rem">MDL</span>
-    </div>
-  </div>
-
-  <!-- Checklist -->
-  <div class="sec">
-    <div class="sec-lbl">Diagnostic Checklist</div>
-    <div class="checklist" id="ecm-checklist">
-
-      <label class="check-item" id="chk-hv">
-        <input type="checkbox" data-chk="hv">
-        <div class="check-box"></div>
-        <span class="check-lbl">High voltage present at module (L-L measured, within ±10% of rated)</span>
-      </label>
-
-      <label class="check-item" id="chk-ctrl">
-        <input type="checkbox" data-chk="ctrl">
-        <div class="check-box"></div>
-        <span class="check-lbl">Control signal present (0–10V DC or PWM verified at control terminals)</span>
-      </label>
-
-      <label class="check-item" id="chk-wind">
-        <input type="checkbox" data-chk="wind">
-        <div class="check-box"></div>
-        <span class="check-lbl">Windings check out (resistance balanced, no open or short to ground)</span>
-      </label>
-
-      <label class="check-item" id="chk-conn">
-        <input type="checkbox" data-chk="conn">
-        <div class="check-box"></div>
-        <span class="check-lbl">Terminal connections clean and tight (no corrosion, no loose pins)</span>
-      </label>
-
-      <label class="check-item" id="chk-meg">
-        <input type="checkbox" data-chk="meg">
-        <div class="check-box"></div>
-        <span class="check-lbl">Insulation resistance acceptable (meggered winding, not bleeding to ground)</span>
-      </label>
-
-    </div>
-  </div>
-
-  <!-- Running -->
-  <div class="sec">
-    <div class="sec-lbl">Running — Optional</div>
-    <div class="input-pair">
-      <div>
-        <label class="fl" for="ecm-run-volts">Supply Voltage</label>
-        <div class="iw">
-          <input type="number" id="ecm-run-volts" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">V</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="ecm-run-amps">Running Amps</label>
-        <div class="iw">
-          <input type="number" id="ecm-run-amps" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">A</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Winding Resistance -->
-  <div class="sec">
-    <div class="sec-lbl">Winding Resistance</div>
-    <div class="hint" style="margin-bottom:8px">ECM stator windings — measure phase-to-phase at motor terminals, not at module connector.</div>
-    <div class="input-trio">
-      <div>
-        <label class="fl" for="ecm-w-t1t2">T1 — T2</label>
-        <div class="iw">
-          <input type="number" id="ecm-w-t1t2" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">Ω</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="ecm-w-t2t3">T2 — T3</label>
-        <div class="iw">
-          <input type="number" id="ecm-w-t2t3" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">Ω</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="ecm-w-t1t3">T1 — T3</label>
-        <div class="iw">
-          <input type="number" id="ecm-w-t1t3" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">Ω</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Megger -->
-  <div class="sec">
-    <div class="sec-lbl">Insulation Resistance</div>
-    <div class="hint" style="margin-bottom:8px">Meg the motor stator only — disconnect module first. Never megger the module itself.</div>
-    <div class="fg">
-      <label class="fl" for="ecm-meg-v">Test Voltage</label>
-      <div class="iw">
-        <input type="number" id="ecm-meg-v" inputmode="decimal" placeholder="500" step="100">
-        <span class="iw-unit">V</span>
-      </div>
-    </div>
-    <label class="fl">Winding to Ground</label>
-    <div class="input-trio">
-      <div>
-        <label class="fl" for="ecm-meg-t1g">T1 — G</label>
-        <div class="iw">
-          <input type="number" id="ecm-meg-t1g" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="ecm-meg-t2g">T2 — G</label>
-        <div class="iw">
-          <input type="number" id="ecm-meg-t2g" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="ecm-meg-t3g">T3 — G</label>
-        <div class="iw">
-          <input type="number" id="ecm-meg-t3g" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-    </div>
-    <label class="fl">Phase to Phase</label>
-    <div class="input-trio">
-      <div>
-        <label class="fl" for="ecm-meg-t1t2">T1 — T2</label>
-        <div class="iw">
-          <input type="number" id="ecm-meg-t1t2" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="ecm-meg-t2t3">T2 — T3</label>
-        <div class="iw">
-          <input type="number" id="ecm-meg-t2t3" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="ecm-meg-t1t3">T1 — T3</label>
-        <div class="iw">
-          <input type="number" id="ecm-meg-t1t3" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">MΩ</span>
-        </div>
-      </div>
-    </div>
-    <div class="hint">IEEE 43 floor: 1 MΩ per kV rated voltage, minimum 1 MΩ. All readings should be well above floor.</div>
-  </div>
-
-  <!-- Notes -->
-  <div class="sec">
-    <div class="sec-lbl">Notes</div>
-    <div class="iw">
-      <textarea id="ecm-notes" rows="3" placeholder="Observations, error codes, symptom description..."></textarea>
-    </div>
-  </div>
-
-  <!-- Results -->
-  <div class="results">
-
-    <div class="result-sec-hdr">Insulation — Winding to Ground</div>
-    <div class="result-row dim" id="ecm-r-meg-t1g">
-      <div class="rr-left"><span class="rr-label">T1 — Ground</span></div>
-      <span class="rr-val" id="ecm-rv-meg-t1g">--</span>
-    </div>
-    <div class="result-row dim" id="ecm-r-meg-t2g">
-      <div class="rr-left"><span class="rr-label">T2 — Ground</span></div>
-      <span class="rr-val" id="ecm-rv-meg-t2g">--</span>
-    </div>
-    <div class="result-row dim" id="ecm-r-meg-t3g">
-      <div class="rr-left"><span class="rr-label">T3 — Ground</span></div>
-      <span class="rr-val" id="ecm-rv-meg-t3g">--</span>
-    </div>
-    <div class="result-row dim" id="ecm-r-meg-lowest">
-      <div class="rr-left"><span class="rr-label">Lowest Reading</span><span class="rr-sub" id="ecm-rv-meg-floor-sub"></span></div>
-      <span class="rr-val" id="ecm-rv-meg-lowest">--</span>
-    </div>
-
-    <div class="result-sec-hdr">Insulation — Phase to Phase</div>
-    <div class="result-row dim" id="ecm-r-meg-t1t2">
-      <div class="rr-left"><span class="rr-label">T1 — T2</span></div>
-      <span class="rr-val" id="ecm-rv-meg-t1t2">--</span>
-    </div>
-    <div class="result-row dim" id="ecm-r-meg-t2t3">
-      <div class="rr-left"><span class="rr-label">T2 — T3</span></div>
-      <span class="rr-val" id="ecm-rv-meg-t2t3">--</span>
-    </div>
-    <div class="result-row dim" id="ecm-r-meg-t1t3">
-      <div class="rr-left"><span class="rr-label">T1 — T3</span></div>
-      <span class="rr-val" id="ecm-rv-meg-t1t3">--</span>
-    </div>
-
-    <div class="result-sec-hdr">Windings</div>
-    <div class="result-row dim" id="ecm-r-wind">
-      <div class="rr-left">
-        <span class="rr-label">Resistance Balance</span>
-        <span class="rr-sub">Max deviation from average</span>
-      </div>
-      <span class="rr-val" id="ecm-rv-wind">--</span>
-    </div>
-
-  </div>
-
-
-</div>
-
-<!-- ══════════════════════════════════════════════
-     COMPRESSOR TAB
-══════════════════════════════════════════════ -->
-<div class="panel" id="panel-comp">
-
-  <!-- Nameplate -->
-  <label class="fl">Nameplate</label>
-  <div class="input-pair">
-    <div>
-      <label class="fl" for="comp-np-volts">Rated Voltage</label>
-      <div class="iw">
-        <input type="number" id="comp-np-volts" inputmode="decimal" placeholder="230" step="1">
-        <span class="iw-unit">V</span>
-      </div>
-    </div>
-    <div>
-      <label class="fl" for="comp-np-rla">RLA</label>
-      <div class="iw">
-        <input type="number" id="comp-np-rla" inputmode="decimal" placeholder="--" step="0.1">
-        <span class="iw-unit">A</span>
-      </div>
-    </div>
-  </div>
-  <div class="fg">
-    <label class="fl" for="comp-np-lra">LRA</label>
-    <div class="iw">
-      <input type="number" id="comp-np-lra" inputmode="decimal" placeholder="--" step="0.1">
-      <span class="iw-unit">A</span>
-    </div>
-  </div>
-
-  <!-- Phase toggle -->
-  <div class="phase-toggle" id="comp-phase-toggle">
-    <button class="pt-btn active" data-phase="1">1Φ Single Phase</button>
-    <button class="pt-btn" data-phase="3">3Φ Three Phase</button>
-  </div>
-
-  <!-- Running -->
-  <div class="sec">
-    <div class="sec-lbl">Running</div>
-    <div class="input-pair">
-      <div>
-        <label class="fl" for="comp-run-volts">Supply Voltage</label>
-        <div class="iw">
-          <input type="number" id="comp-run-volts" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">V</span>
-        </div>
-      </div>
-      <div>
-        <label class="fl" for="comp-run-amps">Running Amps</label>
-        <div class="iw">
-          <input type="number" id="comp-run-amps" inputmode="decimal" placeholder="--" step="0.1">
-          <span class="iw-unit">A</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── 1Φ Winding + Megger ── -->
-  <div id="comp-1ph">
-
-    <div class="sec">
-      <div class="sec-lbl">Winding Resistance</div>
-      <div class="input-trio">
-        <div>
-          <label class="fl" for="comp-w-cr">C — R</label>
-          <div class="iw">
-            <input type="number" id="comp-w-cr" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">Ω</span>
-          </div>
-        </div>
-        <div>
-          <label class="fl" for="comp-w-cs">C — S</label>
-          <div class="iw">
-            <input type="number" id="comp-w-cs" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">Ω</span>
-          </div>
-        </div>
-        <div>
-          <label class="fl" for="comp-w-rs">R — S</label>
-          <div class="iw">
-            <input type="number" id="comp-w-rs" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">Ω</span>
-          </div>
-        </div>
-      </div>
-      <div class="readout">
-        <span class="readout-lbl">C-R + C-S (should ≈ R-S)</span>
-        <span class="readout-val" id="comp-w-sum">--</span>
-      </div>
-      <div class="hint">R-S should equal C-R + C-S within ~5%. Large deviation indicates open or shorted winding.</div>
-    </div>
-
-    <div class="sec">
-      <div class="sec-lbl">Insulation Resistance</div>
-      <div class="hint" style="margin-bottom:8px">Measure at compressor terminals with power and contactor disconnected.</div>
-      <div class="fg">
-        <label class="fl" for="comp-meg-v">Test Voltage</label>
-        <div class="iw">
-          <input type="number" id="comp-meg-v" inputmode="decimal" placeholder="500" step="100">
-          <span class="iw-unit">V</span>
-        </div>
-      </div>
-      <label class="fl">Winding to Ground</label>
-      <div class="input-trio">
-        <div>
-          <label class="fl" for="comp-meg-cg">C — G</label>
-          <div class="iw">
-            <input type="number" id="comp-meg-cg" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">MΩ</span>
-          </div>
-        </div>
-        <div>
-          <label class="fl" for="comp-meg-rg">R — G</label>
-          <div class="iw">
-            <input type="number" id="comp-meg-rg" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">MΩ</span>
-          </div>
-        </div>
-        <div>
-          <label class="fl" for="comp-meg-sg">S — G</label>
-          <div class="iw">
-            <input type="number" id="comp-meg-sg" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">MΩ</span>
-          </div>
-        </div>
-      </div>
-      <label class="fl">Winding to Winding</label>
-      <div class="input-trio">
-        <div>
-          <label class="fl" for="comp-meg-cr">C — R</label>
-          <div class="iw">
-            <input type="number" id="comp-meg-cr" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">MΩ</span>
-          </div>
-        </div>
-        <div>
-          <label class="fl" for="comp-meg-cs">C — S</label>
-          <div class="iw">
-            <input type="number" id="comp-meg-cs" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">MΩ</span>
-          </div>
-        </div>
-        <div>
-          <label class="fl" for="comp-meg-rs">R — S</label>
-          <div class="iw">
-            <input type="number" id="comp-meg-rs" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">MΩ</span>
-          </div>
-        </div>
-      </div>
-      <div class="hint">IEEE 43 floor: 1 MΩ per kV rated voltage, minimum 1 MΩ. Low readings may indicate acid/moisture contamination.</div>
-    </div>
-
-  </div>
-
-  <!-- ── 3Φ Winding + Megger ── -->
-  <div id="comp-3ph" style="display:none">
-
-    <div class="sec">
-      <div class="sec-lbl">Winding Resistance</div>
-      <div class="input-trio">
-        <div>
-          <label class="fl" for="comp3-w-t1t2">T1 — T2</label>
-          <div class="iw">
-            <input type="number" id="comp3-w-t1t2" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">Ω</span>
-          </div>
-        </div>
-        <div>
-          <label class="fl" for="comp3-w-t2t3">T2 — T3</label>
-          <div class="iw">
-            <input type="number" id="comp3-w-t2t3" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">Ω</span>
-          </div>
-        </div>
-        <div>
-          <label class="fl" for="comp3-w-t1t3">T1 — T3</label>
-          <div class="iw">
-            <input type="number" id="comp3-w-t1t3" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">Ω</span>
-          </div>
-        </div>
-      </div>
-      <div class="hint">All three readings should be within 5% of each other. Significant deviation indicates winding fault.</div>
-    </div>
-
-    <div class="sec">
-      <div class="sec-lbl">Insulation Resistance</div>
-      <div class="hint" style="margin-bottom:8px">Measure at compressor terminals with power and contactor disconnected.</div>
-      <div class="fg">
-        <label class="fl" for="comp3-meg-v">Test Voltage</label>
-        <div class="iw">
-          <input type="number" id="comp3-meg-v" inputmode="decimal" placeholder="500" step="100">
-          <span class="iw-unit">V</span>
-        </div>
-      </div>
-      <label class="fl">Winding to Ground</label>
-      <div class="input-trio">
-        <div>
-          <label class="fl" for="comp3-meg-t1g">T1 — G</label>
-          <div class="iw">
-            <input type="number" id="comp3-meg-t1g" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">MΩ</span>
-          </div>
-        </div>
-        <div>
-          <label class="fl" for="comp3-meg-t2g">T2 — G</label>
-          <div class="iw">
-            <input type="number" id="comp3-meg-t2g" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">MΩ</span>
-          </div>
-        </div>
-        <div>
-          <label class="fl" for="comp3-meg-t3g">T3 — G</label>
-          <div class="iw">
-            <input type="number" id="comp3-meg-t3g" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">MΩ</span>
-          </div>
-        </div>
-      </div>
-      <label class="fl">Phase to Phase</label>
-      <div class="input-trio">
-        <div>
-          <label class="fl" for="comp3-meg-t1t2">T1 — T2</label>
-          <div class="iw">
-            <input type="number" id="comp3-meg-t1t2" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">MΩ</span>
-          </div>
-        </div>
-        <div>
-          <label class="fl" for="comp3-meg-t2t3">T2 — T3</label>
-          <div class="iw">
-            <input type="number" id="comp3-meg-t2t3" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">MΩ</span>
-          </div>
-        </div>
-        <div>
-          <label class="fl" for="comp3-meg-t1t3">T1 — T3</label>
-          <div class="iw">
-            <input type="number" id="comp3-meg-t1t3" inputmode="decimal" placeholder="--" step="0.1">
-            <span class="iw-unit">MΩ</span>
-          </div>
-        </div>
-      </div>
-      <div class="hint">IEEE 43 floor: 1 MΩ per kV rated voltage, minimum 1 MΩ. Low readings may indicate acid/moisture contamination.</div>
-    </div>
-
-  </div>
-
-  <!-- Notes -->
-  <div class="sec">
-    <div class="sec-lbl">Notes</div>
-    <div class="iw">
-      <textarea id="comp-notes" rows="3" placeholder="Observations, acid test results, oil condition..."></textarea>
-    </div>
-  </div>
-
-  <!-- Results -->
-  <div class="results">
-
-    <div class="result-sec-hdr">Running</div>
-    <div class="result-row dim" id="comp-r-volts">
-      <div class="rr-left"><span class="rr-label">Supply Voltage</span></div>
-      <span class="rr-val" id="comp-rv-volts">--</span>
-    </div>
-    <div class="result-row dim" id="comp-r-amps">
-      <div class="rr-left">
-        <span class="rr-label">Running Amps</span>
-        <span class="rr-sub" id="comp-rv-amps-sub"></span>
-      </div>
-      <span class="rr-val" id="comp-rv-amps">--</span>
-    </div>
-    <div class="result-row dim" id="comp-r-amp-pct">
-      <div class="rr-left"><span class="rr-label">% of RLA</span></div>
-      <span class="rr-val" id="comp-rv-amp-pct">--</span>
-    </div>
-
-    <!-- 1Φ results -->
-    <div id="comp-1ph-results">
-      <div class="result-sec-hdr">Windings</div>
-      <div class="result-row dim" id="comp-r-wind">
-        <div class="rr-left">
-          <span class="rr-label">Balance Check</span>
-          <span class="rr-sub">C-R + C-S vs R-S</span>
-        </div>
-        <span class="rr-val" id="comp-rv-wind">--</span>
-      </div>
-
-      <div class="result-sec-hdr">Insulation — Winding to Ground</div>
-      <div class="result-row dim" id="comp-r-meg-cg">
-        <div class="rr-left"><span class="rr-label">C — Ground</span></div>
-        <span class="rr-val" id="comp-rv-meg-cg">--</span>
-      </div>
-      <div class="result-row dim" id="comp-r-meg-rg">
-        <div class="rr-left"><span class="rr-label">R — Ground</span></div>
-        <span class="rr-val" id="comp-rv-meg-rg">--</span>
-      </div>
-      <div class="result-row dim" id="comp-r-meg-sg">
-        <div class="rr-left"><span class="rr-label">S — Ground</span></div>
-        <span class="rr-val" id="comp-rv-meg-sg">--</span>
-      </div>
-      <div class="result-row dim" id="comp-r-meg-lowest">
-        <div class="rr-left"><span class="rr-label">Lowest Reading</span><span class="rr-sub" id="comp-rv-meg-floor-sub"></span></div>
-        <span class="rr-val" id="comp-rv-meg-lowest">--</span>
-      </div>
-
-      <div class="result-sec-hdr">Insulation — Winding to Winding</div>
-      <div class="result-row dim" id="comp-r-meg-cr">
-        <div class="rr-left"><span class="rr-label">C — R</span></div>
-        <span class="rr-val" id="comp-rv-meg-cr">--</span>
-      </div>
-      <div class="result-row dim" id="comp-r-meg-cs">
-        <div class="rr-left"><span class="rr-label">C — S</span></div>
-        <span class="rr-val" id="comp-rv-meg-cs">--</span>
-      </div>
-      <div class="result-row dim" id="comp-r-meg-rs">
-        <div class="rr-left"><span class="rr-label">R — S</span></div>
-        <span class="rr-val" id="comp-rv-meg-rs">--</span>
-      </div>
-    </div>
-
-    <!-- 3Φ results -->
-    <div id="comp-3ph-results" style="display:none">
-      <div class="result-sec-hdr">Windings</div>
-      <div class="result-row dim" id="comp3-r-wind">
-        <div class="rr-left">
-          <span class="rr-label">Resistance Balance</span>
-          <span class="rr-sub">Max deviation from average</span>
-        </div>
-        <span class="rr-val" id="comp3-rv-wind">--</span>
-      </div>
-
-      <div class="result-sec-hdr">Insulation — Winding to Ground</div>
-      <div class="result-row dim" id="comp3-r-meg-t1g">
-        <div class="rr-left"><span class="rr-label">T1 — Ground</span></div>
-        <span class="rr-val" id="comp3-rv-meg-t1g">--</span>
-      </div>
-      <div class="result-row dim" id="comp3-r-meg-t2g">
-        <div class="rr-left"><span class="rr-label">T2 — Ground</span></div>
-        <span class="rr-val" id="comp3-rv-meg-t2g">--</span>
-      </div>
-      <div class="result-row dim" id="comp3-r-meg-t3g">
-        <div class="rr-left"><span class="rr-label">T3 — Ground</span></div>
-        <span class="rr-val" id="comp3-rv-meg-t3g">--</span>
-      </div>
-      <div class="result-row dim" id="comp3-r-meg-lowest">
-        <div class="rr-left"><span class="rr-label">Lowest Reading</span><span class="rr-sub" id="comp3-rv-meg-floor-sub"></span></div>
-        <span class="rr-val" id="comp3-rv-meg-lowest">--</span>
-      </div>
-
-      <div class="result-sec-hdr">Insulation — Phase to Phase</div>
-      <div class="result-row dim" id="comp3-r-meg-t1t2">
-        <div class="rr-left"><span class="rr-label">T1 — T2</span></div>
-        <span class="rr-val" id="comp3-rv-meg-t1t2">--</span>
-      </div>
-      <div class="result-row dim" id="comp3-r-meg-t2t3">
-        <div class="rr-left"><span class="rr-label">T2 — T3</span></div>
-        <span class="rr-val" id="comp3-rv-meg-t2t3">--</span>
-      </div>
-      <div class="result-row dim" id="comp3-r-meg-t1t3">
-        <div class="rr-left"><span class="rr-label">T1 — T3</span></div>
-        <span class="rr-val" id="comp3-rv-meg-t1t3">--</span>
-      </div>
-    </div>
-
-  </div>
-
-
-</div>
-
-<!-- STANDALONE REPORT BAR -->
-<div id="standaloneBar">
-  <button class="btn btn-ghost" id="open-report-btn">Export Report</button>
-</div>
-
-<!-- REPORT MODAL -->
-<div class="modal-overlay" id="reportOverlay">
-  <div class="modal">
-    <div class="modal-hdr">
-      <span class="modal-title">Motor Report</span>
-      <button class="modal-close" id="close-report-btn">&#10005;</button>
-    </div>
-    <div class="modal-body">
-      <pre class="report-pre" id="reportText"></pre>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" id="copy-report-btn">Copy</button>
-      <button class="btn btn-primary" id="download-report-btn">Save .txt</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
+</main>
+
+<dialog class="t-dialog" id="reportDlg" aria-labelledby="reportTitle">
+  <div class="dh"><span id="reportTitle">Motor service report</span><button type="button" class="t-btn" id="btnCloseReport" style="min-height:40px">Close</button></div>
+  <pre id="reportText"></pre>
+  <div class="da"><button type="button" class="t-btn" id="btnCopy">Copy</button><button type="button" class="t-btn primary" id="btnSave">Save .txt</button></div>
+</dialog>
 
 <script type="module">
-// motors.js — Motor Analysis module
+import * as R from './shared/refs.js';
 
-// ── State
-let activeTab = 'psc';
-let compPhase = '1'; // '1' = single phase, '3' = three phase
+/* ── Motor types ─────────────────────────────────────────────────────
+   kind:   motor (FLA/SF) | comp (RLA/MCC)
+   terms:  insulation-to-ground labels
+   wmode:  crs = single-phase C/R/S terminal ID; bal = 3-lead balance
+   legs:   running amps / supply readings (1 or 3)
+   cap:    has a run capacitor */
+const TYPES = {
+  psc: { name: 'PSC motor',      kind: 'motor', terms: ['C', 'R', 'S'],    wmode: 'crs', legs: 1, cap: true },
+  m3:  { name: '3-phase motor',  kind: 'motor', terms: ['T1', 'T2', 'T3'], wmode: 'bal', legs: 3, cap: false },
+  ecm: { name: 'ECM',            kind: 'motor', terms: ['T1', 'T2', 'T3'], wmode: 'bal', legs: 1, cap: false },
+  c1:  { name: 'Compressor 1Φ',  kind: 'comp',  terms: ['C', 'R', 'S'],    wmode: 'crs', legs: 1, cap: true },
+  c3:  { name: 'Compressor 3Φ',  kind: 'comp',  terms: ['T1', 'T2', 'T3'], wmode: 'bal', legs: 3, cap: false }
+};
+const STORE = 'hermes_motors_next';
+let type = 'psc';
 
-// ── Helpers
-function fv(id) {
-  const el = document.getElementById(id);
-  if (!el) return null;
-  const n = parseFloat(el.value);
-  return isNaN(n) ? null : n;
+const $ = (id) => document.getElementById(id);
+const val = (id) => { const e = $(id); if (!e) return null; const v = parseFloat(String(e.value).replace(',', '.')); return Number.isFinite(v) ? v : null; };
+const f = (n, d = 1) => (n === null || n === undefined || !Number.isFinite(n) ? '—' : (Math.round(n * 10 ** d) / 10 ** d).toFixed(d));
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* Result row: label, value (+unit), reference line, optional neutral marker. */
+function row(k, v, unit, ref, marker) {
+  return `<div class="t-row"><div class="top"><span class="k">${esc(k)}</span><span class="v">${esc(v)}${unit ? `<small>${esc(unit)}</small>` : ''}</span></div>` +
+    (ref ? `<div class="ref">${ref}</div>` : '') + (marker ? `<span class="t-mk">${esc(marker)}</span>` : '') + `</div>`;
 }
+const empty = (msg) => `<p class="t-empty">${esc(msg)}</p>`;
+function flagInvalid(ids, cond) { ids.forEach((id) => { const e = $(id); if (e) e.setAttribute('aria-invalid', String(!!cond(val(id), e.value))); }); }
 
-function sv(id) {
-  const el = document.getElementById(id);
-  return el ? el.value.trim() : '';
-}
+/* Report lines are collected while rendering, so the report always matches the screen. */
+let report = {};
 
-function d(n, unit = '', dec = 1) {
-  if (n === null) return '--';
-  return n.toFixed(dec) + (unit ? ' ' + unit : '');
-}
-
-function avg(arr) {
-  const f = arr.filter(x => x !== null);
-  return f.length ? f.reduce((a, b) => a + b, 0) / f.length : null;
-}
-
-function imbal(arr) {
-  const f = arr.filter(x => x !== null);
-  if (f.length < 2) return null;
-  const a = avg(f);
-  if (!a) return null;
-  const maxDev = Math.max(...f.map(x => Math.abs(x - a)));
-  return +(maxDev / a * 100).toFixed(2);
-}
-
-function maxDevPct(arr) {
-  // Returns max deviation from average as % — for winding balance
-  const f = arr.filter(x => x !== null);
-  if (f.length < 2) return null;
-  const a = avg(f);
-  if (!a) return null;
-  return +(Math.max(...f.map(x => Math.abs(x - a))) / a * 100).toFixed(1);
-}
-
-let _tt;
-function toast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(_tt);
-  _tt = setTimeout(() => el.classList.remove('show'), 2200);
-}
-
-function show(id, vis) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = vis ? '' : 'none';
-}
-
-function setRow(rowId, valId, value, unit, dec = 1, cls = null) {
-  const row = document.getElementById(rowId);
-  const val = document.getElementById(valId);
-  if (!row || !val) return;
-  if (value === null) {
-    row.className = 'result-row dim';
-    val.className = 'rr-val';
-    val.textContent = '--';
-  } else {
-    row.className = 'result-row live' + (cls ? ' ' + cls : '');
-    val.className  = 'rr-val live'    + (cls ? ' ' + cls : '');
-    val.textContent = d(value, unit, dec);
-  }
-}
-
-function setReadout(id, value, unit = '', dec = 1) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (value === null) {
-    el.textContent = '--';
-    el.classList.remove('live');
-  } else {
-    el.textContent = d(value, unit, dec);
-    el.classList.add('live');
-  }
-}
-
-function setSub(id, text) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = text;
-}
-
-// ── Megger shared logic
-function meggerFloor(npVolts) {
-  // IEEE 43 floor: 1 MΩ per kV rated, min 1 MΩ
-  const ratedKV = (npVolts ?? 0) / 1000;
-  return Math.max(1, ratedKV);
-}
-
-function meggerCls(reading, floor) {
-  if (reading === null) return null;
-  if      (reading < floor)      return 'bad';
-  else if (reading < floor * 10) return 'warn';
-  else                           return 'ok';
-}
-
-// Evaluate an array of winding-to-ground readings
-// Returns { lowest, lowestCls, floorText, perReading: [{val, cls}] }
-function meggerGroundAnalysis(npVolts, readings) {
-  const valid = readings.filter(r => r !== null);
-  if (!valid.length) return null;
-  const floor = meggerFloor(npVolts);
-  const lowest = Math.min(...valid);
-  const lowestCls = meggerCls(lowest, floor);
-  const floorText = `IEEE 43 floor: ${floor.toFixed(0)} MΩ — ${lowest < floor ? 'BELOW FLOOR' : 'above floor'}`;
-  const perReading = readings.map(r => ({ val: r, cls: meggerCls(r, floor) }));
-  return { lowest, lowestCls, floorText, perReading, floor };
-}
-
-// Evaluate an array of winding-to-winding readings — no IEEE floor, just flag low values
-function meggerPhaseAnalysis(readings) {
-  const valid = readings.filter(r => r !== null);
-  if (!valid.length) return null;
-  return readings.map(r => {
-    if (r === null) return { val: null, cls: null };
-    let cls = 'ok';
-    if      (r < 1)  cls = 'bad';
-    else if (r < 10) cls = 'warn';
-    return { val: r, cls };
-  });
-}
-
-// ── Amp % of FLA
-function ampPctAnalysis(runAmps, fla, sf) {
-  if (runAmps === null || fla === null) return null;
-  const pct        = +(runAmps / fla * 100).toFixed(1);
-  const sfCeiling  = sf ? +(fla * sf).toFixed(1) : null;
-  let cls = 'ok';
-  if      (runAmps > (sfCeiling ?? fla * 1.15)) cls = 'bad';
-  else if (pct > 100)                            cls = 'warn';
-  return { pct, sfCeiling, cls };
-}
-
-// ── PSC Calculation
-function calcPSC() {
-  const npVolts  = fv('psc-np-volts');
-  const npFla    = fv('psc-np-fla');
-  const npSf     = fv('psc-np-sf');
-  const runVolts = fv('psc-run-volts');
-  const runAmps  = fv('psc-run-amps');
-  const capRated = fv('psc-cap-rated');
-  const capMeas  = fv('psc-cap-meas');
-  const wCR      = fv('psc-w-cr');
-  const wCS      = fv('psc-w-cs');
-  const wRS      = fv('psc-w-rs');
-  const megCG    = fv('psc-meg-cg');
-  const megRG    = fv('psc-meg-rg');
-  const megSG    = fv('psc-meg-sg');
-  const megCR    = fv('psc-meg-cr');
-  const megCS    = fv('psc-meg-cs');
-  const megRS    = fv('psc-meg-rs');
-
-  // Winding sum
-  const wSum = (wCR !== null && wCS !== null) ? +(wCR + wCS).toFixed(2) : null;
-  const wDev = (wSum !== null && wRS !== null)
-    ? +(Math.abs(wSum - wRS) / wRS * 100).toFixed(1) : null;
-
-  setReadout('psc-w-sum', wSum, 'Ω', 2);
-
-  // Running amps
-  const ampResult = ampPctAnalysis(runAmps, npFla, npSf);
-  setRow('psc-r-volts', 'psc-rv-volts', runVolts, 'V');
-  setRow('psc-r-amps',  'psc-rv-amps',  runAmps,  'A', 1,
-    ampResult ? (runAmps > npFla ? ampResult.cls : null) : null);
-  if (ampResult) {
-    setSub('psc-rv-sf-ceiling',
-      ampResult.sfCeiling ? `SF ceiling: ${ampResult.sfCeiling} A` : '');
-    setRow('psc-r-amp-pct', 'psc-rv-amp-pct', ampResult.pct, '%', 1, ampResult.cls);
-  } else {
-    setRow('psc-r-amp-pct', 'psc-rv-amp-pct', null, '%');
-  }
-
-  // Capacitor
-  if (capRated !== null && capMeas !== null) {
-    const capDev = +(((capMeas - capRated) / capRated) * 100).toFixed(1);
-    const capCls = Math.abs(capDev) > 6 ? 'bad' : Math.abs(capDev) > 4 ? 'warn' : 'ok';
-    setRow('psc-r-cap', 'psc-rv-cap', capDev, '%', 1, capCls);
-  } else {
-    setRow('psc-r-cap', 'psc-rv-cap', null, '%');
-  }
-
-  // Windings
-  if (wDev !== null) {
-    const windCls = wDev > 10 ? 'bad' : wDev > 5 ? 'warn' : 'ok';
-    setRow('psc-r-wind', 'psc-rv-wind', wDev, '% dev', 1, windCls);
-  } else {
-    setRow('psc-r-wind', 'psc-rv-wind', null, '%');
-  }
-
-  // Megger — winding to ground
-  const megGnd = meggerGroundAnalysis(npVolts, [megCG, megRG, megSG]);
-  const gndLabels = ['cg', 'rg', 'sg'];
-  if (megGnd) {
-    megGnd.perReading.forEach((r, i) => {
-      setRow('psc-r-meg-' + gndLabels[i], 'psc-rv-meg-' + gndLabels[i], r.val, 'MΩ', 1, r.cls);
-    });
-    setSub('psc-rv-meg-floor-sub', megGnd.floorText);
-    setRow('psc-r-meg-lowest', 'psc-rv-meg-lowest', megGnd.lowest, 'MΩ', 1, megGnd.lowestCls);
-  } else {
-    gndLabels.forEach(l => setRow('psc-r-meg-' + l, 'psc-rv-meg-' + l, null, 'MΩ'));
-    setSub('psc-rv-meg-floor-sub', '');
-    setRow('psc-r-meg-lowest', 'psc-rv-meg-lowest', null, 'MΩ');
-  }
-
-  // Megger — winding to winding
-  const megPh = meggerPhaseAnalysis([megCR, megCS, megRS]);
-  const phLabels = ['cr', 'cs', 'rs'];
-  if (megPh) {
-    megPh.forEach((r, i) => {
-      setRow('psc-r-meg-' + phLabels[i], 'psc-rv-meg-' + phLabels[i], r.val, 'MΩ', 1, r.cls);
-    });
-  } else {
-    phLabels.forEach(l => setRow('psc-r-meg-' + l, 'psc-rv-meg-' + l, null, 'MΩ'));
-  }
-
-}
-
-// ── 3-Phase Calculation
-function calcThreePhase() {
-  const npVolts  = fv('tph-np-volts');
-  const npFla    = fv('tph-np-fla');
-  const npSf     = fv('tph-np-sf');
-  const aL1      = fv('tph-a-l1');
-  const aL2      = fv('tph-a-l2');
-  const aL3      = fv('tph-a-l3');
-  const vL1L2    = fv('tph-v-l1l2');
-  const vL2L3    = fv('tph-v-l2l3');
-  const vL1L3    = fv('tph-v-l1l3');
-  const wT1T2    = fv('tph-w-t1t2');
-  const wT2T3    = fv('tph-w-t2t3');
-  const wT1T3    = fv('tph-w-t1t3');
-  const megT1G   = fv('tph-meg-t1g');
-  const megT2G   = fv('tph-meg-t2g');
-  const megT3G   = fv('tph-meg-t3g');
-  const megT1T2  = fv('tph-meg-t1t2');
-  const megT2T3  = fv('tph-meg-t2t3');
-  const megT1T3  = fv('tph-meg-t1t3');
-
-  const amps     = [aL1, aL2, aL3];
-  const volts    = [vL1L2, vL2L3, vL1L3];
-  const windings = [wT1T2, wT2T3, wT1T3];
-
-  const avgAmps  = avg(amps.filter(x => x !== null));
-  const avgVolts = avg(volts.filter(x => x !== null));
-  const ampImbal = (amps.every(x => x !== null)) ? imbal(amps) : null;
-  const vImbal   = (volts.every(x => x !== null)) ? imbal(volts) : null;
-  const windDev  = maxDevPct(windings);
-
-  setReadout('tph-avg-amps-disp', avgAmps, 'A');
-
-  // Amps
-  const ampResult = ampPctAnalysis(avgAmps, npFla, npSf);
-  setRow('tph-r-avg-amps', 'tph-rv-avg-amps', avgAmps, 'A', 1,
-    ampResult ? (ampResult.cls !== 'ok' ? ampResult.cls : null) : null);
-  if (ampResult) {
-    setSub('tph-rv-sf-ceiling',
-      ampResult.sfCeiling ? `SF ceiling: ${ampResult.sfCeiling} A` : '');
-    setRow('tph-r-amp-pct', 'tph-rv-amp-pct', ampResult.pct, '%', 1, ampResult.cls);
-  } else {
-    setRow('tph-r-amp-pct', 'tph-rv-amp-pct', null, '%');
-  }
-
-  // Current imbalance
-  if (ampImbal !== null) {
-    const ampImbalCls = ampImbal > 10 ? 'bad' : ampImbal > 5 ? 'warn' : 'ok';
-    setRow('tph-r-amp-imbal', 'tph-rv-amp-imbal', ampImbal, '%', 2, ampImbalCls);
-  } else {
-    setRow('tph-r-amp-imbal', 'tph-rv-amp-imbal', null, '%');
-  }
-
-  // Voltage
-  setRow('tph-r-avg-volts', 'tph-rv-avg-volts', avgVolts, 'V');
-  if (vImbal !== null) {
-    const vImbalCls = vImbal > 2 ? 'bad' : vImbal > 1 ? 'warn' : 'ok';
-    setRow('tph-r-volt-imbal', 'tph-rv-volt-imbal', vImbal, '%', 2, vImbalCls);
-  } else {
-    setRow('tph-r-volt-imbal', 'tph-rv-volt-imbal', null, '%');
-  }
-  const vDev = (avgVolts !== null && npVolts !== null) ? +(avgVolts - npVolts).toFixed(1) : null;
-  setRow('tph-r-vdev', 'tph-rv-vdev', vDev, 'V');
-
-  // Windings
-  if (windDev !== null) {
-    const windCls = windDev > 10 ? 'bad' : windDev > 5 ? 'warn' : 'ok';
-    setRow('tph-r-wind', 'tph-rv-wind', windDev, '% dev', 1, windCls);
-  } else {
-    setRow('tph-r-wind', 'tph-rv-wind', null, '%');
-  }
-
-  // Megger — winding to ground
-  const megGnd = meggerGroundAnalysis(npVolts, [megT1G, megT2G, megT3G]);
-  const gndLabels = ['t1g', 't2g', 't3g'];
-  if (megGnd) {
-    megGnd.perReading.forEach((r, i) => {
-      setRow('tph-r-meg-' + gndLabels[i], 'tph-rv-meg-' + gndLabels[i], r.val, 'MΩ', 1, r.cls);
-    });
-    setSub('tph-rv-meg-floor-sub', megGnd.floorText);
-    setRow('tph-r-meg-lowest', 'tph-rv-meg-lowest', megGnd.lowest, 'MΩ', 1, megGnd.lowestCls);
-  } else {
-    gndLabels.forEach(l => setRow('tph-r-meg-' + l, 'tph-rv-meg-' + l, null, 'MΩ'));
-    setSub('tph-rv-meg-floor-sub', '');
-    setRow('tph-r-meg-lowest', 'tph-rv-meg-lowest', null, 'MΩ');
-  }
-
-  // Megger — phase to phase
-  const megPh = meggerPhaseAnalysis([megT1T2, megT2T3, megT1T3]);
-  const phLabels = ['t1t2', 't2t3', 't1t3'];
-  if (megPh) {
-    megPh.forEach((r, i) => {
-      setRow('tph-r-meg-' + phLabels[i], 'tph-rv-meg-' + phLabels[i], r.val, 'MΩ', 1, r.cls);
-    });
-  } else {
-    phLabels.forEach(l => setRow('tph-r-meg-' + l, 'tph-rv-meg-' + l, null, 'MΩ'));
-  }
-
-}
-
-// ── ECM Calculation
-function calcECM() {
-  const npVolts  = fv('ecm-np-volts');
-  const megT1G   = fv('ecm-meg-t1g');
-  const megT2G   = fv('ecm-meg-t2g');
-  const megT3G   = fv('ecm-meg-t3g');
-  const megT1T2m = fv('ecm-meg-t1t2');
-  const megT2T3m = fv('ecm-meg-t2t3');
-  const megT1T3m = fv('ecm-meg-t1t3');
-  const wT1T2    = fv('ecm-w-t1t2');
-  const wT2T3    = fv('ecm-w-t2t3');
-  const wT1T3    = fv('ecm-w-t1t3');
-
-  const chkHV    = document.querySelector('[data-chk="hv"]')?.checked   ?? false;
-  const chkCtrl  = document.querySelector('[data-chk="ctrl"]')?.checked ?? false;
-  const chkWind  = document.querySelector('[data-chk="wind"]')?.checked ?? false;
-  const chkConn  = document.querySelector('[data-chk="conn"]')?.checked ?? false;
-  const chkMeg   = document.querySelector('[data-chk="meg"]')?.checked  ?? false;
-
-  const windDev  = maxDevPct([wT1T2, wT2T3, wT1T3]);
-
-  // Megger — winding to ground
-  const megGnd = meggerGroundAnalysis(npVolts, [megT1G, megT2G, megT3G]);
-  const gndLabels = ['t1g', 't2g', 't3g'];
-  if (megGnd) {
-    megGnd.perReading.forEach((r, i) => {
-      setRow('ecm-r-meg-' + gndLabels[i], 'ecm-rv-meg-' + gndLabels[i], r.val, 'MΩ', 1, r.cls);
-    });
-    setSub('ecm-rv-meg-floor-sub', megGnd.floorText);
-    setRow('ecm-r-meg-lowest', 'ecm-rv-meg-lowest', megGnd.lowest, 'MΩ', 1, megGnd.lowestCls);
-  } else {
-    gndLabels.forEach(l => setRow('ecm-r-meg-' + l, 'ecm-rv-meg-' + l, null, 'MΩ'));
-    setSub('ecm-rv-meg-floor-sub', '');
-    setRow('ecm-r-meg-lowest', 'ecm-rv-meg-lowest', null, 'MΩ');
-  }
-
-  // Megger — phase to phase
-  const megPh = meggerPhaseAnalysis([megT1T2m, megT2T3m, megT1T3m]);
-  const phLabels = ['t1t2', 't2t3', 't1t3'];
-  if (megPh) {
-    megPh.forEach((r, i) => {
-      setRow('ecm-r-meg-' + phLabels[i], 'ecm-rv-meg-' + phLabels[i], r.val, 'MΩ', 1, r.cls);
-    });
-  } else {
-    phLabels.forEach(l => setRow('ecm-r-meg-' + l, 'ecm-rv-meg-' + l, null, 'MΩ'));
-  }
-
-  // Windings
-  if (windDev !== null) {
-    const windCls = windDev > 10 ? 'bad' : windDev > 5 ? 'warn' : 'ok';
-    setRow('ecm-r-wind', 'ecm-rv-wind', windDev, '% dev', 1, windCls);
-  } else {
-    setRow('ecm-r-wind', 'ecm-rv-wind', null, '%');
-  }
-
-}
-
-// ── Compressor Calculation
-function calcCompressor() {
-  const npVolts  = fv('comp-np-volts');
-  const npRla    = fv('comp-np-rla');
-  const runVolts = fv('comp-run-volts');
-  const runAmps  = fv('comp-run-amps');
-
-  // Running — % of RLA (not FLA)
-  setRow('comp-r-volts', 'comp-rv-volts', runVolts, 'V');
-  if (runAmps !== null && npRla !== null) {
-    const pct = +(runAmps / npRla * 100).toFixed(1);
-    let cls = 'ok';
-    if      (runAmps > npRla * 1.1) cls = 'bad';
-    else if (pct > 100)             cls = 'warn';
-    setRow('comp-r-amps', 'comp-rv-amps', runAmps, 'A', 1,
-      runAmps > npRla ? cls : null);
-    setSub('comp-rv-amps-sub', `RLA: ${npRla} A`);
-    setRow('comp-r-amp-pct', 'comp-rv-amp-pct', pct, '%', 1, cls);
-  } else {
-    setRow('comp-r-amps', 'comp-rv-amps', runAmps, 'A');
-    setSub('comp-rv-amps-sub', '');
-    setRow('comp-r-amp-pct', 'comp-rv-amp-pct', null, '%');
-  }
-
-  if (compPhase === '1') {
-    // ── Single phase: C, R, S
-    const wCR = fv('comp-w-cr'), wCS = fv('comp-w-cs'), wRS = fv('comp-w-rs');
-    const wSum = (wCR !== null && wCS !== null) ? +(wCR + wCS).toFixed(2) : null;
-    const wDev = (wSum !== null && wRS !== null)
-      ? +(Math.abs(wSum - wRS) / wRS * 100).toFixed(1) : null;
-    setReadout('comp-w-sum', wSum, 'Ω', 2);
-    if (wDev !== null) {
-      const windCls = wDev > 10 ? 'bad' : wDev > 5 ? 'warn' : 'ok';
-      setRow('comp-r-wind', 'comp-rv-wind', wDev, '% dev', 1, windCls);
-    } else {
-      setRow('comp-r-wind', 'comp-rv-wind', null, '%');
-    }
-
-    // Megger — winding to ground
-    const megGnd = meggerGroundAnalysis(npVolts, [fv('comp-meg-cg'), fv('comp-meg-rg'), fv('comp-meg-sg')]);
-    const gndLabels = ['cg', 'rg', 'sg'];
-    if (megGnd) {
-      megGnd.perReading.forEach((r, i) => {
-        setRow('comp-r-meg-' + gndLabels[i], 'comp-rv-meg-' + gndLabels[i], r.val, 'MΩ', 1, r.cls);
-      });
-      setSub('comp-rv-meg-floor-sub', megGnd.floorText);
-      setRow('comp-r-meg-lowest', 'comp-rv-meg-lowest', megGnd.lowest, 'MΩ', 1, megGnd.lowestCls);
-    } else {
-      gndLabels.forEach(l => setRow('comp-r-meg-' + l, 'comp-rv-meg-' + l, null, 'MΩ'));
-      setSub('comp-rv-meg-floor-sub', '');
-      setRow('comp-r-meg-lowest', 'comp-rv-meg-lowest', null, 'MΩ');
-    }
-
-    // Megger — winding to winding
-    const megPh = meggerPhaseAnalysis([fv('comp-meg-cr'), fv('comp-meg-cs'), fv('comp-meg-rs')]);
-    const phLabels = ['cr', 'cs', 'rs'];
-    if (megPh) {
-      megPh.forEach((r, i) => {
-        setRow('comp-r-meg-' + phLabels[i], 'comp-rv-meg-' + phLabels[i], r.val, 'MΩ', 1, r.cls);
-      });
-    } else {
-      phLabels.forEach(l => setRow('comp-r-meg-' + l, 'comp-rv-meg-' + l, null, 'MΩ'));
-    }
-
-  } else {
-    // ── Three phase: T1, T2, T3
-    const windings = [fv('comp3-w-t1t2'), fv('comp3-w-t2t3'), fv('comp3-w-t1t3')];
-    const windDev = maxDevPct(windings);
-    if (windDev !== null) {
-      const windCls = windDev > 10 ? 'bad' : windDev > 5 ? 'warn' : 'ok';
-      setRow('comp3-r-wind', 'comp3-rv-wind', windDev, '% dev', 1, windCls);
-    } else {
-      setRow('comp3-r-wind', 'comp3-rv-wind', null, '%');
-    }
-
-    // Megger — winding to ground
-    const megGnd = meggerGroundAnalysis(npVolts, [fv('comp3-meg-t1g'), fv('comp3-meg-t2g'), fv('comp3-meg-t3g')]);
-    const gndLabels = ['t1g', 't2g', 't3g'];
-    if (megGnd) {
-      megGnd.perReading.forEach((r, i) => {
-        setRow('comp3-r-meg-' + gndLabels[i], 'comp3-rv-meg-' + gndLabels[i], r.val, 'MΩ', 1, r.cls);
-      });
-      setSub('comp3-rv-meg-floor-sub', megGnd.floorText);
-      setRow('comp3-r-meg-lowest', 'comp3-rv-meg-lowest', megGnd.lowest, 'MΩ', 1, megGnd.lowestCls);
-    } else {
-      gndLabels.forEach(l => setRow('comp3-r-meg-' + l, 'comp3-rv-meg-' + l, null, 'MΩ'));
-      setSub('comp3-rv-meg-floor-sub', '');
-      setRow('comp3-r-meg-lowest', 'comp3-rv-meg-lowest', null, 'MΩ');
-    }
-
-    // Megger — phase to phase
-    const megPh = meggerPhaseAnalysis([fv('comp3-meg-t1t2'), fv('comp3-meg-t2t3'), fv('comp3-meg-t1t3')]);
-    const phLabels = ['t1t2', 't2t3', 't1t3'];
-    if (megPh) {
-      megPh.forEach((r, i) => {
-        setRow('comp3-r-meg-' + phLabels[i], 'comp3-rv-meg-' + phLabels[i], r.val, 'MΩ', 1, r.cls);
-      });
-    } else {
-      phLabels.forEach(l => setRow('comp3-r-meg-' + l, 'comp3-rv-meg-' + l, null, 'MΩ'));
-    }
-  }
-}
-
-// ── Tab switching
-function switchTab(tabName) {
-  activeTab = tabName;
-  document.querySelectorAll('.tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.tab === tabName);
-  });
-  document.querySelectorAll('.panel').forEach(p => {
-    p.classList.toggle('active', p.id === `panel-${tabName}`);
-  });
-}
-
-// ── Structured calc state — for cross-module analysis
-function getCalcState() {
-  if (activeTab === 'psc') {
-    const npVolts = fv('psc-np-volts'), npFla = fv('psc-np-fla'), npSf = fv('psc-np-sf'), npHp = fv('psc-np-hp');
-    const runVolts = fv('psc-run-volts'), runAmps = fv('psc-run-amps');
-    const capRated = fv('psc-cap-rated'), capMeas = fv('psc-cap-meas');
-    const wCR = fv('psc-w-cr'), wCS = fv('psc-w-cs'), wRS = fv('psc-w-rs');
-    const ampResult = ampPctAnalysis(runAmps, npFla, npSf);
-    const wSum = (wCR !== null && wCS !== null) ? +(wCR + wCS).toFixed(2) : null;
-    const wDev = (wSum !== null && wRS !== null) ? +(Math.abs(wSum - wRS) / wRS * 100).toFixed(1) : null;
-    const capDev = (capRated !== null && capMeas !== null) ? +(((capMeas - capRated) / capRated) * 100).toFixed(1) : null;
-    return {
-      type: 'psc',
-      nameplate: { voltage: npVolts, fla: npFla, sf: npSf, hp: npHp },
-      running: { voltage: runVolts, amps: runAmps, pctFLA: ampResult?.pct ?? null, sfCeiling: ampResult?.sfCeiling ?? null },
-      capacitor: { rated: capRated, measured: capMeas, deviationPct: capDev },
-      windings: { cr: wCR, cs: wCS, rs: wRS, sum: wSum, deviationPct: wDev },
-      insulation: {
-        testVoltage: fv('psc-meg-v'),
-        windingToGround: { cg: fv('psc-meg-cg'), rg: fv('psc-meg-rg'), sg: fv('psc-meg-sg') },
-        windingToWinding: { cr: fv('psc-meg-cr'), cs: fv('psc-meg-cs'), rs: fv('psc-meg-rs') }
-      },
-      notes: sv('psc-notes')
-    };
-  } else if (activeTab === 'three') {
-    const npVolts = fv('tph-np-volts'), npFla = fv('tph-np-fla'), npSf = fv('tph-np-sf'), npHp = fv('tph-np-hp');
-    const amps = [fv('tph-a-l1'), fv('tph-a-l2'), fv('tph-a-l3')];
-    const volts = [fv('tph-v-l1l2'), fv('tph-v-l2l3'), fv('tph-v-l1l3')];
-    const windings = [fv('tph-w-t1t2'), fv('tph-w-t2t3'), fv('tph-w-t1t3')];
-    const avgAmps = avg(amps.filter(x => x !== null));
-    const avgVolts = avg(volts.filter(x => x !== null));
-    const ampImbal = amps.every(x => x !== null) ? imbal(amps) : null;
-    const vImbal = volts.every(x => x !== null) ? imbal(volts) : null;
-    const windDev = maxDevPct(windings);
-    const ampResult = ampPctAnalysis(avgAmps, npFla, npSf);
-    return {
-      type: 'three-phase',
-      nameplate: { voltage: npVolts, fla: npFla, sf: npSf, hp: npHp },
-      running: {
-        amps, avgAmps, ampImbalPct: ampImbal,
-        pctFLA: ampResult?.pct ?? null, sfCeiling: ampResult?.sfCeiling ?? null,
-        volts, avgVolts, voltageImbalPct: vImbal,
-        voltageDeviation: (avgVolts !== null && npVolts !== null) ? +(avgVolts - npVolts).toFixed(1) : null
-      },
-      windings: { values: windings, maxDeviationPct: windDev },
-      insulation: {
-        testVoltage: fv('tph-meg-v'),
-        windingToGround: { t1: fv('tph-meg-t1g'), t2: fv('tph-meg-t2g'), t3: fv('tph-meg-t3g') },
-        phaseToPhase: { t1t2: fv('tph-meg-t1t2'), t2t3: fv('tph-meg-t2t3'), t1t3: fv('tph-meg-t1t3') }
-      },
-      notes: sv('tph-notes')
-    };
-  } else if (activeTab === 'ecm') {
-    const npVolts = fv('ecm-np-volts'), npHp = fv('ecm-np-hp');
-    const windings = [fv('ecm-w-t1t2'), fv('ecm-w-t2t3'), fv('ecm-w-t1t3')];
-    const windDev = maxDevPct(windings);
-    return {
-      type: 'ecm',
-      nameplate: { voltage: npVolts, hp: npHp, moduleModel: sv('ecm-np-model') },
-      running: { voltage: fv('ecm-run-volts'), amps: fv('ecm-run-amps') },
-      checklist: {
-        highVoltage: document.querySelector('[data-chk="hv"]')?.checked ?? false,
-        controlSignal: document.querySelector('[data-chk="ctrl"]')?.checked ?? false,
-        windingsOk: document.querySelector('[data-chk="wind"]')?.checked ?? false,
-        connectionsOk: document.querySelector('[data-chk="conn"]')?.checked ?? false,
-        insulationOk: document.querySelector('[data-chk="meg"]')?.checked ?? false
-      },
-      windings: { values: windings, maxDeviationPct: windDev },
-      insulation: {
-        testVoltage: fv('ecm-meg-v'),
-        windingToGround: { t1: fv('ecm-meg-t1g'), t2: fv('ecm-meg-t2g'), t3: fv('ecm-meg-t3g') },
-        phaseToPhase: { t1t2: fv('ecm-meg-t1t2'), t2t3: fv('ecm-meg-t2t3'), t1t3: fv('ecm-meg-t1t3') }
-      },
-      notes: sv('ecm-notes')
-    };
-  } else if (activeTab === 'comp') {
-    const npVolts = fv('comp-np-volts'), npRla = fv('comp-np-rla'), npLra = fv('comp-np-lra');
-    const runVolts = fv('comp-run-volts'), runAmps = fv('comp-run-amps');
-    const pctRLA = (runAmps !== null && npRla !== null) ? +(runAmps / npRla * 100).toFixed(1) : null;
-    const base = {
-      type: 'compressor',
-      phase: compPhase,
-      nameplate: { voltage: npVolts, rla: npRla, lra: npLra },
-      running: { voltage: runVolts, amps: runAmps, pctRLA: pctRLA !== null ? +pctRLA : null },
-      notes: sv('comp-notes')
-    };
-    if (compPhase === '1') {
-      const wCR = fv('comp-w-cr'), wCS = fv('comp-w-cs'), wRS = fv('comp-w-rs');
-      const wSum = (wCR !== null && wCS !== null) ? +(wCR + wCS).toFixed(2) : null;
-      const wDev = (wSum !== null && wRS !== null) ? +(Math.abs(wSum - wRS) / wRS * 100).toFixed(1) : null;
-      base.windings = { cr: wCR, cs: wCS, rs: wRS, sum: wSum, deviationPct: wDev };
-      base.insulation = {
-        testVoltage: fv('comp-meg-v'),
-        windingToGround: { cg: fv('comp-meg-cg'), rg: fv('comp-meg-rg'), sg: fv('comp-meg-sg') },
-        windingToWinding: { cr: fv('comp-meg-cr'), cs: fv('comp-meg-cs'), rs: fv('comp-meg-rs') }
-      };
-    } else {
-      const windings = [fv('comp3-w-t1t2'), fv('comp3-w-t2t3'), fv('comp3-w-t1t3')];
-      base.windings = { values: windings, maxDeviationPct: maxDevPct(windings) };
-      base.insulation = {
-        testVoltage: fv('comp3-meg-v'),
-        windingToGround: { t1: fv('comp3-meg-t1g'), t2: fv('comp3-meg-t2g'), t3: fv('comp3-meg-t3g') },
-        phaseToPhase: { t1t2: fv('comp3-meg-t1t2'), t2t3: fv('comp3-meg-t2t3'), t1t3: fv('comp3-meg-t1t3') }
-      };
-    }
-    return base;
-  }
-}
-
-// ── Report
-function getReportBlock(context) {
-  const pad = (s, w = 22) => String(s).padEnd(w);
-  const dv  = (n, unit = '', dec = 1) => n === null ? '--' : n.toFixed(dec) + (unit ? ' ' + unit : '');
-
+/* ── Insulation ──────────────────────────────────────────────────── */
+function renderIR() {
+  const t = TYPES[type], rated = R.parseRatedVolts($('np-volts').value);
+  const ids = ['ir-g1', 'ir-g2', 'ir-g3'];
+  const sep = type === 'm3' && $('ir-sep').checked;
+  $('ir-pp').hidden = !sep;
+  const all = sep ? ids.concat(['ir-p12', 'ir-p23', 'ir-p13']) : ids;
+  flagInvalid(all.concat(['ir-temp', 'ir-testv', 'ir-mfr']), (v, raw) => raw !== '' && (v === null || v < 0));
+  const ref = R.irMinimum({ ratedVolts: rated ? rated.high : null, mfrMinimum: val('ir-mfr') });
+  const temp = val('ir-temp');
+  const names = t.terms.map((x) => x + ' to ground').concat(sep ? ['T1–T2', 'T2–T3', 'T1–T3'] : []);
+  const readings = all.map((id, i) => ({ name: names[i], raw: val(id) })).filter((r) => r.raw !== null && r.raw >= 0);
   const lines = [];
-
-  if (!context) {
-    lines.push('MOTOR ANALYSIS');
-    lines.push(
-      new Date().toLocaleDateString('en-US') + '  ' +
-      new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-    );
-    lines.push('');
-  }
-
-  if (activeTab === 'psc') {
-    lines.push('MOTOR TYPE: PSC');
-    lines.push('');
-    lines.push('NAMEPLATE');
-    const npV = fv('psc-np-volts'), npF = fv('psc-np-fla'), npSf = fv('psc-np-sf'), npHp = fv('psc-np-hp');
-    if (npV)  lines.push(pad('Rated Voltage:')  + dv(npV,  'V', 0));
-    if (npHp) lines.push(pad('Horsepower:')     + dv(npHp, 'HP'));
-    if (npF)  lines.push(pad('Full Load Amps:') + dv(npF,  'A'));
-    if (npSf) lines.push(pad('Service Factor:') + dv(npSf, '', 2));
-    lines.push('');
-    lines.push('RUNNING');
-    lines.push(pad('Supply Voltage:')  + dv(fv('psc-run-volts'), 'V'));
-    lines.push(pad('Running Amps:')    + dv(fv('psc-run-amps'),  'A'));
-    const ampR = ampPctAnalysis(fv('psc-run-amps'), npF, npSf);
-    if (ampR) lines.push(pad('% of FLA:') + dv(ampR.pct, '%'));
-    lines.push('');
-    lines.push('CAPACITOR');
-    const cR = fv('psc-cap-rated'), cM = fv('psc-cap-meas');
-    lines.push(pad('Rated:')    + dv(cR, 'MFD'));
-    lines.push(pad('Measured:') + dv(cM, 'MFD'));
-    if (cR && cM) lines.push(pad('Deviation:') + dv(+((cM - cR) / cR * 100).toFixed(1), '%'));
-    lines.push('');
-    lines.push('WINDINGS');
-    lines.push(pad('C-R:') + dv(fv('psc-w-cr'), 'Ohm'));
-    lines.push(pad('C-S:') + dv(fv('psc-w-cs'), 'Ohm'));
-    lines.push(pad('R-S:') + dv(fv('psc-w-rs'), 'Ohm'));
-    const wCR = fv('psc-w-cr'), wCS = fv('psc-w-cs'), wRS = fv('psc-w-rs');
-    if (wCR && wCS && wRS) {
-      const sum = wCR + wCS;
-      lines.push(pad('C-R + C-S:') + dv(sum, 'Ohm', 2));
-      lines.push(pad('Deviation:') + dv(+(Math.abs(sum - wRS) / wRS * 100).toFixed(1), '%'));
-    }
-    lines.push('');
-    lines.push('INSULATION');
-    lines.push(pad('Test Voltage:') + dv(fv('psc-meg-v'), 'V', 0));
-    lines.push('Winding to Ground');
-    lines.push(pad('  C — Ground:') + dv(fv('psc-meg-cg'), 'MOhm'));
-    lines.push(pad('  R — Ground:') + dv(fv('psc-meg-rg'), 'MOhm'));
-    lines.push(pad('  S — Ground:') + dv(fv('psc-meg-sg'), 'MOhm'));
-    lines.push('Winding to Winding');
-    lines.push(pad('  C — R:') + dv(fv('psc-meg-cr'), 'MOhm'));
-    lines.push(pad('  C — S:') + dv(fv('psc-meg-cs'), 'MOhm'));
-    lines.push(pad('  R — S:') + dv(fv('psc-meg-rs'), 'MOhm'));
-    const notes = sv('psc-notes');
-    if (notes) { lines.push(''); lines.push('NOTES'); lines.push(notes); }
-
-  } else if (activeTab === 'three') {
-    lines.push('MOTOR TYPE: 3-Phase');
-    lines.push('');
-    lines.push('NAMEPLATE');
-    const npV = fv('tph-np-volts'), npF = fv('tph-np-fla'), npSf = fv('tph-np-sf'), npHp = fv('tph-np-hp');
-    if (npV)  lines.push(pad('Rated Voltage:')  + dv(npV,  'V', 0));
-    if (npHp) lines.push(pad('Horsepower:')     + dv(npHp, 'HP'));
-    if (npF)  lines.push(pad('Full Load Amps:') + dv(npF,  'A'));
-    if (npSf) lines.push(pad('Service Factor:') + dv(npSf, '', 2));
-    lines.push('');
-    lines.push('RUNNING AMPS');
-    lines.push(pad('L1:') + dv(fv('tph-a-l1'), 'A'));
-    lines.push(pad('L2:') + dv(fv('tph-a-l2'), 'A'));
-    lines.push(pad('L3:') + dv(fv('tph-a-l3'), 'A'));
-    const amps = [fv('tph-a-l1'), fv('tph-a-l2'), fv('tph-a-l3')];
-    const avgA = avg(amps.filter(x => x !== null));
-    if (avgA) lines.push(pad('Average:') + dv(avgA, 'A'));
-    const ampI = amps.every(x => x !== null) ? imbal(amps) : null;
-    if (ampI !== null) lines.push(pad('Current Imbalance:') + dv(ampI, '%', 2));
-    lines.push('');
-    lines.push('SUPPLY VOLTAGE');
-    lines.push(pad('L1 — L2:') + dv(fv('tph-v-l1l2'), 'V'));
-    lines.push(pad('L2 — L3:') + dv(fv('tph-v-l2l3'), 'V'));
-    lines.push(pad('L1 — L3:') + dv(fv('tph-v-l1l3'), 'V'));
-    const volts = [fv('tph-v-l1l2'), fv('tph-v-l2l3'), fv('tph-v-l1l3')];
-    const avgV  = avg(volts.filter(x => x !== null));
-    if (avgV) lines.push(pad('Average L-L:') + dv(avgV, 'V'));
-    const vI = volts.every(x => x !== null) ? imbal(volts) : null;
-    if (vI !== null) lines.push(pad('Voltage Unbalance:') + dv(vI, '%', 2));
-    lines.push('');
-    lines.push('WINDINGS');
-    lines.push(pad('T1-T2:') + dv(fv('tph-w-t1t2'), 'Ohm'));
-    lines.push(pad('T2-T3:') + dv(fv('tph-w-t2t3'), 'Ohm'));
-    lines.push(pad('T1-T3:') + dv(fv('tph-w-t1t3'), 'Ohm'));
-    const wd = maxDevPct([fv('tph-w-t1t2'), fv('tph-w-t2t3'), fv('tph-w-t1t3')]);
-    if (wd !== null) lines.push(pad('Max Deviation:') + dv(wd, '%'));
-    lines.push('');
-    lines.push('INSULATION');
-    lines.push(pad('Test Voltage:') + dv(fv('tph-meg-v'), 'V', 0));
-    lines.push('Winding to Ground');
-    lines.push(pad('  T1 — Ground:') + dv(fv('tph-meg-t1g'), 'MOhm'));
-    lines.push(pad('  T2 — Ground:') + dv(fv('tph-meg-t2g'), 'MOhm'));
-    lines.push(pad('  T3 — Ground:') + dv(fv('tph-meg-t3g'), 'MOhm'));
-    lines.push('Phase to Phase');
-    lines.push(pad('  T1 — T2:') + dv(fv('tph-meg-t1t2'), 'MOhm'));
-    lines.push(pad('  T2 — T3:') + dv(fv('tph-meg-t2t3'), 'MOhm'));
-    lines.push(pad('  T1 — T3:') + dv(fv('tph-meg-t1t3'), 'MOhm'));
-    const notes = sv('tph-notes');
-    if (notes) { lines.push(''); lines.push('NOTES'); lines.push(notes); }
-
-  } else if (activeTab === 'ecm') {
-    lines.push('MOTOR TYPE: ECM');
-    const model = sv('ecm-np-model');
-    if (model) lines.push(pad('Module Model:') + model);
-    lines.push('');
-    lines.push('NAMEPLATE');
-    const npV = fv('ecm-np-volts'), npHp = fv('ecm-np-hp');
-    if (npV)  lines.push(pad('Rated Voltage:') + dv(npV,  'V', 0));
-    if (npHp) lines.push(pad('Horsepower:')    + dv(npHp, 'HP'));
-    lines.push('');
-    lines.push('CHECKLIST');
-    lines.push(pad('High Voltage:')    + (document.querySelector('[data-chk="hv"]')?.checked   ? 'YES' : 'NO'));
-    lines.push(pad('Control Signal:')  + (document.querySelector('[data-chk="ctrl"]')?.checked ? 'YES' : 'NO'));
-    lines.push(pad('Windings OK:')     + (document.querySelector('[data-chk="wind"]')?.checked ? 'YES' : 'NO'));
-    lines.push(pad('Connections OK:')  + (document.querySelector('[data-chk="conn"]')?.checked ? 'YES' : 'NO'));
-    lines.push(pad('Insulation OK:')   + (document.querySelector('[data-chk="meg"]')?.checked  ? 'YES' : 'NO'));
-    lines.push('');
-    lines.push('WINDINGS');
-    lines.push(pad('T1-T2:') + dv(fv('ecm-w-t1t2'), 'Ohm'));
-    lines.push(pad('T2-T3:') + dv(fv('ecm-w-t2t3'), 'Ohm'));
-    lines.push(pad('T1-T3:') + dv(fv('ecm-w-t1t3'), 'Ohm'));
-    const wd = maxDevPct([fv('ecm-w-t1t2'), fv('ecm-w-t2t3'), fv('ecm-w-t1t3')]);
-    if (wd !== null) lines.push(pad('Max Deviation:') + dv(wd, '%'));
-    lines.push('');
-    lines.push('INSULATION');
-    lines.push(pad('Test Voltage:') + dv(fv('ecm-meg-v'), 'V', 0));
-    lines.push('Winding to Ground');
-    lines.push(pad('  T1 — Ground:') + dv(fv('ecm-meg-t1g'), 'MOhm'));
-    lines.push(pad('  T2 — Ground:') + dv(fv('ecm-meg-t2g'), 'MOhm'));
-    lines.push(pad('  T3 — Ground:') + dv(fv('ecm-meg-t3g'), 'MOhm'));
-    lines.push('Phase to Phase');
-    lines.push(pad('  T1 — T2:') + dv(fv('ecm-meg-t1t2'), 'MOhm'));
-    lines.push(pad('  T2 — T3:') + dv(fv('ecm-meg-t2t3'), 'MOhm'));
-    lines.push(pad('  T1 — T3:') + dv(fv('ecm-meg-t1t3'), 'MOhm'));
-    const runV = fv('ecm-run-volts'), runA = fv('ecm-run-amps');
-    if (runV || runA) {
-      lines.push('');
-      lines.push('RUNNING');
-      if (runV) lines.push(pad('Supply Voltage:') + dv(runV, 'V'));
-      if (runA) lines.push(pad('Running Amps:')   + dv(runA, 'A'));
-    }
-    const notes = sv('ecm-notes');
-    if (notes) { lines.push(''); lines.push('NOTES'); lines.push(notes); }
-
-  } else if (activeTab === 'comp') {
-    lines.push('MOTOR TYPE: Compressor (' + (compPhase === '1' ? '1Φ' : '3Φ') + ')');
-    lines.push('');
-    lines.push('NAMEPLATE');
-    const npV = fv('comp-np-volts'), npRla = fv('comp-np-rla'), npLra = fv('comp-np-lra');
-    if (npV)   lines.push(pad('Rated Voltage:') + dv(npV,   'V', 0));
-    if (npRla) lines.push(pad('RLA:')           + dv(npRla, 'A'));
-    if (npLra) lines.push(pad('LRA:')           + dv(npLra, 'A'));
-    lines.push('');
-    lines.push('RUNNING');
-    lines.push(pad('Supply Voltage:') + dv(fv('comp-run-volts'), 'V'));
-    lines.push(pad('Running Amps:')   + dv(fv('comp-run-amps'),  'A'));
-    if (npRla && fv('comp-run-amps') !== null) {
-      lines.push(pad('% of RLA:') + dv(+(fv('comp-run-amps') / npRla * 100).toFixed(1), '%'));
-    }
-    lines.push('');
-    lines.push('WINDINGS');
-    if (compPhase === '1') {
-      lines.push(pad('C-R:') + dv(fv('comp-w-cr'), 'Ohm'));
-      lines.push(pad('C-S:') + dv(fv('comp-w-cs'), 'Ohm'));
-      lines.push(pad('R-S:') + dv(fv('comp-w-rs'), 'Ohm'));
-      const wCR = fv('comp-w-cr'), wCS = fv('comp-w-cs'), wRS = fv('comp-w-rs');
-      if (wCR && wCS && wRS) {
-        const sum = wCR + wCS;
-        lines.push(pad('C-R + C-S:') + dv(sum, 'Ohm', 2));
-        lines.push(pad('Deviation:') + dv(+(Math.abs(sum - wRS) / wRS * 100).toFixed(1), '%'));
-      }
-    } else {
-      lines.push(pad('T1-T2:') + dv(fv('comp3-w-t1t2'), 'Ohm'));
-      lines.push(pad('T2-T3:') + dv(fv('comp3-w-t2t3'), 'Ohm'));
-      lines.push(pad('T1-T3:') + dv(fv('comp3-w-t1t3'), 'Ohm'));
-      const wd = maxDevPct([fv('comp3-w-t1t2'), fv('comp3-w-t2t3'), fv('comp3-w-t1t3')]);
-      if (wd !== null) lines.push(pad('Max Deviation:') + dv(wd, '%'));
-    }
-    lines.push('');
-    lines.push('INSULATION');
-    if (compPhase === '1') {
-      lines.push(pad('Test Voltage:') + dv(fv('comp-meg-v'), 'V', 0));
-      lines.push('Winding to Ground');
-      lines.push(pad('  C — Ground:') + dv(fv('comp-meg-cg'), 'MOhm'));
-      lines.push(pad('  R — Ground:') + dv(fv('comp-meg-rg'), 'MOhm'));
-      lines.push(pad('  S — Ground:') + dv(fv('comp-meg-sg'), 'MOhm'));
-      lines.push('Winding to Winding');
-      lines.push(pad('  C — R:') + dv(fv('comp-meg-cr'), 'MOhm'));
-      lines.push(pad('  C — S:') + dv(fv('comp-meg-cs'), 'MOhm'));
-      lines.push(pad('  R — S:') + dv(fv('comp-meg-rs'), 'MOhm'));
-    } else {
-      lines.push(pad('Test Voltage:') + dv(fv('comp3-meg-v'), 'V', 0));
-      lines.push('Winding to Ground');
-      lines.push(pad('  T1 — Ground:') + dv(fv('comp3-meg-t1g'), 'MOhm'));
-      lines.push(pad('  T2 — Ground:') + dv(fv('comp3-meg-t2g'), 'MOhm'));
-      lines.push(pad('  T3 — Ground:') + dv(fv('comp3-meg-t3g'), 'MOhm'));
-      lines.push('Phase to Phase');
-      lines.push(pad('  T1 — T2:') + dv(fv('comp3-meg-t1t2'), 'MOhm'));
-      lines.push(pad('  T2 — T3:') + dv(fv('comp3-meg-t2t3'), 'MOhm'));
-      lines.push(pad('  T1 — T3:') + dv(fv('comp3-meg-t1t3'), 'MOhm'));
-    }
-    const notes = sv('comp-notes');
-    if (notes) { lines.push(''); lines.push('NOTES'); lines.push(notes); }
-  }
-
-  return lines.join('\n');
+  if (!readings.length) { $('res-ir').innerHTML = empty('Enter at least one reading.'); $('badge-ir').textContent = ''; report.ir = null; return; }
+  let html = '', below = 0;
+  html += `<div class="t-row"><div class="ref" style="margin-top:0">Reference <b>${f(ref.value, 2)} MΩ</b> · ${esc(ref.source)}${ref.at40C ? (temp === null ? ' · readings uncorrected; cold windings read high' : ` · readings corrected to 40 °C from ${f(temp, 0)} °F (×${f(R.irCorrectTo40C(1, temp).factor, 2)})`) : ''}</div></div>`;
+  // Temperature correction only applies to the IEEE 43 reference (defined at 40 °C).
+  readings.forEach((r) => {
+    const c = R.irCorrectTo40C(r.raw, ref.at40C ? temp : null);
+    const shown = c.value;
+    const isBelow = shown < ref.value - 1e-9;
+    if (isBelow) below++;
+    html += row(r.name, f(shown, 2), 'MΩ', c.corrected ? `measured ${f(r.raw, 2)} MΩ` : '', isBelow ? `Below ${f(ref.value, 2)} MΩ reference` : null);
+    lines.push(`  ${r.name}: ${f(shown, 2)} MΩ${c.corrected ? ` (measured ${f(r.raw, 2)}, at 40 °C)` : ''}${isBelow ? '  BELOW REFERENCE' : ''}`);
+  });
+  const guide = R.irTestVoltageGuide(rated ? rated.high : null), tv = val('ir-testv');
+  if (guide && tv !== null) html += `<p class="t-hint">Tested at ${f(tv, 0)} V DC. ${esc(guide.source)}: ${esc(guide.text)}.</p>`;
+  if (t.kind === 'comp') html += `<p class="t-hint">Hermetic compressors: refrigerant and oil in the shell lower readings. Where the compressor manufacturer publishes a minimum, enter it above; it replaces the IEEE 43 reference.</p>`;
+  $('res-ir').innerHTML = html;
+  $('badge-ir').textContent = below ? `${below} below ref` : `${readings.length} reading${readings.length > 1 ? 's' : ''}`;
+  report.ir = [`Insulation to ground (reference ${f(ref.value, 2)} MΩ, ${ref.source}${temp !== null && ref.at40C ? `; corrected to 40 °C from ${f(temp, 0)} °F` : ''}${tv !== null ? `; tested at ${f(tv, 0)} V DC` : ''})`].concat(lines);
 }
 
-// ── Init
-function init() {
-  // Tab clicks
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => switchTab(tab.dataset.tab));
-  });
-
-  // PSC inputs
-  document.querySelectorAll(
-    '#psc-np-volts,#psc-np-fla,#psc-np-sf,#psc-np-hp,' +
-    '#psc-run-volts,#psc-run-amps,' +
-    '#psc-cap-rated,#psc-cap-meas,' +
-    '#psc-w-cr,#psc-w-cs,#psc-w-rs,' +
-    '#psc-meg-v,#psc-meg-cg,#psc-meg-rg,#psc-meg-sg,' +
-    '#psc-meg-cr,#psc-meg-cs,#psc-meg-rs'
-  ).forEach(el => el.addEventListener('input', calcPSC));
-
-  // 3-Phase inputs
-  document.querySelectorAll(
-    '#tph-np-volts,#tph-np-fla,#tph-np-sf,#tph-np-hp,' +
-    '#tph-a-l1,#tph-a-l2,#tph-a-l3,' +
-    '#tph-v-l1l2,#tph-v-l2l3,#tph-v-l1l3,' +
-    '#tph-w-t1t2,#tph-w-t2t3,#tph-w-t1t3,' +
-    '#tph-meg-v,#tph-meg-t1g,#tph-meg-t2g,#tph-meg-t3g,' +
-    '#tph-meg-t1t2,#tph-meg-t2t3,#tph-meg-t1t3'
-  ).forEach(el => el.addEventListener('input', calcThreePhase));
-
-  // ECM inputs
-  document.querySelectorAll(
-    '#ecm-np-volts,#ecm-np-hp,' +
-    '#ecm-run-volts,#ecm-run-amps,' +
-    '#ecm-w-t1t2,#ecm-w-t2t3,#ecm-w-t1t3,' +
-    '#ecm-meg-v,#ecm-meg-t1g,#ecm-meg-t2g,#ecm-meg-t3g,' +
-    '#ecm-meg-t1t2,#ecm-meg-t2t3,#ecm-meg-t1t3'
-  ).forEach(el => el.addEventListener('input', calcECM));
-
-  // Compressor inputs — shared + 1Φ
-  document.querySelectorAll(
-    '#comp-np-volts,#comp-np-rla,#comp-np-lra,' +
-    '#comp-run-volts,#comp-run-amps,' +
-    '#comp-w-cr,#comp-w-cs,#comp-w-rs,' +
-    '#comp-meg-v,#comp-meg-cg,#comp-meg-rg,#comp-meg-sg,' +
-    '#comp-meg-cr,#comp-meg-cs,#comp-meg-rs'
-  ).forEach(el => el.addEventListener('input', calcCompressor));
-
-  // Compressor inputs — 3Φ
-  document.querySelectorAll(
-    '#comp3-w-t1t2,#comp3-w-t2t3,#comp3-w-t1t3,' +
-    '#comp3-meg-v,#comp3-meg-t1g,#comp3-meg-t2g,#comp3-meg-t3g,' +
-    '#comp3-meg-t1t2,#comp3-meg-t2t3,#comp3-meg-t1t3'
-  ).forEach(el => el.addEventListener('input', calcCompressor));
-
-  // Compressor phase toggle
-  document.getElementById('comp-phase-toggle').addEventListener('click', e => {
-    const btn = e.target.closest('.pt-btn');
-    if (!btn || btn.classList.contains('active')) return;
-    compPhase = btn.dataset.phase;
-    document.querySelectorAll('#comp-phase-toggle .pt-btn').forEach(b =>
-      b.classList.toggle('active', b.dataset.phase === compPhase)
-    );
-    document.getElementById('comp-1ph').style.display = compPhase === '1' ? '' : 'none';
-    document.getElementById('comp-3ph').style.display = compPhase === '3' ? '' : 'none';
-    document.getElementById('comp-1ph-results').style.display = compPhase === '1' ? '' : 'none';
-    document.getElementById('comp-3ph-results').style.display = compPhase === '3' ? '' : 'none';
-    calcCompressor();
-  });
-
-  // Checklist toggle
-  document.getElementById('ecm-checklist').addEventListener('click', e => {
-    const item = e.target.closest('.check-item');
-    if (!item) return;
-    const cb = item.querySelector('input[type="checkbox"]');
-    if (!cb) return;
-    cb.checked = !cb.checked;
-    item.classList.toggle('checked', cb.checked);
-    calcECM();
-  });
-
-  // Modal
-  document.getElementById('open-report-btn').addEventListener('click', () => {
-    document.getElementById('reportText').textContent = getReportBlock();
-    document.getElementById('reportOverlay').classList.add('open');
-  });
-  document.getElementById('close-report-btn').addEventListener('click', () => {
-    document.getElementById('reportOverlay').classList.remove('open');
-  });
-  document.getElementById('copy-report-btn').addEventListener('click', () => {
-    navigator.clipboard?.writeText(document.getElementById('reportText').textContent)
-      .then(() => toast('Copied'))
-      .catch(() => toast('Copy failed'));
-  });
-  document.getElementById('download-report-btn').addEventListener('click', () => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob(
-      [document.getElementById('reportText').textContent],
-      { type: 'text/plain' }
-    ));
-    a.download = `motors_${new Date().toISOString().slice(0, 10)}.txt`;
-    a.click();
-    toast('Saved');
-  });
-
-  // Embedded mode
-  if (window.HVAC_EMBEDDED) document.getElementById('standaloneBar').style.display = 'none';
-  window.getReportBlock = getReportBlock;
-  window.getCalcState = getCalcState;
+/* ── Windings ────────────────────────────────────────────────────── */
+function renderW() {
+  const t = TYPES[type];
+  document.querySelectorAll('[data-wmode]').forEach((e) => { e.hidden = e.dataset.wmode !== t.wmode; });
+  if (t.wmode === 'crs') {
+    flagInvalid(['w-12', 'w-13', 'w-23', 'w-spec-run', 'w-spec-start'], (v, raw) => raw !== '' && (v === null || v < 0));
+    const id = R.identifyTerminals(val('w-12'), val('w-13'), val('w-23'));
+    if (!id.ok) {
+      const any = ['w-12', 'w-13', 'w-23'].some((k) => val(k) !== null);
+      $('res-w').innerHTML = empty(any ? (id.reason.charAt(0).toUpperCase() + id.reason.slice(1) + '.') : 'Enter all three readings.');
+      $('badge-w').textContent = ''; report.w = null; return;
+    }
+    const tName = (n) => (t.kind === 'comp' ? 'terminal ' : 'lead ') + n;
+    let html = row('Terminals', `C ${id.common} · R ${id.run} · S ${id.start}`, '', `Smallest reading is Common–Run, middle is Common–Start, largest is Run–Start.`);
+    html += row('Run winding (C–R)', f(id.runOhms, 2), 'Ω', '');
+    html += row('Start winding (C–S)', f(id.startOhms, 2), 'Ω', '');
+    const tol = Math.max(0.1, 0.05 * id.runStartOhms);   // meter + lead tolerance
+    const adds = Math.abs(id.diff) <= tol + 1e-9;
+    html += row('Run–Start (R–S)', f(id.runStartOhms, 2), 'Ω',
+      `C–R + C–S = <b>${f(id.sum, 2)} Ω</b> · difference ${f(id.diff, 2)} Ω. Confirms the readings and terminal ID only.`,
+      adds ? null : "Readings don't add up: re-check lead zero and connections");
+    const lines = [`Winding resistance: C = ${tName(id.common)}, R = ${tName(id.run)}, S = ${tName(id.start)}`,
+      `  C–R ${f(id.runOhms, 2)} Ω · C–S ${f(id.startOhms, 2)} Ω · R–S ${f(id.runStartOhms, 2)} Ω (C–R + C–S = ${f(id.sum, 2)} Ω)`];
+    const sr = val('w-spec-run'), ss = val('w-spec-start');
+    if (sr !== null && sr > 0) { const d = R.vsSpec(id.runOhms, sr); html += row('Run vs spec', (d >= 0 ? '+' : '') + f(d, 1), '%', `Spec <b>${f(sr, 2)} Ω</b> (manufacturer)`); lines.push(`  Run ${f(id.runOhms, 2)} Ω vs spec ${f(sr, 2)} Ω: ${d >= 0 ? '+' : ''}${f(d, 1)}%`); }
+    if (ss !== null && ss > 0) { const d = R.vsSpec(id.startOhms, ss); html += row('Start vs spec', (d >= 0 ? '+' : '') + f(d, 1), '%', `Spec <b>${f(ss, 2)} Ω</b> (manufacturer)`); lines.push(`  Start ${f(id.startOhms, 2)} Ω vs spec ${f(ss, 2)} Ω: ${d >= 0 ? '+' : ''}${f(d, 1)}%`); }
+    $('res-w').innerHTML = html;
+    $('badge-w').textContent = `C ${id.common} · R ${id.run} · S ${id.start}`;
+    report.w = lines;
+  } else {
+    flagInvalid(['wb-12', 'wb-23', 'wb-13', 'wb-spec'], (v, raw) => raw !== '' && (v === null || v <= 0));
+    const r = [val('wb-12'), val('wb-23'), val('wb-13')];
+    const u = R.unbalance(r);
+    if (!u.ok) { $('res-w').innerHTML = empty(r.some((x) => x !== null) ? 'Enter all three readings (no partial averages).' : 'Enter all three readings.'); $('badge-w').textContent = ''; report.w = null; return; }
+    let html = row('Average', f(u.avg, 3), 'Ω', `Range ${f(u.low, 3)}–${f(u.high, 3)} Ω`);
+    html += row('Max deviation from average', f(u.pct, 1), '%', 'No code limit. Field practice looks closer at more than about 5%; the manufacturer\'s resistance spec is the better reference.', u.pct > 5 ? 'Over 5% field guide' : null);
+    const lines = [`Winding resistance: T1–T2 ${f(r[0], 3)} · T2–T3 ${f(r[1], 3)} · T1–T3 ${f(r[2], 3)} Ω; max deviation ${f(u.pct, 1)}% from average ${f(u.avg, 3)} Ω`];
+    const sp = val('wb-spec');
+    if (sp !== null && sp > 0) {
+      const ds = r.map((x) => R.vsSpec(x, sp));
+      html += row('vs spec', ds.map((d) => (d >= 0 ? '+' : '') + f(d, 1)).join(' / '), '%', `Spec <b>${f(sp, 3)} Ω</b> (manufacturer), each pair`);
+      lines.push(`  vs spec ${f(sp, 3)} Ω: ${ds.map((d) => (d >= 0 ? '+' : '') + f(d, 1) + '%').join(', ')}`);
+    }
+    $('res-w').innerHTML = html;
+    $('badge-w').textContent = `${f(u.pct, 1)}% dev`;
+    report.w = lines;
+  }
 }
 
-document.addEventListener('DOMContentLoaded', init);
+/* ── Running load ────────────────────────────────────────────────── */
+function renderLd() {
+  const t = TYPES[type];
+  const ids = t.legs === 3 ? ['ld-a1', 'ld-a2', 'ld-a3'] : ['ld-a1'];
+  $('lbl-ld-a1').textContent = t.legs === 3 ? 'L1' : 'Amps';
+  flagInvalid(ids.concat(['np-fla', 'np-sf', 'np-rla', 'np-mcc']), (v, raw) => raw !== '' && (v === null || v < 0));
+  const amps = ids.map(val);
+  if (amps.every((a) => a === null)) { $('res-ld').innerHTML = empty('Enter running amps.'); $('badge-ld').textContent = ''; report.ld = null; return; }
+  if (t.legs === 3 && amps.some((a) => a === null)) { $('res-ld').innerHTML = empty('Enter all three legs.'); $('badge-ld').textContent = ''; report.ld = null; return; }
+  let html = '', lines = [];
+  const high = Math.max(...amps), leg = amps.indexOf(high) + 1;
+  if (t.legs === 3) {
+    const u = R.unbalance(amps);
+    html += row('Highest leg', f(high, 1), 'A', `L${leg} · legs ${amps.map((a) => f(a, 1)).join(' / ')} A`);
+    if (u.ok) html += row('Current unbalance', f(u.pct, 1), '%', esc(R.VOLTAGE_UNBALANCE_REF.note) + ' Check supply voltage unbalance before the motor.');
+    lines.push(`Running load: L1 ${f(amps[0], 1)} · L2 ${f(amps[1], 1)} · L3 ${f(amps[2], 1)} A${u.ok ? `; current unbalance ${f(u.pct, 1)}%` : ''}`);
+  } else {
+    lines.push(`Running load: ${f(high, 1)} A`);
+  }
+  if (t.kind === 'motor') {
+    const L = R.motorLoad({ fla: val('np-fla'), serviceFactor: val('np-sf'), amps });
+    if (!L.ok) { html += empty(L.reason === 'enter nameplate FLA' ? 'Enter nameplate FLA to compare.' : 'Running amps must be a positive number.'); }
+    else {
+      html += row(t.legs === 3 ? 'Highest leg vs FLA' : 'Load vs FLA', f(L.pctFLA, 0), '%',
+        `Service-factor amps <b>${f(L.sfAmps, 1)} A</b> (FLA ${f(val('np-fla'), 1)} × SF ${f(L.sf, 2)}${L.sfAssumed ? ', SF 1.0 assumed' : ''})`,
+        L.overSF ? 'Above service-factor amps' : null);
+      lines.push(`  ${f(L.pctFLA, 0)}% of FLA ${f(val('np-fla'), 1)} A; service-factor amps ${f(L.sfAmps, 1)} A (SF ${f(L.sf, 2)}${L.sfAssumed ? ' assumed' : ''})${L.overSF ? '  ABOVE SF AMPS' : ''}`);
+    }
+  } else {
+    const rla = val('np-rla'), mcc = val('np-mcc');
+    if (rla !== null && rla > 0) {
+      html += row(t.legs === 3 ? 'Highest leg vs RLA' : 'Load vs RLA', f(high / rla * 100, 0), '%', 'RLA is a rating value, not a running limit; running amps follow suction and discharge pressure and voltage.');
+      lines.push(`  ${f(high / rla * 100, 0)}% of RLA ${f(rla, 1)} A (rating value, not a running limit)`);
+    }
+    if (mcc !== null && mcc > 0) {
+      html += row('Highest vs MCC', f(high / mcc * 100, 0), '%', `MCC <b>${f(mcc, 1)} A</b> · max continuous current; the protector trip reference`, high > mcc ? 'Above MCC' : null);
+      lines.push(`  ${f(high / mcc * 100, 0)}% of MCC ${f(mcc, 1)} A${high > mcc ? '  ABOVE MCC' : ''}`);
+    }
+    if ((rla === null || rla <= 0) && (mcc === null || mcc <= 0)) html += empty('Enter RLA or MCC to compare.');
+  }
+  $('res-ld').innerHTML = html;
+  $('badge-ld').textContent = f(high, 1) + ' A';
+  report.ld = lines;
+}
 
-// Favorites
-(function(){
-  var KEY='hermes_favorites';
-  var id=location.pathname.split('/').pop().replace('.html','');
-  var title=document.title.split('·')[0].trim();
-  var btn=document.getElementById('favBtn');
-  if(!btn)return;
-  function getFavs(){try{return JSON.parse(localStorage.getItem(KEY))||[];}catch(e){return[];}}
-  function isFav(){return getFavs().some(function(f){return f.id===id;});}
-  function sync(){btn.textContent=isFav()?'★':'☆';btn.classList.toggle('on',isFav());}
-  window.toggleFav=function(){
-    var favs=getFavs();var idx=-1;
-    for(var i=0;i<favs.length;i++){if(favs[i].id===id){idx=i;break;}}
-    if(idx!==-1)favs.splice(idx,1);
-    else favs.push({id:id,title:title,tier:'t2',label:title,type:'module'});
-    localStorage.setItem(KEY,JSON.stringify(favs));sync();
-    try{if(window.parent!==window)window.parent.postMessage({type:'hermes-fav-toggle'},'*');}catch(e){}
-  };
+/* ── Supply voltage ──────────────────────────────────────────────── */
+function renderSv() {
+  const t = TYPES[type], three = type === 'm3' || type === 'c3';
+  document.querySelectorAll('#card-sv [data-legs="3"]').forEach((e) => { e.hidden = !three; });
+  $('lbl-sv-1').textContent = three ? 'L1–L2' : 'Volts';
+  const ids = three ? ['sv-1', 'sv-2', 'sv-3'] : ['sv-1'];
+  flagInvalid(ids, (v, raw) => raw !== '' && (v === null || v <= 0));
+  const v = ids.map(val);
+  if (v.every((x) => x === null)) { $('res-sv').innerHTML = empty('Enter measured voltage.'); $('badge-sv').textContent = ''; report.sv = null; return; }
+  if (three && v.some((x) => x === null)) { $('res-sv').innerHTML = empty('Enter all three line-to-line readings.'); $('badge-sv').textContent = ''; report.sv = null; return; }
+  const rated = R.parseRatedVolts($('np-volts').value);
+  const rng = rated ? R.voltageRange(rated.low, rated.high) : { ok: false };
+  let html = '', lines = [];
+  const lo = Math.min(...v), hi = Math.max(...v);
+  const outside = rng.ok && (lo < rng.min - 1e-9 || hi > rng.max + 1e-9);
+  html += row(three ? 'Lowest / highest' : 'Measured', three ? `${f(lo, 0)} / ${f(hi, 0)}` : f(v[0], 0), 'V',
+    rng.ok ? `Range <b>${f(rng.min, 0)}–${f(rng.max, 0)} V</b> · ${esc(rng.source)}` : 'Enter nameplate volts to compare.',
+    outside ? 'Outside ±10% range' : null);
+  lines.push(`Supply: ${three ? `L1–L2 ${f(v[0], 0)} · L2–L3 ${f(v[1], 0)} · L1–L3 ${f(v[2], 0)} V` : `${f(v[0], 0)} V`}${rng.ok ? `; range ${f(rng.min, 0)}–${f(rng.max, 0)} V (±10%)` : ''}${outside ? '  OUTSIDE RANGE' : ''}`);
+  if (three) {
+    const u = R.unbalance(v);
+    if (u.ok) {
+      html += row('Voltage unbalance', f(u.pct, 2), '%', `Reference <b>${R.VOLTAGE_UNBALANCE_REF.limitPct}%</b> · ${esc(R.VOLTAGE_UNBALANCE_REF.source)}`, u.pct > R.VOLTAGE_UNBALANCE_REF.limitPct ? 'Above 1%' : null);
+      lines.push(`  Voltage unbalance ${f(u.pct, 2)}% (NEMA MG-1: derate above 1%)`);
+    }
+  }
+  $('res-sv').innerHTML = html;
+  $('badge-sv').textContent = three ? '' : f(v[0], 0) + ' V';
+  report.sv = lines;
+}
+
+/* ── Run capacitor ───────────────────────────────────────────────── */
+function renderCap() {
+  const t = TYPES[type];
+  $('card-cap').hidden = !t.cap;
+  if (!t.cap) { report.cap = null; return; }
+  flagInvalid(['cap-rated', 'cap-tol', 'cap-meas', 'cap-amps', 'cap-volts'], (v, raw) => raw !== '' && (v === null || v < 0));
+  const rated = val('cap-rated'), tol = val('cap-tol');
+  const fromI = R.capacitorFromCurrent(val('cap-amps'), val('cap-volts'));
+  const meas = val('cap-meas') !== null ? val('cap-meas') : fromI;
+  const lines = [];
+  let html = '';
+  if (fromI !== null) {
+    html += row('From current', f(fromI, 1), 'µF', `2652 × ${f(val('cap-amps'), 2)} A ÷ ${f(val('cap-volts'), 0)} V (60 Hz)`);
+    lines.push(`Run capacitor by current: ${f(fromI, 1)} µF (2652 × A ÷ V)`);
+  }
+  const c = R.capacitorCheck(rated, meas, tol);
+  if (!c.ok) {
+    html += empty(rated === null ? 'Enter the rated µF.' : 'Enter the measured µF, or amps and volts.');
+  } else {
+    const range = c.tolerancePct ? `Rated <b>${f(c.rated, 1)} µF ±${f(c.tolerancePct, 0)}%</b> = ${f(c.low, 2)}–${f(c.high, 2)} µF (printed on the capacitor)` : `Rated ${f(c.rated, 1)} µF · ${esc(c.source)}`;
+    html += row(val('cap-meas') !== null ? 'Measured vs rated' : 'From current vs rated', (c.devPct >= 0 ? '+' : '') + f(c.devPct, 1), '%', range,
+      c.withinTolerance === false ? 'Outside printed tolerance' : null);
+    lines.push(`Run capacitor: ${f(c.measured, 1)} µF vs rated ${f(c.rated, 1)} µF${c.tolerancePct ? ` ±${f(c.tolerancePct, 0)}%` : ''}: ${c.devPct >= 0 ? '+' : ''}${f(c.devPct, 1)}%${c.withinTolerance === false ? '  OUTSIDE PRINTED TOLERANCE' : ''}`);
+  }
+  $('res-cap').innerHTML = html;
+  $('badge-cap').textContent = c.ok ? (c.devPct >= 0 ? '+' : '') + f(c.devPct, 1) + '%' : '';
+  report.cap = lines.length ? lines : null;
+}
+
+/* ── Type switching + labels ─────────────────────────────────────── */
+function applyType() {
+  const t = TYPES[type];
+  document.querySelectorAll('#typeSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.type === type)));
+  document.querySelectorAll('[data-for="motor"]').forEach((e) => { e.hidden = t.kind !== 'motor'; });
+  document.querySelectorAll('[data-for="comp"]').forEach((e) => { e.hidden = t.kind !== 'comp'; });
+  document.querySelectorAll('[data-for="m3"]').forEach((e) => { e.hidden = type !== 'm3'; });
+  document.querySelectorAll('[data-type-only]').forEach((e) => { e.hidden = e.dataset.typeOnly !== type; });
+  document.querySelectorAll('#card-ld [data-legs="3"]').forEach((e) => { e.hidden = t.legs !== 3; });
+  t.terms.forEach((n, i) => { $('lbl-ir-g' + (i + 1)).textContent = n + '–G'; });
+  $('ld-purpose').textContent = t.kind === 'comp' ? 'Running amps at operating conditions, compared with the compressor rating.' : 'Running amps at operating conditions. ' + (t.legs === 3 ? 'Judged on the highest leg; overloads act per leg.' : '');
+  if (type !== 'm3') $('ir-sep').checked = false;
+}
+
+function renderAll() { report = {}; applyType(); renderIR(); renderW(); renderLd(); renderSv(); renderCap(); save(); }
+
+/* ── Persistence (this visit only) ───────────────────────────────── */
+const FIELDS = () => [...document.querySelectorAll('main input, main textarea')];
+function save() {
+  try {
+    const data = { type };
+    FIELDS().forEach((e) => { data[e.id] = e.type === 'checkbox' ? e.checked : e.value; });
+    sessionStorage.setItem(STORE, JSON.stringify(data));
+  } catch (e) {}
+}
+function restore() {
+  try {
+    const data = JSON.parse(sessionStorage.getItem(STORE) || 'null');
+    if (!data) return;
+    if (TYPES[data.type]) type = data.type;
+    FIELDS().forEach((e) => { if (e.id in data) { if (e.type === 'checkbox') e.checked = !!data[e.id]; else e.value = data[e.id]; } });
+  } catch (e) {}
+}
+
+/* ── Report ──────────────────────────────────────────────────────── */
+function buildReport() {
+  const t = TYPES[type], rated = $('np-volts').value.trim();
+  const np = [`Rated ${rated || '—'} V`];
+  if (t.kind === 'motor') { np.push(`FLA ${$('np-fla').value || '—'} A`, `SF ${$('np-sf').value || '1.0 (assumed)'}`); }
+  else { np.push(`RLA ${$('np-rla').value || '—'} A`); if ($('np-mcc').value) np.push(`MCC ${$('np-mcc').value} A`); }
+  const out = [
+    'MOTOR SERVICE REPORT — Hermes Motor Analysis',
+    new Date().toLocaleString(),
+    `Type: ${t.name}`,
+    `Nameplate: ${np.join(' · ')}`,
+    ''
+  ];
+  ['ir', 'w', 'ld', 'sv', 'cap'].forEach((k) => { if (report[k]) out.push(...report[k], ''); });
+  const notes = $('notes').value.trim();
+  if (notes) out.push('Notes:', notes, '');
+  out.push('Readings are compared with the references shown; references and sources are listed beside each value.',
+    'Reference values, not a diagnosis. Verify against manufacturer data.');
+  return out.join('\n');
+}
+$('btnReport').addEventListener('click', () => { $('reportText').textContent = buildReport(); $('reportDlg').showModal(); });
+$('btnCloseReport').addEventListener('click', () => $('reportDlg').close());
+$('btnCopy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('reportText').textContent); $('btnCopy').textContent = 'Copied'; setTimeout(() => { $('btnCopy').textContent = 'Copy'; }, 1500); } catch (e) {}
+});
+$('btnSave').addEventListener('click', () => {
+  const blob = new Blob([$('reportText').textContent], { type: 'text/plain' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'motor-report-' + new Date().toISOString().slice(0, 10) + '.txt'; a.click(); URL.revokeObjectURL(a.href);
+});
+$('btnClear').addEventListener('click', () => {
+  if (!confirm('Clear all readings on this page?')) return;
+  FIELDS().forEach((e) => { if (e.type === 'checkbox') e.checked = false; else e.value = ''; });
+  renderAll();
+});
+
+/* ── Wiring ──────────────────────────────────────────────────────── */
+document.querySelectorAll('#typeSeg button').forEach((b) => b.addEventListener('click', () => { type = b.dataset.type; renderAll(); }));
+document.querySelector('main').addEventListener('input', renderAll);
+document.querySelector('main').addEventListener('change', renderAll);
+
+
+/* Favorites (same store as the shell) */
+(function () {
+  const KEY = 'hermes_favorites', id = location.pathname.split('/').pop().replace('.html', ''), btn = $('favBtn');
+  const get = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { return []; } };
+  const isFav = () => get().some((x) => x.id === id);
+  const sync = () => { btn.textContent = isFav() ? '★' : '☆'; btn.classList.toggle('on', isFav()); btn.setAttribute('aria-pressed', String(isFav())); };
+  btn.addEventListener('click', () => {
+    let favs = get();
+    favs = isFav() ? favs.filter((x) => x.id !== id) : favs.concat([{ id, title: 'Motor Analysis', tier: 't2', label: 'Motor Analysis', type: 'module' }]);
+    try { localStorage.setItem(KEY, JSON.stringify(favs)); } catch (e) {}
+    sync();
+    try { if (window.parent !== window) window.parent.postMessage({ type: 'hermes-fav-toggle' }, '*'); } catch (e) {}
+  });
   sync();
 })();
+
+restore();
+renderAll();
 </script>
 </body>
 </html>
