@@ -1,3 +1,5 @@
+> **Superseded (Nov 2026).** Several conclusions below were wrong (e.g. the MOCP round-up, gas-pipe interpolation, combustion-air divisors). See [audit/2026-11](audit/2026-11/README.md).
+
 b # Calculator Suite — Code Review & Project Assessment
 
 Thorough review of every calculator, the shared infrastructure, and the project as a whole. Written 2026-03-29.
