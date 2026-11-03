@@ -64,6 +64,18 @@ Rules for how calculators in this app are classified, what they get, and when to
 
 ---
 
+## Guidance and How-tos
+
+Field guidance inside a tool (how-to dropdowns, measurement notes) is the **owner's judgment call, made case by case**. The test is whether the guidance helps a tech take a good reading, or gives someone confidence to attempt work that needs training and could damage equipment, property or themselves.
+
+- **Generally fine:** how to take a good measurement (wet bulb, probe and gauge placement, letting a system stabilize, zeroing leads), and low-skill, low-liability diagnostics the owner has walked people through in the field.
+- **Generally not:** step-by-step procedures where a mistake is costly or dangerous and the right answer is training. Pump Sizing and Motor Analysis get no general how-to for this reason.
+- **Every procedure** cites its source (manufacturer or training material), states its limits (which equipment it applies to and which it doesn't), and leads with "use the proper tool first" where a purpose-built tester exists, linking to it.
+- **Example of an approved exception:** Motor Analysis → "Run an ECM without a tester" (Genteq constant-torque motors, 9 V / 24 VAC tap test). Owner-approved as low-skill, low-liability.
+- **Recommended-tool links** (`tools/shared/recommend.js`) go on every tool that has a fitting instrument.
+
+---
+
 ## Release Gate
 
 A tool is listed in the app only after it passes all three steps. Tools that fail are kept in the repo but marked `hidden: true` in the `TOOLS` catalog in `index.html` (out of the catalog, search, Recent, Favorites and deep links). Their pages also load `tools/shared/withdrawn.js`, which shows a non-dismissable "Withdrawn — under review" banner with the known problem to anyone arriving by a direct link or old bookmark.
