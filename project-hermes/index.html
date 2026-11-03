@@ -478,16 +478,18 @@ This software is provided "as is" without warranty of any kind, express or impli
          'calc' = calculator (tools/calculators/<id>.html)
          'ref'  = reference page
    tag:  shown on the row — Analyzer / Report (printable report)
+   hidden: true keeps a tool out of the catalog, search, Recent and
+           Favorites until it is fixed (the file stays in the repo).
    ══════════════════════════════════════════════ */
 var CATS = ['Refrigeration', 'Airflow & Psychrometrics', 'Electrical', 'Motors & Drives', 'Heating & Gas', 'Water & Drains', 'Conversions'];
 var TOOLS = [
   { id: 'refrigeration', kind: 'tool', name: 'Refrigeration Analysis', desc: 'Superheat · subcooling · compression ratio', cat: 0, tag: 'Analyzer', kw: 'sh sc superheat subcool pt saturation charge' },
   { id: 'refrigerant-charge', kind: 'calc', name: 'Line Set Charge', short: 'Line Charge', desc: 'Added charge for line length', cat: 0, kw: 'oz ounces refrigerant' },
-  { id: 'long-lineset', kind: 'calc', name: 'Long Line Set', desc: 'Long-run piping and charge', cat: 0, kw: 'suction liquid refrigerant' },
+  { id: 'long-lineset', hidden: true, kind: 'calc', name: 'Long Line Set', desc: 'Long-run piping and charge', cat: 0, kw: 'suction liquid refrigerant' },
   { id: 'charge-troubleshooting', kind: 'ref', path: 'resources/charge-troubleshooting.html', name: 'Charge Troubleshooting', short: 'Troubleshooting', desc: 'Fixed & TXV symptom chart · targets · field tips', cat: 0, tag: 'Guide', kw: 'troubleshoot diagnose chart overcharge undercharge restriction drier non-condensables txv bulb dtd superheat subcooling' },
   { id: 'airflow', kind: 'tool', name: 'Airflow Analysis', short: 'Airflow', desc: 'Delta T · sensible heat · mixed air · OA%', cat: 1, tag: 'Analyzer', kw: 'cfm temperature split' },
   { id: 'psychrometric', kind: 'tool', path: 'tools/psychrometric/index.html', name: 'Psychrometric', short: 'Psychro', desc: 'Multi-state · coil ADP · comfort zone', cat: 1, tag: 'Analyzer', kw: 'humidity dew point wet bulb rh' },
-  { id: 'enthalpy', kind: 'calc', name: 'Enthalpy', desc: 'Air enthalpy from dry and wet bulb', cat: 1, kw: 'btu lb wet bulb' },
+  { id: 'enthalpy', hidden: true, kind: 'calc', name: 'Enthalpy', desc: 'Air enthalpy from dry and wet bulb', cat: 1, kw: 'btu lb wet bulb' },
   { id: 'cfm-per-ton', kind: 'calc', name: 'CFM per Ton', short: 'CFM / Ton', desc: 'Airflow per ton of capacity', cat: 1, kw: 'airflow' },
   { id: 'duct-sizing', kind: 'calc', name: 'Duct Sizing', short: 'Duct', desc: 'Round and rectangular duct', cat: 1, kw: 'velocity fpm' },
   { id: 'ventilation-sizing', kind: 'calc', name: 'Ventilation Sizing', short: 'Ventilation', desc: 'ACH exhaust and makeup air', cat: 1, tag: 'Report', kw: 'ashrae exhaust makeup' },
@@ -495,7 +497,7 @@ var TOOLS = [
   { id: 'electrical', kind: 'tool', name: 'Electrical Analysis', short: 'Electrical', desc: 'Supply voltage · phase imbalance · transformers', cat: 2, tag: 'Analyzer', kw: 'volts amps voltage' },
   { id: 'wire-sizing', kind: 'calc', name: 'Wire & Breaker', desc: 'NEC ampacity · voltage drop · conductor', cat: 2, tag: 'Report', kw: 'awg nec wire' },
   { id: 'mca-mocp', kind: 'calc', name: 'MCA / MOCP', desc: 'Minimum circuit ampacity, max overcurrent', cat: 2, tag: 'Report', kw: 'nameplate fuse breaker' },
-  { id: 'breaker-sizing', kind: 'calc', name: 'Breaker Sizing', short: 'Breaker', desc: 'Overcurrent device sizing', cat: 2, kw: 'fuse ocpd' },
+  { id: 'breaker-sizing', hidden: true, kind: 'calc', name: 'Breaker Sizing', short: 'Breaker', desc: 'Overcurrent device sizing', cat: 2, kw: 'fuse ocpd' },
   { id: 'capacitor-sizing', kind: 'calc', name: 'Capacitor', desc: 'Run and start capacitor check', cat: 2, kw: 'mfd uf cap' },
   { id: 'ohms-law', kind: 'calc', name: "Ohm's Law", desc: 'Volts · amps · ohms · watts', cat: 2, kw: 'resistance power' },
   { id: 'electrical-cost', kind: 'calc', name: 'Operating Cost', short: 'Op Cost', desc: 'Energy cost estimate', cat: 2, kw: 'kwh cost' },
@@ -515,6 +517,7 @@ var TOOLS = [
 ];
 var BY_ID = {};
 TOOLS.forEach(function (t) { BY_ID[t.id] = t; });
+function listed(t) { return t && !t.hidden; }
 function toolPath(t) {
   if (t.path) return t.path;
   return t.kind === 'calc' ? 'tools/calculators/' + t.id + '.html' : 'tools/' + t.id + '.html';
@@ -571,7 +574,7 @@ function toolRow(t, opts) {
 function renderCatalog() {
   var host = $('catalog'); host.innerHTML = '';
   CATS.forEach(function (name, ci) {
-    var list = TOOLS.filter(function (t) { return t.cat === ci; });
+    var list = TOOLS.filter(function (t) { return t.cat === ci && listed(t); });
     var hd = h('h2', 'h2'); hd.appendChild(h('span', null, name)); hd.appendChild(h('span', 'count', String(list.length)));
     var box = h('div', 'list');
     list.forEach(function (t) { box.appendChild(toolRow(t)); });
@@ -579,7 +582,7 @@ function renderCatalog() {
   });
 }
 function renderRecent() {
-  var ids = load(RECENT_KEY, []).filter(function (id) { return BY_ID[id]; }).slice(0, 6);
+  var ids = load(RECENT_KEY, []).filter(function (id) { return listed(BY_ID[id]); }).slice(0, 6);
   var row = $('recentRow'); row.innerHTML = '';
   ids.forEach(function (id) {
     var t = BY_ID[id], c = h('button', 'chip', t.short || t.name); c.type = 'button';
@@ -596,6 +599,7 @@ function renderSearch() {
   if (!q) return;
   var words = q.split(/\s+/);
   var hits = TOOLS.filter(function (t) {
+    if (!listed(t)) return false;
     var hay = (t.name + ' ' + t.desc + ' ' + (CATS[t.cat] || '') + ' ' + (t.kw || '') + ' ' + (t.tag || '')).toLowerCase();
     return words.every(function (w) { return hay.indexOf(w) !== -1; });
   });
@@ -611,7 +615,7 @@ $('searchClear').addEventListener('click', function () { $('search').value = '';
 /* ── Favorites view ──────────────────────────────────────────── */
 function renderFavs() {
   var host = $('favBody'); host.innerHTML = '';
-  var favs = getFavs().filter(function (f) { return BY_ID[f.id]; });
+  var favs = getFavs().filter(function (f) { return listed(BY_ID[f.id]); });
   if (!favs.length) {
     host.innerHTML = '<div class="empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true" style="color:var(--text-mute)"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8z"/></svg><h2>Nothing pinned yet</h2>Open a tool and tap the star in its title bar. Pinned tools land here, one tap away.</div>';
     return;
@@ -624,7 +628,7 @@ function renderFavs() {
 
 /* ── View switching ──────────────────────────────────────────── */
 var VIEW_TITLES = {
-  tools: ['Hermes', 'HVAC field tools · ' + TOOLS.filter(function (t) { return t.cat >= 0; }).length + ' tools'],
+  tools: ['Hermes', 'HVAC field tools · ' + TOOLS.filter(function (t) { return t.cat >= 0 && listed(t); }).length + ' tools'],
   favs: ['Favorites', ''],
   more: ['More', 'Reference · scans · settings']
 };
@@ -635,7 +639,7 @@ function showView(v) {
   document.querySelectorAll('.tabbar [data-view]').forEach(function (b) {
     if (b.dataset.view === v) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
-  if (v === 'favs') { renderFavs(); VIEW_TITLES.favs[1] = getFavs().filter(function (f) { return BY_ID[f.id]; }).length + ' pinned'; }
+  if (v === 'favs') { renderFavs(); VIEW_TITLES.favs[1] = getFavs().filter(function (f) { return listed(BY_ID[f.id]); }).length + ' pinned'; }
   if (v === 'more') refreshMore();
   $('shellTitle').textContent = VIEW_TITLES[v][0];
   $('shellSub').textContent = VIEW_TITLES[v][1];
@@ -656,7 +660,7 @@ function parseRoute() {
   return p.get('calc') || p.get('tool') || p.get('ref');
 }
 function openById(id, opts) {
-  var t = BY_ID[id]; if (!t) return;
+  var t = BY_ID[id]; if (!listed(t)) return;
   opts = opts || {};
   activeTool = t;
   $('tool-frame-title').textContent = t.name;
@@ -792,7 +796,7 @@ window.addEventListener('appinstalled', function () { track('install', 'App inst
   var v = null; try { v = sessionStorage.getItem('hermes_view'); } catch (e) {}
   showView(v && VIEW_TITLES[v] ? v : 'tools');
   var id = parseRoute();
-  if (id && BY_ID[id]) {
+  if (id && listed(BY_ID[id])) {
     // Deep link: put a plain entry underneath so Back closes the tool instead of leaving the app.
     try { history.replaceState(null, '', location.pathname + location.search); history.pushState({ tool: id }, '', routeHash(BY_ID[id])); } catch (e) {}
     openById(id, { fromRoute: true });
