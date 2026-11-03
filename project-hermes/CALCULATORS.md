@@ -66,7 +66,7 @@ Rules for how calculators in this app are classified, what they get, and when to
 
 ## Release Gate
 
-A tool is listed in the app only after it passes all three steps. Tools that fail are kept in the repo but marked `hidden: true` in the `TOOLS` catalog in `index.html` (out of the catalog, search, Recent, Favorites and deep links).
+A tool is listed in the app only after it passes all three steps. Tools that fail are kept in the repo but marked `hidden: true` in the `TOOLS` catalog in `index.html` (out of the catalog, search, Recent, Favorites and deep links). Their pages also load `tools/shared/withdrawn.js`, which shows a non-dismissable "Withdrawn — under review" banner with the known problem to anyone arriving by a direct link or old bookmark.
 
 **1. Engineering review**
 - Method re-derived from the governing source (NEC, IFGC/NFPA 54, IMC, ASHRAE, ACCA, manufacturer data), cited in the file.
@@ -80,7 +80,7 @@ A tool is listed in the app only after it passes all three steps. Tools that fai
 - Boundary rules above hold: no verdicts that diagnose or declare faults.
 - No stale results after inputs change or become invalid; bad input is flagged, not computed.
 
-**3. Owner sign-off**, then remove `hidden: true` and bump `CACHE_VERSION` in `sw.js`.
+**3. Owner sign-off**, then remove `hidden: true` from the catalog, remove the `withdrawn.js` banner line right after `<body>` in the tool's page, and bump `CACHE_VERSION` in `sw.js`.
 
 ### Hidden pending the gate (audit 2026-11)
 
