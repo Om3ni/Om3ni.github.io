@@ -123,6 +123,18 @@ button { font-family: var(--ui); }
   color: var(--text); padding: 0;
 }
 .shell-hdr .hdr-cam .cam-badge { position: absolute; top: -6px; right: -6px; }
+.shell-hdr .hdr-sup { width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0; }
+.shell-hdr .hdr-sup[aria-expanded="true"] { border-color: var(--orange-hi); color: var(--orange-hi); }
+.support-panel { position: fixed; z-index: 160; top: calc(var(--hdr-h) + env(safe-area-inset-top, 0px)); right: 0; width: min(360px, 100vw); max-height: calc(100dvh - var(--hdr-h) - var(--tab-h)); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-top: 0; border-radius: 0 0 0 10px; box-shadow: -4px 6px 18px rgba(0,0,0,.4); padding: 4px 14px 14px; }
+.support-panel[hidden] { display: none; }
+.support-panel h2 { margin: 14px 2px 6px; font-family: var(--ui); font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim); }
+.support-panel a { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 4px; border-top: 1px solid var(--border); color: var(--text); text-decoration: none; }
+.support-panel a:first-of-type { border-top: 0; }
+.support-panel a .txt { flex: 1; min-width: 0; }
+.support-panel a .name { display: block; font-size: 1.02rem; font-weight: 600; }
+.support-panel a .desc { display: block; font-size: .85rem; color: var(--text-dim); }
+.support-panel a .ext { font-family: var(--mono); font-size: .8rem; color: var(--text-mute); }
+.support-panel .note { margin: 12px 2px 0; font-size: .8rem; color: var(--text-mute); line-height: 1.4; }
 .scratchpad-panel { top: calc(var(--hdr-h) + env(safe-area-inset-top, 0px)); max-height: calc(100dvh - var(--hdr-h) - var(--tab-h)); }
 
 /* Views */
@@ -315,11 +327,20 @@ This software is provided "as is" without warranty of any kind, express or impli
     <h1 id="shellTitle">Hermes</h1>
     <div class="sub" id="shellSub">HVAC field tools</div>
   </div>
+  <button type="button" class="hdr-sup" id="supportBtn" aria-label="Support: stores and creators we use" title="Support" aria-expanded="false" aria-controls="supportPanel">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.5s-7.5-4.4-7.5-10A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.9c0 5.6-7.5 10-7.5 10z"/></svg>
+  </button>
   <button type="button" class="hdr-cam" id="capCamBtn" aria-label="Scan a nameplate" title="Scan a nameplate">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/><path d="M20 16v2a2 2 0 0 1-2 2h-2"/><path d="M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M8 10h8"/><path d="M8 14h5"/></svg>
     <span class="cam-badge" id="capBadge">0</span>
   </button>
 </header>
+
+<!-- Support: stores and creators (links set in SUPPORT_LINKS) -->
+<div class="support-panel" id="supportPanel" role="region" aria-label="Support" hidden>
+  <div id="supportBody"></div>
+  <p class="note">Shops and channels we use and recommend. Links open in a new tab.</p>
+</div>
 
 <!-- Captured nameplate text -->
 <div class="scratchpad-panel" id="capScratchpad">
@@ -554,6 +575,23 @@ function track(path, title) {
   })();
 }
 
+/* ── Support links ───────────────────────────────────────────────
+   Fill these in to show them in the header's Support dropdown.
+   Entries with an empty url are skipped, and a section with no links is
+   hidden, so placeholders never show to users. */
+var SUPPORT_LINKS = [
+  { section: 'Stores we use', links: [
+    { name: 'TruTech Tools', desc: 'Test instruments and meters', url: 'https://trutechtools.com/' },
+    { name: '', desc: '', url: '' },
+    { name: '', desc: '', url: '' }
+  ] },
+  { section: 'Creators we follow', links: [
+    { name: '', desc: '', url: '' },
+    { name: '', desc: '', url: '' },
+    { name: '', desc: '', url: '' }
+  ] }
+];
+
 /* ── Storage (all wrapped: private mode can throw) ───────────── */
 function load(key, fallback) { try { var v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch (e) { return fallback; } }
 function store(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
@@ -745,6 +783,33 @@ $('toolFavBtn').addEventListener('click', function () {
 window.addEventListener('message', function (e) {
   if (e.data && e.data.type === 'hermes-fav-toggle') { syncFavBtn(); if (currentView === 'favs') renderFavs(); }
 });
+
+/* ── Support dropdown ──────────────────────────────────────────── */
+(function () {
+  var btn = $('supportBtn'), panel = $('supportPanel'), body = $('supportBody');
+  var sections = SUPPORT_LINKS.map(function (sec) {
+    return { section: sec.section, links: sec.links.filter(function (l) { return l && l.url && /^https?:\/\//.test(l.url); }) };
+  }).filter(function (sec) { return sec.links.length; });
+  if (!sections.length) { btn.hidden = true; return; }
+  sections.forEach(function (sec) {
+    body.appendChild(h('h2', null, sec.section));
+    sec.links.forEach(function (l) {
+      var a = h('a'); a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
+      var txt = h('span', 'txt'); txt.appendChild(h('span', 'name', l.name || l.url));
+      if (l.desc) txt.appendChild(h('span', 'desc', l.desc));
+      a.appendChild(txt); a.appendChild(h('span', 'ext', '↗'));
+      body.appendChild(a);
+    });
+  });
+  function setOpen(open) {
+    panel.hidden = !open; btn.setAttribute('aria-expanded', String(open));
+    if (open) { var sp = $('capScratchpad'); if (sp) sp.classList.remove('open'); }
+  }
+  btn.addEventListener('click', function (e) { e.stopPropagation(); setOpen(panel.hidden); });
+  document.addEventListener('click', function (e) { if (!panel.hidden && !panel.contains(e.target) && e.target !== btn) setOpen(false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !panel.hidden) { setOpen(false); btn.focus(); } });
+  $('capCamBtn').addEventListener('click', function () { setOpen(false); });
+})();
 
 /* ── Theme ───────────────────────────────────────────────────── */
 function getTheme() { try { return localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { return 'dark'; } }

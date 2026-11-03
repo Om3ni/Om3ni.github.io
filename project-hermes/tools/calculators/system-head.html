@@ -144,7 +144,7 @@
     <button type="button" class="t-btn" id="btnClear">Clear all</button>
   </div>
 
-  <div class="duty-bar" aria-live="polite">
+  <div class="duty-bar" aria-live="polite" data-rec-before>
     <div><span class="k">Duty point</span><span class="v" id="bar-duty">—</span></div>
     <div><span class="k">Measured flow</span><span class="v" id="bar-meas">—</span></div>
   </div>
@@ -414,5 +414,6 @@ $('h-mat').value = 'copperL'; fillSizes('');
 restore();
 renderAll();
 </script>
+<script src="../shared/recommend.js" data-tool="system-head"></script>
 </body>
 </html>
