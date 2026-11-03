@@ -64,6 +64,45 @@ Rules for how calculators in this app are classified, what they get, and when to
 
 ---
 
+## Release Gate
+
+A tool is listed in the app only after it passes all three steps. Tools that fail are kept in the repo but marked `hidden: true` in the `TOOLS` catalog in `index.html` (out of the catalog, search, Recent, Favorites and deep links).
+
+**1. Engineering review**
+- Method re-derived from the governing source (NEC, IFGC/NFPA 54, IMC, ASHRAE, ACCA, manufacturer data), cited in the file.
+- Every Critical and High finding in the latest audit fixed, and its reproduction case now gives the correct answer.
+- Code limits are respected in the safe direction: maximums round down, minimums round up, tables use the next row rather than interpolating where the code says so.
+- Independent reference test where practical (as `refrigerants/tests/reference.test.mjs` does for PT data), and it passes.
+
+**2. UX review**
+- Rebuilt to the current Hermes tool layout and checked at 390 px.
+- Assumptions and inputs that drive the answer are shown with the result; no silent defaults.
+- Boundary rules above hold: no verdicts that diagnose or declare faults.
+- No stale results after inputs change or become invalid; bad input is flagged, not computed.
+
+**3. Owner sign-off**, then remove `hidden: true` and bump `CACHE_VERSION` in `sw.js`.
+
+### Hidden pending the gate (audit 2026-11)
+
+| Tool | Reason |
+|---|---|
+| Gas Pipe | Critical: runs over 100 ft, row interpolation, propane factor |
+| Combustion Air | Critical: indoor and horizontal-duct opening methods missing |
+| MCA / MOCP | Critical: MOCP rounded up past the 440.22 maximum |
+| Ventilation Sizing | Critical: fuel-fired rooms preset negative, labs preset positive |
+| Start Controls | Critical: overload rule inverted, starter size, capacitor math |
+| Pump Sizing | High: glycol properties, CPVC diameter, stale operating point |
+| Line Set Charge | High: rates 30–45% high, no factory allowance |
+| Long Line Set | High: same rates, fixed pressure drop, no limits |
+| Belt Length | High: section correction sign |
+| Belt Deflection | High: force table |
+| Enthalpy | High: saturation-pressure constant |
+| Breaker Sizing | Hidden by owner before the audit (audit: OK with issues) |
+
+Findings, reproductions and suggested fixes: [audit/2026-11](audit/2026-11/README.md).
+
+---
+
 ## When to Add vs Expand
 
 **New calculator:** The use case has its own distinct input set and doesn't share a UI with an existing tool.

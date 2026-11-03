@@ -478,13 +478,16 @@ This software is provided "as is" without warranty of any kind, express or impli
          'calc' = calculator (tools/calculators/<id>.html)
          'ref'  = reference page
    tag:  shown on the row — Analyzer / Report (printable report)
-   hidden: true keeps a tool out of the catalog, search, Recent and
-           Favorites until it is fixed (the file stays in the repo).
+   hidden: true keeps a tool out of the catalog, search, Recent,
+           Favorites and deep links (the file stays in the repo).
+           Every tool marked BROKEN in audit/2026-11 is hidden. A hidden
+           tool comes back only after it passes the release gate in
+           CALCULATORS.md (engineering review + UX review + owner sign-off).
    ══════════════════════════════════════════════ */
 var CATS = ['Refrigeration', 'Airflow & Psychrometrics', 'Electrical', 'Motors & Drives', 'Heating & Gas', 'Water & Drains', 'Conversions'];
 var TOOLS = [
   { id: 'refrigeration', kind: 'tool', name: 'Refrigeration Analysis', desc: 'Superheat · subcooling · compression ratio', cat: 0, tag: 'Analyzer', kw: 'sh sc superheat subcool pt saturation charge' },
-  { id: 'refrigerant-charge', kind: 'calc', name: 'Line Set Charge', short: 'Line Charge', desc: 'Added charge for line length', cat: 0, kw: 'oz ounces refrigerant' },
+  { id: 'refrigerant-charge', hidden: true, kind: 'calc', name: 'Line Set Charge', short: 'Line Charge', desc: 'Added charge for line length', cat: 0, kw: 'oz ounces refrigerant' },
   { id: 'long-lineset', hidden: true, kind: 'calc', name: 'Long Line Set', desc: 'Long-run piping and charge', cat: 0, kw: 'suction liquid refrigerant' },
   { id: 'charge-troubleshooting', kind: 'ref', path: 'resources/charge-troubleshooting.html', name: 'Charge Troubleshooting', short: 'Troubleshooting', desc: 'Fixed & TXV symptom chart · targets · field tips', cat: 0, tag: 'Guide', kw: 'troubleshoot diagnose chart overcharge undercharge restriction drier non-condensables txv bulb dtd superheat subcooling' },
   { id: 'airflow', kind: 'tool', name: 'Airflow Analysis', short: 'Airflow', desc: 'Delta T · sensible heat · mixed air · OA%', cat: 1, tag: 'Analyzer', kw: 'cfm temperature split' },
@@ -492,23 +495,23 @@ var TOOLS = [
   { id: 'enthalpy', hidden: true, kind: 'calc', name: 'Enthalpy', desc: 'Air enthalpy from dry and wet bulb', cat: 1, kw: 'btu lb wet bulb' },
   { id: 'cfm-per-ton', kind: 'calc', name: 'CFM per Ton', short: 'CFM / Ton', desc: 'Airflow per ton of capacity', cat: 1, kw: 'airflow' },
   { id: 'duct-sizing', kind: 'calc', name: 'Duct Sizing', short: 'Duct', desc: 'Round and rectangular duct', cat: 1, kw: 'velocity fpm' },
-  { id: 'ventilation-sizing', kind: 'calc', name: 'Ventilation Sizing', short: 'Ventilation', desc: 'ACH exhaust and makeup air', cat: 1, tag: 'Report', kw: 'ashrae exhaust makeup' },
+  { id: 'ventilation-sizing', hidden: true, kind: 'calc', name: 'Ventilation Sizing', short: 'Ventilation', desc: 'ACH exhaust and makeup air', cat: 1, tag: 'Report', kw: 'ashrae exhaust makeup' },
   { id: 'load-calc', kind: 'calc', name: 'Load Estimate', short: 'Load', desc: 'Simplified heating and cooling load', cat: 1, kw: 'manual j btu tonnage' },
   { id: 'electrical', kind: 'tool', name: 'Electrical Analysis', short: 'Electrical', desc: 'Supply voltage · phase imbalance · transformers', cat: 2, tag: 'Analyzer', kw: 'volts amps voltage' },
   { id: 'wire-sizing', kind: 'calc', name: 'Wire & Breaker', desc: 'NEC ampacity · voltage drop · conductor', cat: 2, tag: 'Report', kw: 'awg nec wire' },
-  { id: 'mca-mocp', kind: 'calc', name: 'MCA / MOCP', desc: 'Minimum circuit ampacity, max overcurrent', cat: 2, tag: 'Report', kw: 'nameplate fuse breaker' },
+  { id: 'mca-mocp', hidden: true, kind: 'calc', name: 'MCA / MOCP', desc: 'Minimum circuit ampacity, max overcurrent', cat: 2, tag: 'Report', kw: 'nameplate fuse breaker' },
   { id: 'breaker-sizing', hidden: true, kind: 'calc', name: 'Breaker Sizing', short: 'Breaker', desc: 'Overcurrent device sizing', cat: 2, kw: 'fuse ocpd' },
   { id: 'capacitor-sizing', kind: 'calc', name: 'Capacitor', desc: 'Run and start capacitor check', cat: 2, kw: 'mfd uf cap' },
   { id: 'ohms-law', kind: 'calc', name: "Ohm's Law", desc: 'Volts · amps · ohms · watts', cat: 2, kw: 'resistance power' },
   { id: 'electrical-cost', kind: 'calc', name: 'Operating Cost', short: 'Op Cost', desc: 'Energy cost estimate', cat: 2, kw: 'kwh cost' },
   { id: 'motors', kind: 'tool', name: 'Motor Analysis', short: 'Motors', desc: 'PSC · 3-phase · ECM · compressor · insulation', cat: 3, tag: 'Analyzer', kw: 'megger winding motor' },
-  { id: 'motor-start-controls', kind: 'calc', name: 'Start Controls', desc: 'Start methods · VFD · relays · hard start', cat: 3, tag: 'Report', kw: 'contactor vfd' },
-  { id: 'belt-length', kind: 'calc', name: 'Belt Length', desc: 'V-belt length and section', cat: 3, kw: 'pulley sheave belt' },
-  { id: 'belt-deflection', kind: 'calc', name: 'Belt Deflection', desc: 'Tension by deflection', cat: 3, kw: 'tension belt' },
+  { id: 'motor-start-controls', hidden: true, kind: 'calc', name: 'Start Controls', desc: 'Start methods · VFD · relays · hard start', cat: 3, tag: 'Report', kw: 'contactor vfd' },
+  { id: 'belt-length', hidden: true, kind: 'calc', name: 'Belt Length', desc: 'V-belt length and section', cat: 3, kw: 'pulley sheave belt' },
+  { id: 'belt-deflection', hidden: true, kind: 'calc', name: 'Belt Deflection', desc: 'Tension by deflection', cat: 3, kw: 'tension belt' },
   { id: 'heat', kind: 'tool', name: 'Heat Analysis', short: 'Heat', desc: 'Gas and electric heat · temp rise · output', cat: 4, tag: 'Analyzer', kw: 'furnace heating' },
-  { id: 'gas-pipe', kind: 'calc', name: 'Gas Pipe', desc: 'IFGC pipe sizing', cat: 4, kw: 'cfh natural propane' },
-  { id: 'combustion-air', kind: 'calc', name: 'Combustion Air', desc: 'Combustion air openings', cat: 4, kw: 'ifgc' },
-  { id: 'system-head', kind: 'calc', name: 'Pump Sizing', short: 'Pump', desc: 'Pump head · pipe loss · pump curve', cat: 5, tag: 'Report', kw: 'gpm hydronic head pump' },
+  { id: 'gas-pipe', hidden: true, kind: 'calc', name: 'Gas Pipe', desc: 'IFGC pipe sizing', cat: 4, kw: 'cfh natural propane' },
+  { id: 'combustion-air', hidden: true, kind: 'calc', name: 'Combustion Air', desc: 'Combustion air openings', cat: 4, kw: 'ifgc' },
+  { id: 'system-head', hidden: true, kind: 'calc', name: 'Pump Sizing', short: 'Pump', desc: 'Pump head · pipe loss · pump curve', cat: 5, tag: 'Report', kw: 'gpm hydronic head pump' },
   { id: 'condensate-drain', kind: 'calc', name: 'Condensate Drain', short: 'Condensate', desc: 'Drain line sizing', cat: 5, kw: 'trap drain' },
   { id: 'temp-convert', kind: 'calc', name: 'Temperature', short: 'Temp', desc: '°F · °C · °R · K', cat: 6, kw: 'convert celsius fahrenheit' },
   { id: 'pressure-convert', kind: 'calc', name: 'Pressure', desc: 'psi · kPa · bar · inHg · mmHg', cat: 6, kw: 'convert' },
