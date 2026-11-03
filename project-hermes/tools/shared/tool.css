@@ -1,0 +1,86 @@
+/* ══════════════════════════════════════════════════════════════════════
+   tools/shared/tool.css — layout for redesigned Hermes tools (2026-11 on)
+   Load after ../base.css (tokens, header, fonts).
+
+   Page = a stack of test cards. Each card: title, one-line purpose,
+   inputs, then its results directly underneath. Results read
+   "value · reference (source)"; a neutral marker flags a value outside
+   its reference. No green/yellow/red verdicts (CALCULATORS.md).
+   ══════════════════════════════════════════════════════════════════════ */
+
+.t-wrap { max-width: 640px; margin: 0 auto; padding: 12px 16px 40px; }
+.t-intro { margin: 4px 2px 0; font-size: .95rem; line-height: 1.45; color: var(--text-dim); }
+
+/* Segmented choice (motor type, phase, …) */
+.t-seg { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; padding: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.t-seg button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; color: var(--text-dim); font-family: var(--ui); font-size: .98rem; font-weight: 700; letter-spacing: .03em; cursor: pointer; }
+.t-seg button[aria-pressed="true"] { background: var(--orange-dim); color: var(--orange-hi); box-shadow: inset 0 0 0 1px var(--orange-hi); }
+.t-lbl { display: block; margin: 16px 2px 0; font-family: var(--ui); font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); }
+
+/* Cards */
+.t-card { margin-top: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.t-card > summary, .t-card > .t-head { display: flex; align-items: center; gap: 10px; min-height: 54px; padding: 0 14px; list-style: none; cursor: pointer; }
+.t-card > .t-head { cursor: default; }
+.t-card > summary::-webkit-details-marker { display: none; }
+.t-card > summary::after { content: '+'; margin-left: auto; font-family: var(--mono); font-size: 1.1rem; color: var(--orange-hi); }
+.t-card[open] > summary::after { content: '−'; }
+.t-title { margin: 0; font-family: var(--ui); font-size: 1.12rem; font-weight: 700; letter-spacing: .04em; color: var(--text); }
+.t-badge { font-family: var(--mono); font-size: .72rem; color: var(--text-mute); }
+.t-body { padding: 0 14px 14px; }
+.t-purpose { margin: 0 0 4px; font-size: .9rem; line-height: 1.4; color: var(--text-dim); }
+
+/* Fields */
+.t-grid { display: grid; gap: 10px; margin-top: 10px; }
+.t-grid.c2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.t-grid.c3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.t-f { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.t-f > span:first-child { font-family: var(--ui); font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); }
+.t-f .opt { font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-mute); }
+.t-in { position: relative; }
+.t-in input, .t-in textarea { width: 100%; height: 50px; padding: 0 40px 0 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--mono); font-size: 1.15rem; outline: none; -moz-appearance: textfield; }
+.t-in textarea { height: 96px; padding: 10px 12px; font-family: var(--ui); font-size: 1rem; resize: vertical; }
+.t-in input::-webkit-outer-spin-button, .t-in input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.t-in input:focus, .t-in textarea:focus { border-color: var(--orange-hi); }
+.t-in input[aria-invalid="true"] { border-color: var(--text); border-style: dashed; }
+.t-in .u { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-family: var(--mono); font-size: .8rem; color: var(--text-mute); pointer-events: none; }
+.t-hint { margin: 8px 2px 0; font-size: .85rem; line-height: 1.4; color: var(--text-mute); }
+.t-err { margin: 6px 2px 0; font-size: .85rem; color: var(--text); }
+.t-err::before { content: '! '; font-family: var(--mono); color: var(--orange-hi); }
+
+/* Results: value vs reference */
+.t-res { margin-top: 12px; border-top: 1px solid var(--border); }
+.t-row { padding: 10px 2px; border-bottom: 1px solid var(--border); }
+.t-row:last-child { border-bottom: 0; }
+.t-row .top { display: flex; align-items: baseline; gap: 10px; }
+.t-row .k { flex: 1; min-width: 0; font-family: var(--ui); font-size: .95rem; font-weight: 600; color: var(--text-dim); }
+.t-row .v { font-family: var(--mono); font-size: 1.25rem; color: var(--text); white-space: nowrap; }
+.t-row .v small { font-size: .8rem; color: var(--text-mute); margin-left: 2px; }
+.t-row .ref { margin-top: 3px; font-size: .84rem; line-height: 1.4; color: var(--text-mute); }
+.t-row .ref b { font-weight: 600; color: var(--text-dim); }
+/* Neutral marker: a fact about the comparison, not a verdict */
+.t-mk { display: inline-block; margin-top: 6px; padding: 3px 8px; border: 1px solid var(--text-dim); border-radius: 4px; font-family: var(--mono); font-size: .75rem; letter-spacing: .04em; color: var(--text); }
+.t-mk::before { content: '◆ '; color: var(--orange-hi); }
+.t-empty { margin: 10px 2px 0; font-size: .88rem; color: var(--text-mute); }
+
+/* Buttons */
+.t-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 18px; border-radius: 8px; border: 1px solid var(--orange-lo); background: var(--surface2); color: var(--orange-hi); font-family: var(--ui); font-size: 1rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.t-btn.primary { background: var(--orange); border-color: var(--orange); color: #fff; }
+.t-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.t-actions .t-btn { flex: 1 1 140px; }
+
+/* Preview flag (unreleased redesign) */
+.t-preview { margin: 0; padding: 10px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); font-size: .88rem; color: var(--text-dim); }
+.t-preview b { color: var(--text); }
+
+/* Report dialog */
+.t-dialog { width: min(640px, calc(100vw - 24px)); max-height: calc(100dvh - 48px); padding: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); }
+.t-dialog::backdrop { background: rgba(0, 0, 0, .6); }
+.t-dialog .dh { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); font-family: var(--ui); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.t-dialog pre { margin: 0; padding: 14px; max-height: 60dvh; overflow: auto; white-space: pre-wrap; font-family: var(--mono); font-size: .8rem; line-height: 1.5; color: var(--text); }
+.t-dialog .da { display: flex; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--border); }
+.t-dialog .da .t-btn { flex: 1; }
+
+/* Light theme accents stay readable on grey */
+[data-theme="light"] .t-seg button[aria-pressed="true"] { color: #9a4000; box-shadow: inset 0 0 0 1px #9a4000; }
+[data-theme="light"] .t-card > summary::after, [data-theme="light"] .t-mk::before, [data-theme="light"] .t-err::before { color: #9a4000; }
+[data-theme="light"] .t-btn:not(.primary) { color: #9a4000; border-color: #9a4000; }
