@@ -228,4 +228,19 @@ function match(meter, readings) {
   });
 }
 
-export { NOTES, ORDER, PROBLEMS, READINGS, codes, noteOf, whyFor, looksLikeFor, match };
+/**
+ * possible(meter, readings) → { sp: [...], lp: [...], ... }: for each reading,
+ * the values ("d" | "n" | "u") that would still leave at least one matching
+ * problem, given the other readings already chosen. Used to hide choices that
+ * can't match anything.
+ */
+function possible(meter, readings) {
+  const out = {};
+  READINGS.forEach(({ k }) => {
+    const others = { ...readings }; delete others[k];
+    out[k] = ["d", "n", "u"].filter((v) => match(meter, { ...others, [k]: v }).length > 0);
+  });
+  return out;
+}
+
+export { NOTES, ORDER, PROBLEMS, READINGS, codes, noteOf, whyFor, looksLikeFor, match, possible };
