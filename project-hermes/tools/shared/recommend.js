@@ -46,6 +46,7 @@
     'electrical-cost':        ['clamp'],
     'motors':                 ['megger', 'clamp', 'cap'],
     'heat':                   ['combustion', 'manometer', 'thermo'],
+    'gas-pipe':               ['manometer'],
     'system-head':            ['hydronic', 'clamp_t'],
     'temp-convert':           ['thermo', 'ir'],
     'pressure-convert':       ['manometer', 'manifold'],

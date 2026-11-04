@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gas Pipe Sizing · HVAC Tools</title>
+<link rel="stylesheet" href="../../base.css">
+<link rel="stylesheet" href="../shared/tool.css">
+<script>try { var th = localStorage.getItem('sl_theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}</script>
+<style>
+[hidden] { display: none !important; }
+.app-row { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 8px; margin-top: 8px; }
+.app-row input, .sec-name { width: 100%; height: 46px; padding: 0 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 1rem; }
+.app-row .t-in input { height: 46px; font-size: 1.05rem; padding-right: 54px; }
+.sec { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.sec:first-child { margin-top: 4px; padding-top: 0; border-top: 0; }
+.sec-head { display: flex; align-items: center; gap: 8px; }
+.sec-head .fixed { font-family: var(--ui); font-weight: 700; color: var(--text); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chips button { min-height: 40px; padding: 0 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text-dim); font-family: var(--ui); font-size: .92rem; font-weight: 600; cursor: pointer; }
+.chips button[aria-pressed="true"] { background: var(--orange-dim); color: var(--orange-hi); border-color: var(--orange-hi); }
+.sec-out { margin-top: 6px; }
+.sec-out .t-row { padding: 6px 2px; border: 0; }
+.rowcaps { margin-top: 4px; font-family: var(--mono); font-size: .8rem; line-height: 1.6; color: var(--text-mute); }
+[data-theme="light"] .chips button[aria-pressed="true"] { color: #9a4000; border-color: #9a4000; }
+</style>
+</head>
+<body>
+<p class="t-preview" id="previewFlag" hidden><b>Preview</b> — redesigned Gas Pipe Sizing, not yet released.</p>
+<header>
+  <a class="hdr-home" href="../../index.html" title="Project home">⌂</a>
+  <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
+  <div class="hdr-titles">
+    <div class="hdr-title">Gas Pipe Sizing</div>
+    <div class="hdr-sub">Schedule 40 · low pressure · IFGC longest length</div>
+  </div>
+</header>
+
+<main class="t-wrap">
+  <p class="t-intro">Sizes each section of a low-pressure Schedule 40 gas system from the IFGC capacity tables, using the longest length method: one length for the whole system, and each section sized for the appliances it feeds.</p>
+
+  <!-- GAS -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Gas</h2><span class="t-badge" id="badge-g"></span></div>
+    <div class="t-body">
+      <div class="t-seg" id="gasSeg" role="group" aria-label="Gas">
+        <button type="button" data-gas="ng">Natural gas</button>
+        <button type="button" data-gas="lp">Propane</button>
+      </div>
+      <div class="t-grid c2" id="hvWrap">
+        <label class="t-f"><span>Heating value <span class="opt">opt.</span></span><span class="t-in"><input id="hv" type="number" inputmode="decimal" step="any" placeholder="1000" style="padding-right:70px"><span class="u">Btu/ft³</span></span></label>
+      </div>
+      <p class="t-hint" id="gasHint"></p>
+      <div class="t-res" id="res-g"></div>
+    </div>
+  </section>
+
+  <!-- APPLIANCES -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Appliances</h2><span class="t-badge" id="badge-a"></span></div>
+    <div class="t-body">
+      <p class="t-purpose">Input rating from each appliance's rating plate. All are assumed to run at once (402.2).</p>
+      <div id="appRows"></div>
+      <div class="t-res" id="res-a"></div>
+    </div>
+  </section>
+
+  <!-- LENGTH -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Longest length</h2><span class="t-badge" id="badge-l"></span></div>
+    <div class="t-body">
+      <p class="t-purpose" id="lenPurpose"></p>
+      <div class="t-grid c2">
+        <label class="t-f" style="grid-column:1/-1"><span>Measured length</span><span class="t-in"><input id="len" type="number" inputmode="decimal" step="any"><span class="u">ft</span></span></label>
+      </div>
+      <span class="t-lbl">Fittings on that run <span class="opt" style="text-transform:none;letter-spacing:0;font-weight:500">optional</span></span>
+      <div class="t-grid c3">
+        <label class="t-f"><span>90° ells</span><span class="t-in"><input id="f-ell90" type="number" inputmode="numeric" min="0" step="1"></span></label>
+        <label class="t-f"><span>Tees</span><span class="t-in"><input id="f-tee" type="number" inputmode="numeric" min="0" step="1"></span></label>
+        <label class="t-f"><span>45° ells</span><span class="t-in"><input id="f-ell45" type="number" inputmode="numeric" min="0" step="1"></span></label>
+      </div>
+      <p class="t-hint">With four or more fittings, their equivalent length (Table A102.2, screwed) is added to the run. Four elbows can be enough to move to the next row.</p>
+      <div class="t-res" id="res-l"></div>
+    </div>
+  </section>
+
+  <!-- SECTIONS -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Sections</h2><span class="t-badge" id="badge-s"></span></div>
+    <div class="t-body">
+      <p class="t-purpose">Split the piping at each tee. For each section, tap the appliances downstream of it.</p>
+      <div id="secRows"></div>
+      <div class="t-actions" style="margin-top:12px"><button type="button" class="t-btn" id="btnAddSec">Add section</button></div>
+    </div>
+  </section>
+
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Notes</h2></div>
+    <div class="t-body"><label class="t-f"><span class="opt" style="text-transform:none;letter-spacing:0">Job, meter or regulator location, routing</span><span class="t-in"><textarea id="notes"></textarea></span></label></div>
+  </section>
+
+  <p class="t-hint">CSST and other listed piping systems are sized from the manufacturer's own tables (402.3(2)); each brand differs. Above 2,000 ft elevation, the flow must be adjusted for altitude (402.2). Supply pressure at every appliance must meet its minimum (402.6).</p>
+
+  <div class="t-actions">
+    <button type="button" class="t-btn primary" id="btnReport">Report</button>
+    <button type="button" class="t-btn" id="btnClear">Clear all</button>
+  </div>
+</main>
+
+<dialog class="t-dialog" id="reportDlg" aria-labelledby="reportTitle">
+  <div class="dh"><span id="reportTitle">Gas pipe report</span><button type="button" class="t-btn" id="btnCloseReport" style="min-height:40px">Close</button></div>
+  <pre id="reportText"></pre>
+  <div class="da"><button type="button" class="t-btn" id="btnCopy">Copy</button><button type="button" class="t-btn primary" id="btnSave">Save .txt</button></div>
+</dialog>
+
+<script type="module">
+import * as G from '../shared/gas.js';
+
+const STORE = 'hermes_gas_next';
+const VERSION = 'gas-pipe 2026-11';
+const N_APP = 6, MAX_SEC = 8;
+let gas = 'ng';
+let sections = [];   // extra sections (the first, from the point of delivery, is implicit): { name, apps: [indices] }
+
+const $ = (id) => document.getElementById(id);
+const val = (id) => { const e = $(id); if (!e || e.value === '') return null; const v = parseFloat(String(e.value).replace(',', '.')); return Number.isFinite(v) ? v : NaN; };
+const f = (n, d = 0) => (n === null || n === undefined || !Number.isFinite(n) ? '—' : (Math.round(n * 10 ** d) / 10 ** d).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }));
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function row(k, v, unit, ref, marker) {
+  return `<div class="t-row"><div class="top"><span class="k">${esc(k)}</span><span class="v">${esc(v)}${unit ? `<small>${esc(unit)}</small>` : ''}</span></div>` +
+    (ref ? `<div class="ref">${ref}</div>` : '') + (marker ? `<span class="t-mk">${esc(marker)}</span>` : '') + `</div>`;
+}
+const empty = (msg) => `<p class="t-empty">${esc(msg)}</p>`;
+const bad = (id, cond) => { const e = $(id); if (e) e.setAttribute('aria-invalid', String(!!cond)); };
+const pos = (v) => v !== null && Number.isFinite(v) && v > 0;
+const inch = (s) => s + '″';
+const START = () => (gas === 'lp' ? 'second-stage regulator' : 'meter');
+
+/* ── Build inputs ────────────────────────────────────────────────── */
+$('appRows').innerHTML = Array.from({ length: N_APP }, (_, i) =>
+  `<div class="app-row"><input id="app-name-${i}" type="text" placeholder="${['Furnace', 'Water heater', 'Range', 'Dryer', 'Fireplace', 'Appliance 6'][i]}" aria-label="Appliance ${i + 1} name"><span class="t-in"><input id="app-btu-${i}" type="number" inputmode="numeric" step="any" aria-label="Appliance ${i + 1} input"><span class="u">Btu/h</span></span></div>`).join('');
+
+function apps() {
+  const out = [];
+  for (let i = 0; i < N_APP; i++) {
+    const b = val('app-btu-' + i), name = $('app-name-' + i).value.trim() || $('app-name-' + i).placeholder;
+    bad('app-btu-' + i, b !== null && !pos(b));
+    if (pos(b)) out.push({ i, name, btuh: b });
+  }
+  return out;
+}
+
+function drawSections(list) {
+  const host = $('secRows');
+  const keep = sections.map((s, k) => { const e = $('sec-name-' + k); return e ? e.value : s.name; });
+  sections.forEach((s, k) => { s.name = keep[k]; });
+  let html = `<div class="sec"><div class="sec-head"><span class="fixed">From the ${esc(START())}</span></div><p class="t-hint" style="margin-top:4px">Carries every appliance.</p><div class="sec-out" id="sec-out-0"></div></div>`;
+  sections.forEach((s, k) => {
+    html += `<div class="sec"><div class="sec-head"><input class="sec-name" id="sec-name-${k}" type="text" placeholder="Section ${k + 2}, e.g. tee to furnace" value="${esc(s.name || '')}" aria-label="Section ${k + 2} name"><button type="button" class="t-btn" data-del="${k}" style="min-height:46px;padding:0 12px" aria-label="Remove section ${k + 2}">✕</button></div>` +
+      `<div class="chips" role="group" aria-label="Appliances downstream of section ${k + 2}">` +
+      (list.length ? list.map((a) => `<button type="button" data-sec="${k}" data-app="${a.i}" aria-pressed="${s.apps.includes(a.i)}">${esc(a.name)}</button>`).join('') : '<span class="t-empty" style="margin:0">Enter appliances first.</span>') +
+      `</div><div class="sec-out" id="sec-out-${k + 1}"></div></div>`;
+  });
+  host.innerHTML = html;
+  $('btnAddSec').disabled = sections.length >= MAX_SEC - 1;
+}
+
+/* ── Everything the page knows, as one plain record ─────────────── */
+let R = {};
+
+function render(redraw = true) {
+  R = { tool: 'gas-pipe', version: VERSION, gas };
+  document.querySelectorAll('#gasSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.gas === gas)));
+  $('hvWrap').hidden = gas !== 'ng';
+  const t = G.TABLES[gas];
+  $('gasHint').textContent = gas === 'ng'
+    ? 'Ask the gas supplier for the average heating value (A102.1). Left blank, 1,000 Btu/ft³ is used, which reads slightly high in CFH for most pipeline gas.'
+    : 'Undiluted propane at 11 in. w.c. Sizes piping after the second-stage (or single-stage) regulator only.';
+  $('lenPurpose').textContent = `From the ${START()} outlet to the most remote appliance, along the pipe. This one length sizes every section (402.4.1).`;
+
+  // Gas card
+  const hv = val('hv'); bad('hv', hv !== null && !pos(hv));
+  $('res-g').innerHTML = row('Table', t.table.replace('IFGC 2021 ', ''), '', `${esc(t.title)} · capacities in ${t.unit}`);
+  $('badge-g').textContent = gas === 'ng' ? `NG · ${pos(hv) ? f(hv) : '1,000'} Btu/ft³` : 'Propane';
+
+  // Appliances
+  const list = apps();
+  const total = list.reduce((s, a) => s + a.btuh, 0);
+  R.appliances = list.map((a) => ({ name: a.name, btuh: a.btuh }));
+  $('res-a').innerHTML = list.length ? row('Total connected load', f(total), 'Btu/h', gas === 'ng' ? `${f(total / (pos(hv) ? hv : G.DEFAULT_HV), 1)} CFH at ${pos(hv) ? f(hv) : '1,000'} Btu/ft³` : `${f(total / 1000, 1)} kBtu/h`) : empty('Enter at least one appliance input.');
+  $('badge-a').textContent = list.length ? `${f(total / 1000, 0)}k Btu/h` : '';
+
+  // Sections: drop chips for appliances that no longer have a load
+  const live = new Set(list.map((a) => a.i));
+  sections.forEach((s) => { s.apps = s.apps.filter((i) => live.has(i)); });
+  if (redraw) drawSections(list);
+
+  // Length + sizing
+  const L = val('len'); bad('len', L !== null && !pos(L));
+  const fits = {}; G.FITTINGS.forEach((x) => { const v = val('f-' + x.key); bad('f-' + x.key, v !== null && !(v >= 0 && Number.isInteger(v))); if (v > 0) fits[x.key] = v; });
+  R.length = { measured: pos(L) ? L : null, fittings: fits };
+  const secInputs = [{ name: `From the ${START()}`, btuh: total }].concat(sections.map((s, k) => ({ name: (s.name || '').trim() || `Section ${k + 2}`, btuh: list.filter((a) => s.apps.includes(a.i)).reduce((x, a) => x + a.btuh, 0) })));
+  const clearOuts = (msg) => { secInputs.forEach((_, k) => { const o = $('sec-out-' + k); if (o) o.innerHTML = k === 0 && msg ? empty(msg) : ''; }); $('badge-s').textContent = ''; };
+  R.result = null;
+  if (!pos(L)) { $('res-l').innerHTML = empty('Enter the measured length.'); $('badge-l').textContent = ''; clearOuts(list.length ? 'Enter the longest length.' : 'Enter appliances and the longest length.'); return finish(); }
+  if (!list.length) { $('res-l').innerHTML = ''; $('badge-l').textContent = ''; clearOuts('Enter at least one appliance input.'); return finish(); }
+  const r = G.sizeSystem({ gas, heatingValue: pos(hv) ? hv : undefined, lengthFt: L, fittings: fits, sections: secInputs });
+  if (!r.ok) { $('res-l').innerHTML = empty(r.reason.charAt(0).toUpperCase() + r.reason.slice(1) + '.'); $('badge-l').textContent = ''; clearOuts(''); return finish(); }
+  R.result = r;
+
+  const fitNote = r.fittingsApplied ? ` + ${f(r.fittingsLength, 1)} ft for ${r.fittingsCounted} fittings at ${inch(r.fittingsAt)}` : r.fittingsCounted ? ` (${r.fittingsCounted} fitting${r.fittingsCounted > 1 ? 's' : ''}: under four, no allowance)` : '';
+  const caps = r.rowCapacities.filter((c) => c.capacity !== null).slice(0, gas === 'ng' ? 9 : 9).map((c) => `${inch(c.size)} ${f(c.capacity)}`).join(' · ');
+  $('res-l').innerHTML = row('Table row used', f(r.rowLength), 'ft',
+    `${f(L, 0)} ft measured${fitNote}${r.rowLength !== Math.round(r.totalLength) ? '; next longer row' : ''} · <b>A103.1 step 5</b>`) +
+    `<div class="rowcaps">${esc(t.unit)} at ${f(r.rowLength)} ft: ${esc(caps)}</div>`;
+  $('badge-l').textContent = `${f(r.rowLength)} ft row`;
+
+  // Each section
+  let sized = 0;
+  r.sections.forEach((s, k) => {
+    const o = $('sec-out-' + k); if (!o) return;
+    if (s.empty) { o.innerHTML = empty('Tap the appliances this section feeds.'); return; }
+    const load = gas === 'ng' ? `${f(s.load, 1)} CFH` : `${f(s.load, 1)} kBtu/h`;
+    if (s.over) { o.innerHTML = row('Pipe size', 'Beyond table', '', `${load} is more than the largest size in this row`, 'Engineered design needed'); return; }
+    sized++;
+    o.innerHTML = row('Pipe size', inch(s.size), '', `${load} (${f(s.btuh)} Btu/h) · this size carries <b>${f(s.capacity)} ${t.unit}</b> at ${f(r.rowLength)} ft`);
+  });
+  $('badge-s').textContent = r.sections[0] && r.sections[0].size ? `${inch(r.sections[0].size)} from the ${START()}` : '';
+  return finish();
+}
+
+function finish() { save(); }
+
+/* ── Persistence (this visit) ────────────────────────────────────── */
+const FIELDS = () => [...document.querySelectorAll('main input:not(.sec-name), main textarea')];
+function save() {
+  try {
+    const d = { gas, sections: sections.map((s, k) => ({ name: ($('sec-name-' + k) || {}).value ?? s.name, apps: s.apps })) };
+    FIELDS().forEach((e) => { d[e.id] = e.value; });
+    sessionStorage.setItem(STORE, JSON.stringify(d));
+  } catch (e) {}
+}
+function restore() {
+  try {
+    const d = JSON.parse(sessionStorage.getItem(STORE) || 'null'); if (!d) return;
+    if (d.gas === 'lp' || d.gas === 'ng') gas = d.gas;
+    if (Array.isArray(d.sections)) sections = d.sections.slice(0, MAX_SEC - 1).map((s) => ({ name: String(s.name || ''), apps: Array.isArray(s.apps) ? s.apps.filter(Number.isInteger) : [] }));
+    FIELDS().forEach((e) => { if (e.id in d) e.value = d[e.id]; });
+  } catch (e) {}
+}
+
+/* ── Report ──────────────────────────────────────────────────────── */
+function buildReport() {
+  const t = G.TABLES[gas], r = R.result;
+  const out = ['GAS PIPE SIZING REPORT — Hermes', new Date().toLocaleString(), `${t.table}: ${t.title}`, 'Schedule 40 metallic pipe · longest length method (IFGC 402.4.1, Appendix A103.1)', ''];
+  if (gas === 'ng') out.push(`Heating value: ${pos(val('hv')) ? f(val('hv')) : '1,000 (default)'} Btu/ft³`);
+  (R.appliances || []).forEach((a) => out.push(`  ${a.name}: ${f(a.btuh)} Btu/h`));
+  if (R.appliances && R.appliances.length) out.push(`  Total: ${f(R.appliances.reduce((s, a) => s + a.btuh, 0))} Btu/h`);
+  if (r) {
+    out.push('', `Longest length: ${f(r.measuredLength, 0)} ft from the ${START()}` + (r.fittingsApplied ? ` + ${f(r.fittingsLength, 1)} ft fittings (${r.fittingsCounted}, at ${r.fittingsAt}″)` : '') + ` → ${f(r.rowLength)} ft row`, '');
+    r.sections.forEach((s) => {
+      if (s.empty) return;
+      const load = gas === 'ng' ? `${f(s.load, 1)} CFH` : `${f(s.load, 1)} kBtu/h`;
+      out.push(`${s.name}: ${s.over ? 'beyond the table — engineered design' : s.size + '″'} (${f(s.btuh)} Btu/h = ${load}${s.over ? '' : `; capacity ${f(s.capacity)} ${t.unit}`})`);
+    });
+  }
+  const n = $('notes').value.trim(); if (n) out.push('', 'Notes:', n);
+  out.push('', 'Reference values from the IFGC tables. CSST and other listed systems: use the manufacturer\'s tables. Verify against the code adopted by the AHJ and the appliance minimum inlet pressures.');
+  return out.join('\n');
+}
+$('btnReport').addEventListener('click', () => { $('reportText').textContent = buildReport(); $('reportDlg').showModal(); });
+$('btnCloseReport').addEventListener('click', () => $('reportDlg').close());
+$('btnCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('reportText').textContent); $('btnCopy').textContent = 'Copied'; setTimeout(() => { $('btnCopy').textContent = 'Copy'; }, 1500); } catch (e) {} });
+$('btnSave').addEventListener('click', () => { const el = document.createElement('a'); el.href = URL.createObjectURL(new Blob([$('reportText').textContent], { type: 'text/plain' })); el.download = 'gas-pipe-report-' + new Date().toISOString().slice(0, 10) + '.txt'; el.click(); URL.revokeObjectURL(el.href); });
+$('btnClear').addEventListener('click', () => { if (!confirm('Clear all inputs on this page?')) return; FIELDS().forEach((e) => { e.value = ''; }); sections = []; render(); });
+
+/* ── Wiring ──────────────────────────────────────────────────────── */
+document.querySelectorAll('#gasSeg button').forEach((b) => b.addEventListener('click', () => { gas = b.dataset.gas; render(); }));
+$('btnAddSec').addEventListener('click', () => { if (sections.length < MAX_SEC - 1) { sections.push({ name: '', apps: [] }); render(); const e = $('sec-name-' + (sections.length - 1)); if (e) e.focus(); } });
+$('secRows').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button'); if (!b) return;
+  if (b.dataset.del !== undefined) { sections.splice(+b.dataset.del, 1); render(); return; }
+  if (b.dataset.sec !== undefined) {
+    const s = sections[+b.dataset.sec], i = +b.dataset.app;
+    s.apps = s.apps.includes(i) ? s.apps.filter((x) => x !== i) : s.apps.concat(i);
+    render();
+  }
+});
+// Typing a section name only needs the numbers refreshed, not the inputs rebuilt (keeps focus).
+document.querySelector('main').addEventListener('input', (ev) => {
+  if (ev.target.classList.contains('sec-name')) { const k = +ev.target.id.split('-').pop(); sections[k].name = ev.target.value; render(false); return; }
+  // Appliance names/loads change the chips; rebuild sections but keep focus on the field being typed in.
+  render(/^app-/.test(ev.target.id));
+});
+
+restore();
+render();
+window.hermesRecord = () => JSON.parse(JSON.stringify(R));
+if (/gas-pipe-next\.html$/.test(location.pathname) && window.parent === window) $('previewFlag').hidden = false;
+</script>
+<script src="../shared/recommend.js" data-tool="gas-pipe"></script>
+</body>
+</html>
