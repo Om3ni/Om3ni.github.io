@@ -486,7 +486,7 @@ var TOOLS = [
   { id: 'load-calc', kind: 'calc', name: 'Load Estimate', short: 'Load', desc: 'Simplified heating and cooling load', cat: 1, kw: 'manual j btu tonnage' },
   { id: 'electrical', kind: 'tool', name: 'Electrical Analysis', short: 'Electrical', desc: 'Supply voltage · phase imbalance · transformers', cat: 2, tag: 'Analyzer', kw: 'volts amps voltage' },
   { id: 'wire-sizing', kind: 'calc', name: 'Wire & Breaker', desc: 'NEC ampacity · voltage drop · conductor', cat: 2, tag: 'Report', kw: 'awg nec wire' },
-  { id: 'mca-mocp', hidden: true, kind: 'calc', name: 'MCA / MOCP', desc: 'Minimum circuit ampacity, max overcurrent', cat: 2, tag: 'Report', kw: 'nameplate fuse breaker' },
+  { id: 'mca-mocp', kind: 'calc', name: 'MCA / MOCP', desc: 'Circuit ampacity · max breaker · wire size', cat: 2, tag: 'Report', kw: 'nameplate fuse breaker mop wire conductor awg compressor rla condenser circuit nec 440' },
   { id: 'breaker-sizing', hidden: true, kind: 'calc', name: 'Breaker Sizing', short: 'Breaker', desc: 'Overcurrent device sizing', cat: 2, kw: 'fuse ocpd' },
   { id: 'capacitor-sizing', kind: 'calc', name: 'Capacitor', desc: 'Run and start capacitor check', cat: 2, kw: 'mfd uf cap' },
   { id: 'ohms-law', kind: 'calc', name: "Ohm's Law", desc: 'Volts · amps · ohms · watts', cat: 2, kw: 'resistance power' },
@@ -503,7 +503,6 @@ var TOOLS = [
   { id: 'temp-convert', kind: 'calc', name: 'Temperature', short: 'Temp', desc: '°F · °C · °R · K', cat: 6, kw: 'convert celsius fahrenheit' },
   { id: 'pressure-convert', kind: 'calc', name: 'Pressure', desc: 'psi · kPa · bar · inHg · mmHg', cat: 6, kw: 'convert' },
   { id: 'motor-convert', kind: 'calc', name: 'Power', desc: 'HP · kW · BTU/h · tons', cat: 6, kw: 'convert horsepower' },
-  { id: 'mca-mocp-next', preview: true, kind: 'calc', name: 'MCA / MOCP (redesign)', desc: 'Preview — not yet released', cat: -1 },
   { id: 'samsung-dvm-s2', kind: 'ref', path: 'resources/samsung-dvm-s2-compressor.html', name: 'Samsung DVM S2 Compressor', desc: 'Field service guide', cat: -1, kw: 'vrf samsung' }
 ];
 var BY_ID = {};

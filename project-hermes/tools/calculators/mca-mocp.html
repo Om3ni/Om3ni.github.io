@@ -1,202 +1,267 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>MCA / MOCP · HVAC Calculators</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCA / MOCP · HVAC Tools</title>
 <link rel="stylesheet" href="../../base.css">
-<link rel="stylesheet" href="calc.css">
+<link rel="stylesheet" href="../shared/tool.css">
+<script>try { var th = localStorage.getItem('sl_theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}</script>
 <style>
+[hidden] { display: none !important; }
+.sub { margin: 14px 2px 0; font-family: var(--ui); font-size: .8rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-mute); }
 </style>
 </head>
 <body>
-<script src="../shared/withdrawn.js" data-reason="MOCP is rounded up to the next breaker size, but NEC 440.22 sets a maximum that must not be exceeded"></script>
 <header>
   <a class="hdr-home" href="../../index.html" title="Project home">⌂</a>
   <a class="hdr-back" href="javascript:void(0)" onclick="history.back()" title="Back">&#8592;</a>
   <div class="hdr-titles">
     <div class="hdr-title">MCA / MOCP</div>
-    <div class="hdr-sub"><span class="hdr-tier t3">advanced</span>Minimum Circuit Ampacity · Max Overcurrent</div>
+    <div class="hdr-sub">HVAC equipment circuits · NEC Article 440</div>
   </div>
-  <button class="hdr-fav" id="favBtn" title="Favorite" onclick="toggleFav()">&#9734;</button>
 </header>
-<main>
-  <div class="sec sec-flush">
-    <div class="sec-lbl sec-lbl-flush" style="display:flex;align-items:center;justify-content:space-between">
-      <span>Motor Loads</span>
-    </div>
-    <div class="input-pair">
-      <div class="fg">
-        <label class="fl">Compressor RLA</label>
-        <div class="iw">
-          <input type="number" id="inRLA" inputmode="decimal" placeholder="—">
-          <span class="iw-unit">A</span>
-        </div>
-      </div>
-      <div class="fg">
-        <label class="fl">Fan Motor FLA</label>
-        <div class="iw">
-          <input type="number" id="inFan" inputmode="decimal" placeholder="—">
-          <span class="iw-unit">A</span>
-        </div>
-      </div>
-    </div>
-    <div class="fg">
-      <label class="fl">Additional Loads (optional)</label>
-      <div class="iw">
-        <input type="number" id="inExtra" inputmode="decimal" placeholder="0">
-        <span class="iw-unit">A</span>
-      </div>
-    </div>
-  </div>
 
-  <div class="results">
-    <div class="result-row dim" id="rowMCA">
-      <div class="rr-left">
-        <div class="rr-label">MCA</div>
-        <div class="rr-sub">Largest × 125% + others (NEC 440.33)</div>
-      </div>
-      <div class="rr-val" id="valMCA">— A</div>
-    </div>
-    <div class="result-row dim" id="rowMOCP">
-      <div class="rr-left">
-        <div class="rr-label">MOCP — Default</div>
-        <div class="rr-sub">Largest × 175% + others, next std size (NEC 440.22(A))</div>
-      </div>
-      <div class="rr-val" id="valMOCP">— A</div>
-    </div>
-    <div class="result-row dim" id="rowMOCPMax">
-      <div class="rr-left">
-        <div class="rr-label">MOCP — Maximum</div>
-        <div class="rr-sub">225% allowed only if 175% prevents motor starting</div>
-      </div>
-      <div class="rr-val" id="valMOCPMax">— A</div>
-    </div>
-    <div class="result-row dim" id="rowWire">
-      <div class="rr-left">
-        <div class="rr-label">Min Wire Gauge</div>
-        <div class="rr-sub">NEC Table 310.16, 75°C copper</div>
-      </div>
-      <div class="rr-val" id="valWire">—</div>
-    </div>
-  </div>
+<main class="t-wrap">
+  <p class="t-intro">Minimum circuit ampacity and maximum overcurrent protection for equipment with a motor-compressor, and the conductor that carries it. The nameplate governs: use the calculation to check a label or for equipment that has none.</p>
 
-  <div class="hint">Per NEC 440.22(A) + 440.33. Default MOCP is 175%; bump to 225% only if 175% trips on starting inrush. Always verify against unit nameplate MCA/MOCP when available — the manufacturer's value is authoritative.</div>
+  <!-- NAMEPLATE -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Nameplate</h2><span class="t-badge" id="badge-np"></span></div>
+    <div class="t-body">
+      <p class="t-purpose">As printed on the unit's data plate.</p>
+      <div class="t-grid c2">
+        <label class="t-f"><span>MCA</span><span class="t-in"><input id="np-mca" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+        <label class="t-f"><span>MOP / max fuse</span><span class="t-in"><input id="np-mop" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+      </div>
+      <p class="t-hint">Also check what the label says about the device type: many units require time-delay fuses or HACR-type breakers.</p>
+      <div class="t-res" id="res-np"></div>
+    </div>
+  </section>
+
+  <!-- CALCULATED -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Calculate from the components</h2><span class="t-badge" id="badge-c"></span></div>
+    <div class="t-body">
+      <p class="t-purpose">Every load on this one circuit, from the component labels or the nameplate's electrical data.</p>
+      <span class="sub">Compressors</span>
+      <div class="t-grid c2">
+        <label class="t-f"><span>Compressor RLA</span><span class="t-in"><input id="c1-rla" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+        <label class="t-f"><span>BCSC <span class="opt">if listed</span></span><span class="t-in"><input id="c1-bcsc" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+        <label class="t-f"><span>2nd compressor <span class="opt">opt.</span></span><span class="t-in"><input id="c2-rla" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+        <label class="t-f"><span>BCSC <span class="opt">if listed</span></span><span class="t-in"><input id="c2-bcsc" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+      </div>
+      <p class="t-hint">Rated-load amps, not LRA. Where the label also gives a branch-circuit selection current (BCSC), the larger of the two is used (440.4(C)).</p>
+      <span class="sub">Other motors on this circuit</span>
+      <div class="t-grid c3">
+        <label class="t-f"><span>Outdoor fan</span><span class="t-in"><input id="m1" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+        <label class="t-f"><span>Blower</span><span class="t-in"><input id="m2" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+        <label class="t-f"><span>Other</span><span class="t-in"><input id="m3" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+      </div>
+      <p class="t-hint">FLA from each motor. A split-system condenser usually has the outdoor fan only; the blower is on the air handler's circuit. Packaged units carry both.</p>
+      <span class="sub">Non-motor loads</span>
+      <div class="t-grid c2">
+        <label class="t-f"><span>Resistance heat</span><span class="t-in"><input id="heat" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+        <label class="t-f"><span>Other loads</span><span class="t-in"><input id="other" type="number" inputmode="decimal" step="any"><span class="u">A</span></span></label>
+      </div>
+      <p class="t-hint">Heat strips counted at 125% in MCA. Other loads (crankcase heater, controls) at 100%. Everything entered is assumed to run at the same time.</p>
+      <div class="t-res" id="res-c"></div>
+    </div>
+  </section>
+
+  <!-- CONDUCTOR -->
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Conductor</h2><span class="t-badge" id="badge-w"></span></div>
+    <div class="t-body">
+      <div class="t-seg" id="metalSeg" role="group" aria-label="Conductor metal">
+        <button type="button" data-metal="cu">Copper</button>
+        <button type="button" data-metal="al">Aluminum</button>
+      </div>
+      <div class="t-res" id="res-w"></div>
+    </div>
+  </section>
+
+  <section class="t-card">
+    <div class="t-head"><h2 class="t-title">Notes</h2></div>
+    <div class="t-body"><label class="t-f"><span class="opt" style="text-transform:none;letter-spacing:0">Unit model, circuit, run length</span><span class="t-in"><textarea id="notes"></textarea></span></label></div>
+  </section>
+
+  <div class="t-actions">
+    <button type="button" class="t-btn primary" id="btnReport">Report</button>
+    <button type="button" class="t-btn" id="btnClear">Clear all</button>
+  </div>
 </main>
-<script>
-'use strict';
-function init() {
-  var inRLA = document.getElementById('inRLA');
-  var inFan = document.getElementById('inFan');
-  var inExtra = document.getElementById('inExtra');
 
-  var breakerSizes = [15,20,25,30,35,40,45,50,60,70,80,90,100,110,125,150,175,200,225,250,300];
+<dialog class="t-dialog" id="reportDlg" aria-labelledby="reportTitle">
+  <div class="dh"><span id="reportTitle">MCA / MOCP report</span><button type="button" class="t-btn" id="btnCloseReport" style="min-height:40px">Close</button></div>
+  <pre id="reportText"></pre>
+  <div class="da"><button type="button" class="t-btn" id="btnCopy">Copy</button><button type="button" class="t-btn primary" id="btnSave">Save .txt</button></div>
+</dialog>
 
-  var wireTable = [
-    { gauge: '14 AWG', amps: 15 },
-    { gauge: '12 AWG', amps: 20 },
-    { gauge: '10 AWG', amps: 30 },
-    { gauge: '8 AWG',  amps: 40 },
-    { gauge: '6 AWG',  amps: 55 },
-    { gauge: '4 AWG',  amps: 70 },
-    { gauge: '3 AWG',  amps: 85 },
-    { gauge: '2 AWG',  amps: 95 },
-    { gauge: '1 AWG',  amps: 110 },
-    { gauge: '1/0 AWG', amps: 125 },
-    { gauge: '2/0 AWG', amps: 145 },
-    { gauge: '3/0 AWG', amps: 165 },
-    { gauge: '4/0 AWG', amps: 195 }
-  ];
+<script type="module">
+import * as N from '../shared/nec.js';
 
-  function nextBreaker(amps) {
-    for (var i = 0; i < breakerSizes.length; i++) {
-      if (breakerSizes[i] >= amps) return breakerSizes[i];
-    }
-    return breakerSizes[breakerSizes.length - 1];
-  }
+const STORE = 'hermes_mca_next';
+const VERSION = 'mca-mocp 2026-11';
+let metal = 'cu';
 
-  function minWire(mca) {
-    for (var i = 0; i < wireTable.length; i++) {
-      if (wireTable[i].amps >= mca) return wireTable[i].gauge;
-    }
-    return '> 4/0 AWG';
-  }
-
-  function calc() {
-    var rla = parseFloat(inRLA.value) || 0;
-    var fan = parseFloat(inFan.value) || 0;
-    var extra = parseFloat(inExtra.value) || 0;
-
-    var rowIds = ['rowMCA','rowMOCP','rowMOCPMax','rowWire'];
-    var valIds = ['valMCA','valMOCP','valMOCPMax','valWire'];
-
-    if (rla <= 0 && fan <= 0) {
-      rowIds.forEach(function(id) { document.getElementById(id).className = 'result-row dim'; });
-      valIds.forEach(function(id) { document.getElementById(id).className = 'rr-val'; });
-      document.getElementById('valMCA').textContent = '— A';
-      document.getElementById('valMOCP').textContent = '— A';
-      document.getElementById('valMOCPMax').textContent = '— A';
-      document.getElementById('valWire').textContent = '—';
-      return;
-    }
-
-    var loads = [rla, fan].filter(function(v) { return v > 0; });
-    if (loads.length === 0) return;
-
-    var largest = Math.max.apply(null, loads);
-    var sumOthers = 0;
-    loads.forEach(function(v) { sumOthers += v; });
-    sumOthers = sumOthers - largest + extra;
-
-    /* MCA — NEC 440.33: largest motor at 125% + others at 100% */
-    var mca = (largest * 1.25) + sumOthers;
-    /* MOCP — NEC 440.22(A):
-         Default = 175% of largest motor RLA + sum of other loads, next std size up.
-         May be increased to (but not exceeding) 225% only if the 175% device prevents
-         starting. Most HVAC compressor nameplates spec one or the other; defer to
-         nameplate when known. */
-    var mocp175 = nextBreaker((largest * 1.75) + sumOthers);
-    var mocp225 = nextBreaker((largest * 2.25) + sumOthers);
-    var wire = minWire(mca);
-
-    document.getElementById('valMCA').textContent = mca.toFixed(1) + ' A';
-    document.getElementById('valMOCP').textContent = mocp175 + ' A';
-    document.getElementById('valMOCPMax').textContent = mocp225 + ' A';
-    document.getElementById('valWire').textContent = wire;
-
-    rowIds.forEach(function(id) { document.getElementById(id).className = 'result-row live'; });
-    valIds.forEach(function(id) { document.getElementById(id).className = 'rr-val live'; });
-  }
-
-  inRLA.addEventListener('input', calc);
-  inFan.addEventListener('input', calc);
-  inExtra.addEventListener('input', calc);
+const $ = (id) => document.getElementById(id);
+const val = (id) => { const e = $(id); if (!e || e.value === '') return null; const v = parseFloat(String(e.value).replace(',', '.')); return Number.isFinite(v) ? v : NaN; };
+const f = (n, d = 1) => (n === null || n === undefined || !Number.isFinite(n) ? '—' : (Math.round(n * 10 ** d) / 10 ** d).toFixed(d));
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function row(k, v, unit, ref, marker) {
+  return `<div class="t-row"><div class="top"><span class="k">${esc(k)}</span><span class="v">${esc(v)}${unit ? `<small>${esc(unit)}</small>` : ''}</span></div>` +
+    (ref ? `<div class="ref">${ref}</div>` : '') + (marker ? `<span class="t-mk">${esc(marker)}</span>` : '') + `</div>`;
 }
-document.addEventListener('DOMContentLoaded', init);
+const empty = (msg) => `<p class="t-empty">${esc(msg)}</p>`;
+const bad = (id, cond) => { const e = $(id); if (e) e.setAttribute('aria-invalid', String(!!cond)); };
+const pos = (v) => v !== null && Number.isFinite(v) && v > 0;
+const nonneg = (v) => v === null || (Number.isFinite(v) && v >= 0);
+const METAL = { cu: 'copper', al: 'aluminum' };
 
-// Favorites
-(function(){
-  var KEY='hermes_favorites';
-  var id=location.pathname.split('/').pop().replace('.html','');
-  var title=document.title.split('·')[0].trim();
-  var tierEl=document.querySelector('.hdr-tier');
-  var tier=tierEl?(tierEl.classList.contains('t1')?'t1':tierEl.classList.contains('t3')?'t3':'t2'):'t2';
-  var btn=document.getElementById('favBtn');
-  if(!btn)return;
-  function getFavs(){try{return JSON.parse(localStorage.getItem(KEY))||[];}catch(e){return[];}}
-  function isFav(){return getFavs().some(function(f){return f.id===id;});}
-  function sync(){btn.textContent=isFav()?'★':'☆';btn.classList.toggle('on',isFav());}
-  window.toggleFav=function(){
-    var favs=getFavs();var idx=-1;
-    for(var i=0;i<favs.length;i++){if(favs[i].id===id){idx=i;break;}}
-    if(idx!==-1)favs.splice(idx,1);
-    else favs.push({id:id,title:title,tier:tier,label:title,type:'calc'});
-    localStorage.setItem(KEY,JSON.stringify(favs));sync();
-    try{if(window.parent!==window)window.parent.postMessage({type:'hermes-fav-toggle'},'*');}catch(e){}
+/* Everything the page knows, as a plain record. The report is written from
+   this, and it's the shape a future "submit" would send. */
+let R = {};
+
+function calcNameplate() {
+  const mca = val('np-mca'), mop = val('np-mop');
+  bad('np-mca', mca !== null && !pos(mca)); bad('np-mop', mop !== null && !pos(mop));
+  R.nameplate = { mca: pos(mca) ? mca : null, mop: pos(mop) ? mop : null };
+  if (!pos(mca) && !pos(mop)) {
+    $('res-np').innerHTML = empty(mca !== null || mop !== null ? 'Amps must be positive numbers.' : 'Enter MCA and MOP if the unit has a nameplate.');
+    $('badge-np').textContent = ''; return;
+  }
+  let html = '';
+  if (pos(mca)) html += row('MCA', f(mca, 1), 'A', 'Size the conductor from this (NEC 110.3(B), 440.4(B))');
+  if (pos(mop)) {
+    const std = N.STANDARD_OCPD.includes(mop);
+    html += row('Maximum breaker or fuse', f(mop, 0), 'A', 'Do not exceed (NEC 110.3(B), 440.22(C))', std ? null : 'Not a 240.6(A) standard size');
+  }
+  if (pos(mca) && pos(mop) && mop < mca) html += row('MOP vs MCA', `${f(mop, 0)} < ${f(mca, 1)}`, 'A', 'Recheck the label reading.', 'MOP below MCA');
+  $('res-np').innerHTML = html;
+  $('badge-np').textContent = [pos(mca) ? `${f(mca, 1)} A` : null, pos(mop) ? `${f(mop, 0)} A max` : null].filter(Boolean).join(' · ');
+}
+
+function calcComponents() {
+  const ids = ['c1-rla', 'c1-bcsc', 'c2-rla', 'c2-bcsc', 'm1', 'm2', 'm3', 'heat', 'other'];
+  const v = Object.fromEntries(ids.map((id) => [id, val(id)]));
+  ids.forEach((id) => bad(id, !nonneg(v[id])));
+  const num = (x) => (Number.isFinite(x) ? x : undefined);
+  const input = {
+    compressors: [{ rla: num(v['c1-rla']), bcsc: num(v['c1-bcsc']) }, { rla: num(v['c2-rla']), bcsc: num(v['c2-bcsc']) }],
+    motors: ['m1', 'm2', 'm3'].map((k) => num(v[k])).filter((x) => x !== undefined),
+    heatAmps: num(v.heat), otherAmps: num(v.other)
   };
-  sync();
-})();
-</script>
+  R.inputs = v; R.calc = null;
+  if (ids.every((id) => v[id] === null)) { $('res-c').innerHTML = empty('Enter at least the compressor RLA.'); $('badge-c').textContent = ''; return; }
+  if (ids.some((id) => Number.isNaN(v[id]))) { $('res-c').innerHTML = empty('Check the highlighted entry.'); $('badge-c').textContent = ''; return; }
+  const r = N.mcaMocp(input);
+  if (!r.ok) {
+    const noComp = /at least one compressor/.test(r.reason);
+    $('res-c').innerHTML = empty(noComp
+      ? 'Article 440 covers equipment with a motor-compressor. For a furnace or an air handler with heat strips, use the nameplate; heaters are sized under Article 424 and motors under Article 430.'
+      : r.reason.charAt(0).toUpperCase() + r.reason.slice(1) + '.');
+    $('badge-c').textContent = ''; return;
+  }
+  R.calc = r;
+  const comps = input.compressors.map((c) => Math.max(c.rla ?? 0, c.bcsc ?? 0)).filter((a) => a > 0);
+  const motors = input.motors.filter((a) => a > 0);
+  const parts = [...comps.map((a) => f(a, 1)), ...motors.map((a) => f(a, 1))].join(' + ');
+  const heatPart = r.heatAt125 > 0 ? ` + ${f(r.heatAt125, 1)} heat (125%)` : '';
+  const otherPart = pos(input.otherAmps) ? ` + ${f(input.otherAmps, 1)} other` : '';
+  let html = row('MCA', f(r.mca, 1), 'A', `${parts} + 25% of ${f(r.largestAny, 1)}${heatPart}${otherPart} · <b>NEC 440.33</b>${r.heatAt125 > 0 ? ', 424.3(B)' : ''}`);
+  const others = r.calc175 - 1.75 * r.largestComp;
+  html += row('Maximum breaker or fuse', f(r.mocp175, 0), 'A',
+    `175% × ${f(r.largestComp, 1)} + ${f(others, 1)} others = ${f(r.calc175, 1)} A, rounded <b>down</b> to a standard size · <b>NEC 440.22(A)</b>, 240.6(A)${r.mocp175 === 15 && r.calc175 < 15 ? '; not required below 15 A' : ''}`,
+    r.belowMca175 ? 'Below the MCA: check the nameplate' : null);
+  html += row('Where 175% won’t start it', f(r.mocp225, 0), 'A',
+    `225% × ${f(r.largestComp, 1)} + ${f(others, 1)} = ${f(r.calc225, 1)} A, rounded down. Permitted only where the 175% device won’t carry the starting current · NEC 440.22(A)`,
+    r.belowMca225 ? 'Below the MCA: check the nameplate' : null);
+  const np = R.nameplate;
+  if (np.mca || np.mop) {
+    if (np.mca) {
+      const d = r.mca - np.mca;
+      html += row('vs nameplate MCA', `${f(r.mca, 1)} / ${f(np.mca, 1)}`, 'A', Math.abs(d) < 0.5 ? 'Within half an amp of the label.' : `Calculated is ${f(Math.abs(d), 1)} A ${d > 0 ? 'higher' : 'lower'}. The label may include loads not entered here, or exclude ones that don’t run together.`);
+    }
+    if (np.mop) {
+      const m = np.mop === r.mocp175 ? 'Matches the 175% figure.' : np.mop === r.mocp225 ? 'Matches the 225% figure. Manufacturers often mark the 225% value.' : 'Matches neither figure. The label governs; it may include loads or ratings not entered here.';
+      html += row('vs nameplate MOP', `${f(r.mocp175, 0)}–${f(r.mocp225, 0)} / ${f(np.mop, 0)}`, 'A', m);
+    }
+  }
+  $('res-c').innerHTML = html;
+  $('badge-c').textContent = `${f(r.mca, 1)} A · ${f(r.mocp175, 0)} A max`;
+}
 
+function calcConductor() {
+  document.querySelectorAll('#metalSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.metal === metal)));
+  R.conductor = null;
+  const np = R.nameplate.mca, mca = np || (R.calc && R.calc.mca);
+  if (!pos(mca)) { $('res-w').innerHTML = empty('Enter the nameplate MCA, or calculate it above.'); $('badge-w').textContent = ''; return; }
+  const from = np ? `nameplate MCA ${f(mca, 1)} A` : `calculated MCA ${f(mca, 1)} A`;
+  const c75 = N.conductorFor(mca, { metal, tempC: 75 }), c60 = N.conductorFor(mca, { metal, tempC: 60 });
+  const show = (c) => (c.over ? ['Over 500 kcmil', ''] : [c.size, '']);
+  let html = row('75 °C terminations', show(c75)[0], '', c75.over ? 'Beyond this table: parallel conductors or engineering.' : `${METAL[metal]}, ${f(c75.ampacity, 0)} A ≥ ${from} · <b>Table 310.16</b>`);
+  html += row('60 °C terminations', show(c60)[0], '', c60.over ? 'Beyond this table.' : `${METAL[metal]}, ${f(c60.ampacity, 0)} A · use where the breaker or unit terminals aren’t marked 75 °C (110.14(C)(1))`);
+  html += `<p class="t-hint">Before derating: correct for rooftop or hot-attic ambient (310.15(B)) and more than three current-carrying conductors in a raceway (310.15(C)(1)). Voltage drop on long runs isn't included. The small-conductor limits of 240.4(D) don't apply here (240.4(G), 440.22): a 10 AWG circuit on a 45 A breaker is permitted when the nameplate allows it.</p>`;
+  $('res-w').innerHTML = html;
+  $('badge-w').textContent = c75.size ? `${c75.size} ${metal === 'cu' ? 'Cu' : 'Al'}` : '';
+  R.conductor = { metal, from: np ? 'nameplate' : 'calculated', mca, at75: c75.size, at75amps: c75.ampacity, at60: c60.size, at60amps: c60.ampacity };
+}
+
+function renderAll() { R = { tool: 'mca-mocp', version: VERSION }; calcNameplate(); calcComponents(); calcConductor(); save(); }
+
+/* ── Persistence (this visit) ────────────────────────────────────── */
+const FIELDS = () => [...document.querySelectorAll('main input, main textarea')];
+function save() { try { const d = { metal }; FIELDS().forEach((e) => { d[e.id] = e.value; }); sessionStorage.setItem(STORE, JSON.stringify(d)); } catch (e) {} }
+function restore() {
+  try {
+    const d = JSON.parse(sessionStorage.getItem(STORE) || 'null'); if (!d) return;
+    if (d.metal === 'al' || d.metal === 'cu') metal = d.metal;
+    FIELDS().forEach((e) => { if (e.id in d) e.value = d[e.id]; });
+  } catch (e) {}
+}
+
+/* ── Report ──────────────────────────────────────────────────────── */
+function buildReport() {
+  const out = ['MCA / MOCP REPORT — Hermes', new Date().toLocaleString(), ''];
+  const np = R.nameplate || {};
+  if (np.mca || np.mop) out.push(`Nameplate: MCA ${np.mca ? f(np.mca, 1) + ' A' : '—'} · MOP ${np.mop ? f(np.mop, 0) + ' A' : '—'}`);
+  const v = R.inputs || {}, a = (k) => (pos(v[k]) ? f(v[k], 1) + ' A' : null);
+  if (R.calc) {
+    const r = R.calc;
+    const ins = [['Compressor 1 RLA', 'c1-rla'], ['BCSC', 'c1-bcsc'], ['Compressor 2 RLA', 'c2-rla'], ['BCSC', 'c2-bcsc'], ['Outdoor fan', 'm1'], ['Blower', 'm2'], ['Other motor', 'm3'], ['Resistance heat', 'heat'], ['Other loads', 'other']]
+      .filter(([, k]) => a(k)).map(([n, k]) => `${n} ${a(k)}`);
+    out.push('', 'Entered: ' + ins.join(', '));
+    out.push(`Calculated MCA: ${f(r.mca, 1)} A (NEC 440.33${r.heatAt125 > 0 ? ', 424.3(B)' : ''})`);
+    out.push(`Calculated max breaker/fuse: ${f(r.mocp175, 0)} A (175%: ${f(r.calc175, 1)} A rounded down; NEC 440.22(A), 240.6(A))`);
+    out.push(`  Where 175% won't carry the starting current: up to ${f(r.mocp225, 0)} A (225%: ${f(r.calc225, 1)} A rounded down)`);
+    if (r.belowMca175) out.push('  Note: the 175% figure is below the MCA; check the nameplate.');
+  }
+  if (R.conductor) {
+    const c = R.conductor;
+    out.push('', `Conductor (${METAL[c.metal]}, from ${c.from} MCA ${f(c.mca, 1)} A, Table 310.16):`,
+      `  75 °C terminations: ${c.at75 || 'over 500 kcmil'}${c.at75amps ? ` (${c.at75amps} A)` : ''}`,
+      `  60 °C terminations: ${c.at60 || 'over 500 kcmil'}${c.at60amps ? ` (${c.at60amps} A)` : ''}`,
+      '  Before ambient and conductor-count derating; voltage drop not included.');
+  }
+  const n = $('notes').value.trim(); if (n) out.push('', 'Notes:', n);
+  out.push('', 'NFPA 70 (2023). The equipment nameplate governs (110.3(B)). Reference values; verify against the installation instructions and local code.');
+  return out.join('\n');
+}
+$('btnReport').addEventListener('click', () => { $('reportText').textContent = buildReport(); $('reportDlg').showModal(); });
+$('btnCloseReport').addEventListener('click', () => $('reportDlg').close());
+$('btnCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText($('reportText').textContent); $('btnCopy').textContent = 'Copied'; setTimeout(() => { $('btnCopy').textContent = 'Copy'; }, 1500); } catch (e) {} });
+$('btnSave').addEventListener('click', () => { const el = document.createElement('a'); el.href = URL.createObjectURL(new Blob([$('reportText').textContent], { type: 'text/plain' })); el.download = 'mca-mocp-report-' + new Date().toISOString().slice(0, 10) + '.txt'; el.click(); URL.revokeObjectURL(el.href); });
+$('btnClear').addEventListener('click', () => { if (!confirm('Clear all inputs on this page?')) return; FIELDS().forEach((e) => { e.value = ''; }); renderAll(); });
+
+/* ── Wiring ──────────────────────────────────────────────────────── */
+document.querySelectorAll('#metalSeg button').forEach((b) => b.addEventListener('click', () => { metal = b.dataset.metal; renderAll(); }));
+document.querySelector('main').addEventListener('input', renderAll);
+
+restore();
+renderAll();
+window.hermesRecord = () => JSON.parse(JSON.stringify(R));
+</script>
+<script src="../shared/recommend.js" data-tool="mca-mocp"></script>
 </body>
 </html>

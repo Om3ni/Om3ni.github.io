@@ -14,7 +14,7 @@ Detailed reports, with exact reproductions, file:line causes, suggested fixes, w
 | Gas Pipe | **BROKEN** | 3 | 1 | 3 | 4 | yes |
 | Start Controls | **BROKEN** | 3 | 5 | 5 | 5 | yes |
 | Ventilation Sizing | **BROKEN** | 2 | 2 | 4 | 3 | yes |
-| MCA / MOCP | **BROKEN** | 1 | 0 | 5 | 3 | yes |
+| MCA / MOCP | **BROKEN** — redesigned and released 2026-11 | 1 | 0 | 5 | 3 | yes |
 | Combustion Air | **BROKEN** | 1 | 0 | 4 | 2 | yes |
 | Pump Sizing | **BROKEN** (glycol, CPVC, operating point) — redesigned and released 2026-11 | 0 | 4 | 7 | 6 | yes (redesign) |
 | Long Line Set | **BROKEN** | 0 | 3 | 3 | 3 | hidden |

@@ -100,7 +100,6 @@ A tool is listed in the app only after it passes all three steps. Tools that fai
 |---|---|
 | Gas Pipe | Critical: runs over 100 ft, row interpolation, propane factor |
 | Combustion Air | Critical: indoor and horizontal-duct opening methods missing |
-| MCA / MOCP | Critical: MOCP rounded up past the 440.22 maximum |
 | Ventilation Sizing | Critical: fuel-fired rooms preset negative, labs preset positive |
 | Start Controls | Critical: overload rule inverted, starter size, capacitor math |
 | Line Set Charge | High: rates 30–45% high, no factory allowance |
@@ -116,6 +115,7 @@ A tool is listed in the app only after it passes all three steps. Tools that fai
 |---|---|---|
 | Motor Analysis | 2026-11 | Rebuilt by test on `tools/shared/refs.js` (IEEE 43 / NEMA MG-1 references, printed capacitor tolerance, highest-leg load). Tests: `tools/shared/refs.test.mjs`. |
 | Pump Sizing | 2026-11 | Rebuilt on `tools/shared/fluids.js` (Dow / Melinder data) and `tools/shared/hydronics.js`. Closed loops only. Tests: `tools/shared/hydronics.test.mjs`. |
+| MCA / MOCP | 2026-11 | Rebuilt on `tools/shared/nec.js` (NEC 2023 440.33, 440.22(A) rounded down, 240.6(A), Table 310.16). Nameplate first. Tests: `tools/shared/nec.test.mjs`. |
 
 Findings, reproductions and suggested fixes: [audit/2026-11](audit/2026-11/README.md).
 

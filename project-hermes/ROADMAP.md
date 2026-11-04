@@ -27,8 +27,8 @@ Unblocked by the audit: a standalone pressure–temperature lookup built on the 
 
 Each tool is rebuilt on the shared layout (`tools/shared/tool.css`) and shared, tested rule modules, then released through the gate in CALCULATORS.md.
 
-- Done: Motor Analysis, Pump Sizing (2026-11).
-- Next: the audit's Critical tools (MCA/MOCP, Gas Pipe, Combustion Air, Start Controls, Ventilation), then the rest of the hidden list. Capacitor and Electrical Analysis move onto `refs.js` so capacitor tolerance and unbalance follow one rule.
+- Done: Motor Analysis, Pump Sizing, MCA/MOCP (2026-11).
+- Next: the audit's Critical tools (Gas Pipe, Combustion Air, Start Controls, Ventilation), then the rest of the hidden list. Capacitor and Electrical Analysis move onto `refs.js` so capacitor tolerance and unbalance follow one rule.
 - Pump Sizing later: open systems (cooling towers) with suction-surface static head and an NPSH caution.
 
 ## Nameplate capture (removed Nov 2026)
