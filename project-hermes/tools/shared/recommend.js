@@ -39,6 +39,7 @@
     'duct-sizing':            ['anemometer', 'flowhood', 'static_p'],
     'load-calc':              ['psychro', 'ir'],
     'electrical':             ['clamp', 'dmm'],
+    'mca-mocp':               ['clamp', 'dmm'],
     'wire-sizing':            ['clamp', 'dmm'],
     'capacitor-sizing':       ['cap', 'clamp'],
     'ohms-law':               ['dmm', 'clamp'],

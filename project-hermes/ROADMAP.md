@@ -34,3 +34,13 @@ Each tool is rebuilt on the shared layout (`tools/shared/tool.css`) and shared, 
 ## Nameplate capture (removed Nov 2026)
 
 The camera/OCR feature relied on the browser's experimental TextDetector API, which is behind a flag on current phones, so it only ever fell back to pasting text. It was removed. Revisit if Hermes is wrapped as a native app (e.g. Capacitor), which gives access to the phone's own camera and on-device text recognition (Apple Vision / Google ML Kit); nameplate values could then auto-fill Motor Analysis, MCA/MOCP and Electrical Analysis.
+
+
+## Field data library (idea, not started)
+
+Owner's idea (Nov 2026): move off GitHub Pages, or add a small backend beside it, so techs can submit readings and reports and build a library: good and bad measurements and tech reports, possibly as training data for a small task-specific model.
+
+- No need to leave static hosting first. Keep the tools static and add an endpoint (e.g. Cloudflare Workers + D1, or Supabase) that receives only what a tech chooses to submit.
+- Training value needs labels. A reading is only useful with its outcome: what was found and what fixed it. Plan the report around "readings + confirmed diagnosis", not readings alone.
+- Storing data changes liability: privacy policy, opt-in consent beside the license gate, strip customer names/addresses/photos before anything leaves the phone.
+- Groundwork now: each redesigned tool builds its report from one plain record (inputs, results, tool version, sources). MCA/MOCP is the first (`window.hermesRecord()`); a later "submit" sends that record.
