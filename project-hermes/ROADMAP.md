@@ -30,3 +30,7 @@ Each tool is rebuilt on the shared layout (`tools/shared/tool.css`) and shared, 
 - Done: Motor Analysis, Pump Sizing (2026-11).
 - Next: the audit's Critical tools (MCA/MOCP, Gas Pipe, Combustion Air, Start Controls, Ventilation), then the rest of the hidden list. Capacitor and Electrical Analysis move onto `refs.js` so capacitor tolerance and unbalance follow one rule.
 - Pump Sizing later: open systems (cooling towers) with suction-surface static head and an NPSH caution.
+
+## Nameplate capture (removed Nov 2026)
+
+The camera/OCR feature relied on the browser's experimental TextDetector API, which is behind a flag on current phones, so it only ever fell back to pasting text. It was removed. Revisit if Hermes is wrapped as a native app (e.g. Capacitor), which gives access to the phone's own camera and on-device text recognition (Apple Vision / Google ML Kit); nameplate values could then auto-fill Motor Analysis, MCA/MOCP and Electrical Analysis.

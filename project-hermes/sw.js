@@ -3,7 +3,7 @@
   Strategy: cache-first for app shell, network-first for external resources.
   Bump CACHE_VERSION to force update after deploy.
 */
-var CACHE_VERSION = 'hermes-v30';
+var CACHE_VERSION = 'hermes-v31';
 
 var APP_SHELL = [
   './',
@@ -13,8 +13,6 @@ var APP_SHELL = [
   './icon-192.png',
   './icon-512.png',
   './tools/calculators/calc.css',
-  './tools/shared/capture.js',
-  './tools/shared/capture.css',
   './tools/shared/withdrawn.js',
   './tools/shared/recommend.js',
   './tools/shared/refs.js',

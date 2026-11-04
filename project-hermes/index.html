@@ -6,7 +6,6 @@
 <title>Project Hermes — HVAC Field Tools</title>
 <meta name="description" content="HVAC field calculators and diagnostic tools. Works offline.">
 <link rel="stylesheet" href="base.css">
-<link rel="stylesheet" href="tools/shared/capture.css">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1c1c1c">
 <link rel="apple-touch-icon" href="icon-512.png">
@@ -116,13 +115,6 @@ button { font-family: var(--ui); }
   letter-spacing: .18em; text-transform: uppercase; line-height: 1; color: var(--text);
 }
 .shell-hdr .sub { font-family: var(--mono); font-size: .75rem; color: var(--text-mute); letter-spacing: .04em; margin-top: 5px; }
-.shell-hdr .hdr-cam {
-  position: relative; width: 44px; height: 44px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
-  color: var(--text); padding: 0;
-}
-.shell-hdr .hdr-cam .cam-badge { position: absolute; top: -6px; right: -6px; }
 .shell-hdr .hdr-sup { width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0; }
 .shell-hdr .hdr-sup[aria-expanded="true"] { border-color: var(--orange-hi); color: var(--orange-hi); }
 .support-panel { position: fixed; z-index: 160; top: calc(var(--hdr-h) + env(safe-area-inset-top, 0px)); right: 0; width: min(360px, 100vw); max-height: calc(100dvh - var(--hdr-h) - var(--tab-h)); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-top: 0; border-radius: 0 0 0 10px; box-shadow: -4px 6px 18px rgba(0,0,0,.4); padding: 4px 14px 14px; }
@@ -135,7 +127,6 @@ button { font-family: var(--ui); }
 .support-panel a .desc { display: block; font-size: .85rem; color: var(--text-dim); }
 .support-panel a .ext { font-family: var(--mono); font-size: .8rem; color: var(--text-mute); }
 .support-panel .note { margin: 12px 2px 0; font-size: .8rem; color: var(--text-mute); line-height: 1.4; }
-.scratchpad-panel { top: calc(var(--hdr-h) + env(safe-area-inset-top, 0px)); max-height: calc(100dvh - var(--hdr-h) - var(--tab-h)); }
 
 /* Views */
 .view { max-width: 680px; margin: 0 auto; padding: 16px max(16px, env(safe-area-inset-right, 0px)) 28px max(16px, env(safe-area-inset-left, 0px)); }
@@ -330,30 +321,12 @@ This software is provided "as is" without warranty of any kind, express or impli
   <button type="button" class="hdr-sup" id="supportBtn" aria-label="Support: stores and creators we use" title="Support" aria-expanded="false" aria-controls="supportPanel">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.5s-7.5-4.4-7.5-10A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.9c0 5.6-7.5 10-7.5 10z"/></svg>
   </button>
-  <button type="button" class="hdr-cam" id="capCamBtn" aria-label="Scan a nameplate" title="Scan a nameplate">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/><path d="M20 16v2a2 2 0 0 1-2 2h-2"/><path d="M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M8 10h8"/><path d="M8 14h5"/></svg>
-    <span class="cam-badge" id="capBadge">0</span>
-  </button>
 </header>
 
 <!-- Support: stores and creators (links set in SUPPORT_LINKS) -->
 <div class="support-panel" id="supportPanel" role="region" aria-label="Support" hidden>
   <div id="supportBody"></div>
   <p class="note">Shops and channels we use and recommend. Links open in a new tab.</p>
-</div>
-
-<!-- Captured nameplate text -->
-<div class="scratchpad-panel" id="capScratchpad">
-  <div class="scratchpad-hdr">
-    <div class="scratchpad-title">Captured Text</div>
-    <div class="scratchpad-actions">
-      <button class="scratchpad-clear" id="capScratchClear" type="button">Clear</button>
-      <button class="scratchpad-clear" id="capScratchClose" type="button">Close</button>
-    </div>
-  </div>
-  <div class="scratchpad-body" id="capScratchBody">
-    <div class="scratchpad-empty">No captured text yet. Tap the scan button in the header to read a nameplate.</div>
-  </div>
 </div>
 
 <main>
@@ -410,19 +383,6 @@ This software is provided "as is" without warranty of any kind, express or impli
         <span class="txt"><span class="name">Electrical safety</span><span class="desc">OSHA · external link</span></span>
         <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
       </a>
-    </div>
-
-    <h2 class="h2">Nameplate scans</h2>
-    <div class="list">
-      <button type="button" class="row" id="moreScan">
-        <span class="txt"><span class="name">Scan a nameplate</span><span class="desc">Read model, serial, RLA and FLA with the camera</span></span>
-        <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
-      <button type="button" class="row" id="moreCaptured">
-        <span class="txt"><span class="name">Captured text</span><span class="desc">Copy lines from earlier scans</span></span>
-        <span class="val" id="moreCapturedCount">0</span>
-        <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
     </div>
 
     <h2 class="h2">App</h2>
@@ -803,12 +763,10 @@ window.addEventListener('message', function (e) {
   });
   function setOpen(open) {
     panel.hidden = !open; btn.setAttribute('aria-expanded', String(open));
-    if (open) { var sp = $('capScratchpad'); if (sp) sp.classList.remove('open'); }
   }
   btn.addEventListener('click', function (e) { e.stopPropagation(); setOpen(panel.hidden); });
   document.addEventListener('click', function (e) { if (!panel.hidden && !panel.contains(e.target) && e.target !== btn) setOpen(false); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !panel.hidden) { setOpen(false); btn.focus(); } });
-  $('capCamBtn').addEventListener('click', function () { setOpen(false); });
 })();
 
 /* ── Theme ───────────────────────────────────────────────────── */
@@ -849,12 +807,9 @@ function refreshMore() {
   var ready = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
   $('offlineDesc').textContent = ready ? 'All tools saved to this device' : 'Saves to this device after the first full load';
   var tag = $('offlineTag'); tag.textContent = ready ? 'Ready' : 'Not yet'; tag.className = 'tag ' + (ready ? 'ok' : 'report');
-  var n = 0; try { n = (JSON.parse(localStorage.getItem('hermes_scratchpad')) || []).length; } catch (e) {}
-  $('moreCapturedCount').textContent = String(n);
 }
 document.querySelectorAll('[data-open]').forEach(function (b) { b.addEventListener('click', function () { openById(b.dataset.open); }); });
 $('checkUpdates').addEventListener('click', forceRefresh);
-$('moreScan').addEventListener('click', function () { $('capCamBtn').click(); });
 
 var _toastTimer;
 function toast(msg) {
@@ -941,73 +896,6 @@ function forceRefresh() {
   if (!('serviceWorker' in navigator)) { go(); return; }
   navigator.serviceWorker.getRegistration().then(function (reg) { if (reg) return reg.update(); }).catch(function () {}).then(go);
 }
-</script>
-
-<!-- Nameplate capture (OCR) -->
-<script type="module">
-  import { openCaptureModal, readScratchpad, clearScratchpad } from './tools/shared/capture.js';
-
-  const SCRATCH_KEY = 'hermes_scratchpad';
-  const camBtn = document.getElementById('capCamBtn');
-  const camBadge = document.getElementById('capBadge');
-  const panel = document.getElementById('capScratchpad');
-  const panelBody = document.getElementById('capScratchBody');
-
-  function refreshBadge() {
-    const n = readScratchpad(SCRATCH_KEY).length;
-    camBadge.textContent = String(n);
-    camBadge.classList.toggle('shown', n > 0);
-    const more = document.getElementById('moreCapturedCount');
-    if (more) more.textContent = String(n);
-  }
-
-  function copyToClipboard(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).catch(() => {}); return; }
-    const ta = document.createElement('textarea');
-    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-    document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); } catch {}
-    document.body.removeChild(ta);
-  }
-
-  function renderPanel() {
-    const lines = readScratchpad(SCRATCH_KEY);
-    panelBody.innerHTML = '';
-    if (!lines.length) {
-      const empty = document.createElement('div');
-      empty.className = 'scratchpad-empty';
-      empty.textContent = 'No captured text yet. Tap the scan button in the header to read a nameplate.';
-      panelBody.appendChild(empty);
-      return;
-    }
-    for (const line of lines) {
-      const row = document.createElement('div'); row.className = 'cap-line';
-      const text = document.createElement('span'); text.className = 'cap-line-text'; text.textContent = line;
-      const btn = document.createElement('button'); btn.className = 'btn btn-ghost cap-line-btn'; btn.type = 'button'; btn.textContent = 'Copy';
-      btn.addEventListener('click', () => { copyToClipboard(line); window.toast('Copied'); });
-      row.appendChild(text); row.appendChild(btn); panelBody.appendChild(row);
-    }
-  }
-
-  function togglePanel(open) {
-    if (open) { renderPanel(); panel.classList.add('open'); } else panel.classList.remove('open');
-  }
-
-  camBtn.addEventListener('click', (e) => {
-    if (e.target === camBadge && camBadge.classList.contains('shown')) { togglePanel(true); return; }
-    openCaptureModal({ mode: 'scratchpad', scratchpadKey: SCRATCH_KEY, title: 'Capture Nameplate', onLines: refreshBadge });
-  });
-  document.getElementById('moreCaptured').addEventListener('click', (e) => { e.stopPropagation(); togglePanel(true); });
-  document.getElementById('capScratchClear').addEventListener('click', () => {
-    clearScratchpad(SCRATCH_KEY); refreshBadge(); renderPanel(); window.toast('Cleared');
-  });
-  document.getElementById('capScratchClose').addEventListener('click', () => togglePanel(false));
-  document.addEventListener('click', (e) => {
-    if (!panel.classList.contains('open') || panel.contains(e.target) || camBtn.contains(e.target)) return;
-    togglePanel(false);
-  });
-
-  refreshBadge();
 </script>
 
 <script data-goatcounter="https://om3ni.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>

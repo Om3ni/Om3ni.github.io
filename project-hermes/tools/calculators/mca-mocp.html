@@ -6,7 +6,6 @@
 <title>MCA / MOCP · HVAC Calculators</title>
 <link rel="stylesheet" href="../../base.css">
 <link rel="stylesheet" href="calc.css">
-<link rel="stylesheet" href="../shared/capture.css">
 <style>
 </style>
 </head>
@@ -25,7 +24,6 @@
   <div class="sec sec-flush">
     <div class="sec-lbl sec-lbl-flush" style="display:flex;align-items:center;justify-content:space-between">
       <span>Motor Loads</span>
-      <button class="cap-section-btn" id="capMcaMocp" type="button" title="Capture nameplate &amp; auto-fill">📷 Capture</button>
     </div>
     <div class="input-pair">
       <div class="fg">
@@ -200,28 +198,5 @@ document.addEventListener('DOMContentLoaded', init);
 })();
 </script>
 
-<!-- ══ Capture / OCR — Phase 1 ══ -->
-<script type="module">
-  import { openCaptureModal } from '../shared/capture.js';
-
-  window.HVAC_CAPTURE = {
-    fields: [
-      { id: 'inRLA',   label: 'Compressor RLA', type: 'number' },
-      { id: 'inFan',   label: 'Fan Motor FLA',  type: 'number' },
-      { id: 'inExtra', label: 'Additional',     type: 'number' }
-    ]
-  };
-
-  const btn = document.getElementById('capMcaMocp');
-  if (btn) {
-    btn.addEventListener('click', () => {
-      openCaptureModal({
-        mode: 'scoped',
-        fields: window.HVAC_CAPTURE.fields,
-        title: 'Capture Nameplate'
-      });
-    });
-  }
-</script>
 </body>
 </html>

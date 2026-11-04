@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Electrical Analysis · HVAC Tools</title>
 <link rel="stylesheet" href="../base.css">
-<link rel="stylesheet" href="./shared/capture.css">
 <style>
 /* ── Electrical-specific styles ── */
 
@@ -90,7 +89,6 @@
   <div class="sec sec-flush">
     <div class="sec-lbl sec-lbl-flush" style="display:flex;align-items:center;justify-content:space-between">
       <span>Nameplate</span>
-      <button class="cap-section-btn" id="capElec" type="button" title="Capture nameplate &amp; auto-fill">📷 Capture</button>
     </div>
     <div class="fg">
       <label class="fl" for="np-voltage">Rated Voltage</label>
@@ -789,28 +787,6 @@ document.addEventListener('DOMContentLoaded', init);
 })();
 </script>
 
-<!-- ══ Capture / OCR — Phase 1 ══ -->
-<script type="module">
-  import { openCaptureModal } from './shared/capture.js';
-
-  /* Field map for scoped capture: which inputs the OCR can fill. */
-  window.HVAC_CAPTURE = {
-    fields: [
-      { id: 'np-voltage', label: 'Rated Voltage', type: 'number' }
-    ]
-  };
-
-  const btn = document.getElementById('capElec');
-  if (btn) {
-    btn.addEventListener('click', () => {
-      openCaptureModal({
-        mode: 'scoped',
-        fields: window.HVAC_CAPTURE.fields,
-        title: 'Capture Nameplate'
-      });
-    });
-  }
-</script>
 <script src="shared/recommend.js" data-tool="electrical"></script>
 </body>
 </html>
